@@ -130,11 +130,9 @@ export function ScreenShareControls({
           type="button"
           className={btnClass(styles.shareBtn, isSharing && styles.btnActive)}
           onClick={onToggleScreenShare}
+          aria-label={isSharing ? "Stop screen sharing" : "Share screen"}
         >
           <ScreenShare />
-          <span className={styles.shareLabel}>
-            {isSharing ? "Stop" : "Share"}
-          </span>
         </button>
       </Tooltip>
 

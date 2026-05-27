@@ -27,10 +27,20 @@
 
 @media (max-width: 900px) {
   .primaryView {
-    min-height: min(220px, 38dvh);
-    border-radius: calc(var(--radius) - 2px);
+    flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    box-shadow: none;
   }
+}
 
+@media (max-width: 900px) {
   .overlay {
     bottom: 0.5rem;
     left: 0.5rem;
@@ -47,14 +57,10 @@
   }
 }
 
-@media (max-width: 480px) {
-  .primaryView {
-    min-height: min(180px, 34dvh);
-  }
-}
-
 @media (max-height: 500px) and (orientation: landscape) {
   .primaryView {
+    aspect-ratio: auto;
+    max-height: none;
     min-height: 0;
     flex: 1 1 auto;
   }

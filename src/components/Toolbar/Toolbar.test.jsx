@@ -41,7 +41,7 @@ describe("Toolbar", () => {
     const footer = screen.getByRole("contentinfo");
     const buttons = within(footer).getAllByRole("button");
 
-    await user.click(screen.getByRole("button", { name: "Share" }));
+    await user.click(screen.getByRole("button", { name: "Share screen" }));
     await user.click(buttons[4]);
     await user.click(buttons[5]);
 

@@ -23,7 +23,7 @@ describe("ScreenShareControls", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Share" }));
+    await user.click(screen.getByRole("button", { name: "Share screen" }));
     expect(onToggleScreenShare).toHaveBeenCalledTimes(1);
   });
 

@@ -1105,25 +1105,29 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             onDismiss={dismissDownloadBanner}
           />
 
-          <VideoGallery
-            visible={isGalleryVisible}
-            screenStream={screenStream}
-            localStream={localStream}
-            participants={videoParticipants}
-            isAudioMuted={isAudioMuted}
-            localDisplayName={resolvedDisplayName}
-          />
+          <div className={styles.gallerySlot}>
+            <VideoGallery
+              visible={isGalleryVisible}
+              screenStream={screenStream}
+              localStream={localStream}
+              participants={videoParticipants}
+              isAudioMuted={isAudioMuted}
+              localDisplayName={resolvedDisplayName}
+            />
+          </div>
 
-          <PrimaryView
-            stream={primaryStream}
-            label={primaryLabel}
-            isMuted={primaryMuted}
-            isAudioMuted={viewingHostStream ? hostAudioMuted : false}
-            isVideoMuted={viewingHostStream ? hostVideoMuted : false}
-            isRecording={isRecording}
-            isRecordingPaused={isRecordingPaused}
-            recordingDurationSeconds={recordingSeconds}
-          />
+          <div className={styles.videoStage}>
+            <PrimaryView
+              stream={primaryStream}
+              label={primaryLabel}
+              isMuted={primaryMuted}
+              isAudioMuted={viewingHostStream ? hostAudioMuted : false}
+              isVideoMuted={viewingHostStream ? hostVideoMuted : false}
+              isRecording={isRecording}
+              isRecordingPaused={isRecordingPaused}
+              recordingDurationSeconds={recordingSeconds}
+            />
+          </div>
         </div>
 
         <ParticipantsSidebar

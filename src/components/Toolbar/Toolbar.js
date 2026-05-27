@@ -1,15 +1,6 @@
-import {
-  Gallery,
-  Mic,
-  MicOff,
-  Pause,
-  Play,
-  Record,
-  Stop,
-  Users,
-  Video,
-  VideoOff,
-} from "@/components/Icons";
+import { Pause, Play, Record, Stop } from "@/components/Icons";
+import { LayoutControls } from "./LayoutControls";
+import { MediaControls } from "./MediaControls";
 import { ProfileControls } from "./ProfileControls";
 import { ScreenShareControls } from "./ScreenShareControls";
 import { Tooltip } from "@/components/Tooltip";
@@ -60,26 +51,13 @@ export function Toolbar({
           </div>
         : null}
 
-      <div className={styles.controlGroup}>
-        <Tooltip text={isAudioMuted ? "Unmute Microphone" : "Mute Microphone"}>
-          <button
-            type="button"
-            className={btnClass(isAudioMuted && styles.btnDanger)}
-            onClick={onToggleAudio}
-          >
-            {isAudioMuted ? <MicOff /> : <Mic />}
-          </button>
-        </Tooltip>
-
-        <Tooltip text={isVideoMuted ? "Turn Camera On" : "Turn Camera Off"}>
-          <button
-            type="button"
-            className={btnClass(isVideoMuted && styles.btnDanger)}
-            onClick={onToggleVideo}
-          >
-            {isVideoMuted ? <VideoOff /> : <Video />}
-          </button>
-        </Tooltip>
+      <div className={`${styles.controlGroup} ${styles.mediaGroup}`}>
+        <MediaControls
+          isAudioMuted={isAudioMuted}
+          isVideoMuted={isVideoMuted}
+          onToggleAudio={onToggleAudio}
+          onToggleVideo={onToggleVideo}
+        />
       </div>
 
       {allowScreenShare
@@ -94,30 +72,13 @@ export function Toolbar({
           </div>
         : null}
 
-      <div className={styles.controlGroup}>
-        <Tooltip
-          text={isGalleryVisible ? "Hide Video Gallery" : "Show Video Gallery"}
-        >
-          <button
-            type="button"
-            className={btnClass(isGalleryVisible && styles.btnActive)}
-            onClick={onToggleGallery}
-          >
-            <Gallery />
-          </button>
-        </Tooltip>
-
-        <Tooltip
-          text={isSidebarVisible ? "Hide Participants" : "Show Participants"}
-        >
-          <button
-            type="button"
-            className={btnClass(isSidebarVisible && styles.btnActive)}
-            onClick={onToggleSidebar}
-          >
-            <Users />
-          </button>
-        </Tooltip>
+      <div className={`${styles.controlGroup} ${styles.layoutGroup}`}>
+        <LayoutControls
+          isGalleryVisible={isGalleryVisible}
+          isSidebarVisible={isSidebarVisible}
+          onToggleGallery={onToggleGallery}
+          onToggleSidebar={onToggleSidebar}
+        />
       </div>
 
       {showRecording
