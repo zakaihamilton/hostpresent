@@ -26,6 +26,10 @@ import {
   isFatalSignalingError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
+import {
+  pickOutboundVideoTrack,
+  resolveOutboundAudioTrack,
+} from "@/lib/webrtc/outboundMedia";
 import styles from "./MeetingView.module.css";
 
 function participantColor(id) {
@@ -54,7 +58,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       ? buildParticipantInviteLink(routeJoinCode ?? roomState?.joinCode ?? "")
       : "";
 
-  const [hostPresent, setHostPresent] = useState(isHost);
+  const [hostStream, setHostStream] = useState(null);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
 
   const [localStream, setLocalStream] = useState(null);
@@ -81,6 +85,12 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     });
 
   const { confirm, dialogProps } = useConfirmDialog();
+
+  const [hostPresent, setHostPresent] = useState(isHost);
+
+  const handleRemoteHostStream = useCallback((stream) => {
+    setHostStream(stream);
+  }, []);
 
   const handleRemoteParticipant = useCallback((participant) => {
     if (!participant?.id) return;
@@ -110,7 +120,10 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     token,
     roomId: roomState?.roomId ?? null,
     enabled: Boolean(token && roomState?.roomId),
+    localStream,
+    screenStream,
     onRemoteParticipant: isHost ? handleRemoteParticipant : undefined,
+    onRemoteHostStream: isHost ? undefined : handleRemoteHostStream,
   });
 
   const fatalConnectionError =
@@ -381,22 +394,13 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     }, 5000);
   }, [updateDownloadProgress]);
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     if (!localStream || !isHost) return;
 
-    const activeVideoTrack = screenStream
-      ? screenStream.getVideoTracks()[0]
-      : localStream.getVideoTracks()[0];
-    const hostAudioTrack = localStream.getAudioTracks()[0];
-    const screenAudioTracks = screenStream?.getAudioTracks() ?? [];
+    const activeVideoTrack = pickOutboundVideoTrack(localStream, screenStream);
+    const audioTrack = await resolveOutboundAudioTrack(localStream, screenStream);
 
-    const tracksToRecord = [];
-    if (activeVideoTrack) tracksToRecord.push(activeVideoTrack);
-    for (const track of screenAudioTracks) {
-      if (track.readyState === "live") tracksToRecord.push(track);
-    }
-    if (hostAudioTrack) tracksToRecord.push(hostAudioTrack);
-
+    const tracksToRecord = [activeVideoTrack, audioTrack].filter(Boolean);
     const compositeStream = new MediaStream(tracksToRecord);
 
     let options = { mimeType: "video/mp4;codecs=avc1" };
@@ -474,13 +478,18 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   };
 
   const activeMainStream = screenStream || localStream;
-  const primaryLabel = screenStream
-    ? isScreenAudioShared
-      ? "You are sharing your screen with audio"
-      : "You are sharing your screen"
-    : isHost
-      ? "You (Host)"
-      : "You";
+  const viewingHostStream = !isHost && hostStream;
+  const primaryStream = viewingHostStream ? hostStream : activeMainStream;
+  const primaryLabel = viewingHostStream
+    ? "Host"
+    : screenStream
+      ? isScreenAudioShared
+        ? "You are sharing your screen with audio"
+        : "You are sharing your screen"
+      : isHost
+        ? "You (Host)"
+        : "You";
+  const primaryMuted = !viewingHostStream;
 
   const handleCopyInviteLink = async () => {
     if (!inviteLink) return;
@@ -615,6 +624,15 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         : null}
 
       <main className={styles.workspace}>
+        {isSidebarVisible ? (
+          <button
+            type="button"
+            className={styles.sidebarBackdrop}
+            aria-label="Close participants panel"
+            onClick={() => setIsSidebarVisible(false)}
+          />
+        ) : null}
+
         <div className={styles.stage}>
           <ErrorBanner message={errorMsg} onDismiss={() => setErrorMsg("")} />
 
@@ -632,8 +650,9 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           />
 
           <PrimaryView
-            stream={activeMainStream}
+            stream={primaryStream}
             label={primaryLabel}
+            isMuted={primaryMuted}
             isRecording={isRecording}
             isRecordingPaused={isRecordingPaused}
             recordingDurationSeconds={recordingSeconds}
@@ -669,6 +688,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         showRecording={isHost}
+        allowScreenShare={isHost}
         onToggleAudio={toggleAudio}
         onToggleVideo={toggleVideo}
         onToggleScreenShare={toggleScreenShare}

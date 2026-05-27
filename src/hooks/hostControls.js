@@ -265,22 +265,14 @@ export function useHostControls({
 
     return signaling.subscribe((message) => {
       switch (message.type) {
-        case SIGNALING_MESSAGE.HOST_MUTE_AUDIO:
         case SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED:
           applyParticipantAudioMuted(
             message.participantId,
             message.participantType,
           );
           break;
-        case SIGNALING_MESSAGE.HOST_MUTE_VIDEO:
         case SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED:
           applyParticipantVideoMuted(message.participantId);
-          break;
-        case SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO:
-          applyMuteAllAudio();
-          break;
-        case SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO:
-          applyMuteAllVideo();
           break;
         case SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED:
           applyParticipantAudioUnmuted(
@@ -296,8 +288,6 @@ export function useHostControls({
       }
     });
   }, [
-    applyMuteAllAudio,
-    applyMuteAllVideo,
     applyParticipantAudioMuted,
     applyParticipantAudioUnmuted,
     applyParticipantVideoMuted,

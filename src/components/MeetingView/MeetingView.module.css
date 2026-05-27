@@ -2,10 +2,13 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
+  width: 100dvw;
   background-color: var(--bg-main);
   color: var(--text-main);
   position: relative;
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .recordingBar {
@@ -48,6 +51,42 @@
   overflow-y: auto;
   position: relative;
   min-width: 0;
+}
+
+.sidebarBackdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .stage {
+    padding: 0.75rem 0.75rem 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .shareBar {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .shareRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .shareButton {
+    width: 100%;
+  }
+
+  .sidebarBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 24;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: rgba(15, 23, 42, 0.45);
+    cursor: pointer;
+  }
 }
 
 @keyframes recordingBarSlide {

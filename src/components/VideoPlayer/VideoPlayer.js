@@ -16,9 +16,29 @@ export function VideoPlayer({
 
     if (stream) {
       video.srcObject = stream;
+      void video.play().catch(() => {});
+    } else {
+      video.pause();
+      video.srcObject = null;
+    }
+
+    const refresh = () => {
+      if (!videoRef.current || !stream) return;
+      videoRef.current.srcObject = null;
+      videoRef.current.srcObject = stream;
+      void videoRef.current.play().catch(() => {});
+    };
+
+    if (typeof stream?.addEventListener === "function") {
+      stream.addEventListener("addtrack", refresh);
+      stream.addEventListener("removetrack", refresh);
     }
 
     return () => {
+      if (typeof stream?.removeEventListener === "function") {
+        stream.removeEventListener("addtrack", refresh);
+        stream.removeEventListener("removetrack", refresh);
+      }
       video.pause();
       video.srcObject = null;
     };

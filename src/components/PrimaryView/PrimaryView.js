@@ -8,6 +8,7 @@ export function PrimaryView({
   isRecording,
   isRecordingPaused,
   recordingDurationSeconds,
+  isMuted = true,
 }) {
   return (
     <div
@@ -32,7 +33,7 @@ export function PrimaryView({
         </output>
       )}
 
-      {stream && <VideoPlayer stream={stream} isMuted />}
+      {stream && <VideoPlayer stream={stream} isMuted={isMuted} />}
       <div className={styles.overlay}>{label}</div>
     </div>
   );

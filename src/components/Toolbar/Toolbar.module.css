@@ -4,11 +4,20 @@
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0 1.5rem;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0));
   z-index: 10;
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.04);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.toolbar::-webkit-scrollbar {
+  display: none;
 }
 
 .controlGroup {
@@ -23,6 +32,25 @@
 .controlGroup:last-child {
   border-right: none;
   padding-right: 0;
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    height: auto;
+    min-height: 72px;
+    padding-top: 0.5rem;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0));
+  }
+
+  .controlGroup {
+    flex-shrink: 0;
+    padding-right: 0.75rem;
+  }
+
+  .btn {
+    width: 42px;
+    height: 42px;
+  }
 }
 
 .recordingGroup {

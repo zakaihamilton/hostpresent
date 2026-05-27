@@ -196,4 +196,31 @@
     min-width: auto;
     padding: 0.35rem 0.55rem;
   }
+
+  .logoText {
+    display: none;
+  }
+
+  .header {
+    padding: 0 0.75rem;
+    height: 52px;
+  }
+
+  .backButton {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.75rem;
+  }
+
+  .meta {
+    gap: 0.35rem;
+  }
+
+  .recordingBadge {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.6875rem;
+  }
+
+  .recordingTime {
+    display: none;
+  }
 }

@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  canReceiveSignalingMessage,
+  canSendSignalingMessage,
+} from "@/lib/room/messageAuth";
+import {
   createHostPresentMessage,
   isSignalingMessage,
   parseSignalingMessage,
@@ -18,6 +22,11 @@ import {
   SIGNALING_CONNECT_TIMEOUT_MS,
 } from "@/lib/webrtc/peerClient";
 import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
+import {
+  buildOutboundMediaStream,
+  destroyOutboundAudioMixer,
+  syncOutboundTracks,
+} from "@/lib/webrtc/outboundMedia";
 
 const SIGNALING_NOT_CONFIGURED_ERROR =
   "Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.";
@@ -40,7 +49,10 @@ export function useRoomDataChannel({
   token,
   roomId,
   enabled = true,
+  localStream = null,
+  screenStream = null,
   onRemoteParticipant,
+  onRemoteHostStream,
 }) {
   const isHost = role === "host";
   const [isConnected, setIsConnected] = useState(false);
@@ -53,14 +65,17 @@ export function useRoomDataChannel({
   const peerRef = useRef(null);
   const peerConfigRef = useRef(null);
   const connectionsRef = useRef(new Map());
+  const mediaCallsRef = useRef(new Map());
   const hostConnectionRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const handlersRef = useRef(new Set());
   const hostPresentTimerRef = useRef(null);
   const openCountRef = useRef(0);
   const signalingOpenRef = useRef(false);
   const retryTimerRef = useRef(null);
   const retryAttemptRef = useRef(0);
-  const connectRetryTimerRef = useRef(null);
+  const localParticipantIdRef = useRef("");
 
   const updateConnectedState = useCallback((delta) => {
     openCountRef.current = Math.max(0, openCountRef.current + delta);
@@ -97,6 +112,84 @@ export function useRoomDataChannel({
     }
   }, []);
 
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
+  useEffect(() => {
+    screenStreamRef.current = screenStream;
+  }, [screenStream]);
+
+  const bindMediaCall = useCallback(
+    (call, remoteId) => {
+      if (!call) return;
+
+      mediaCallsRef.current.set(remoteId, call);
+
+      call.on("stream", (remoteStream) => {
+        if (isHost) {
+          onRemoteParticipant?.({ id: remoteId, stream: remoteStream });
+          return;
+        }
+        onRemoteHostStream?.(remoteStream);
+      });
+
+      call.on("close", () => {
+        mediaCallsRef.current.delete(remoteId);
+        if (isHost) {
+          onRemoteParticipant?.({ id: remoteId, stream: null });
+          return;
+        }
+        onRemoteHostStream?.(null);
+      });
+
+      call.on("error", (error) => {
+        console.warn("[peer] media call error", error);
+      });
+    },
+    [isHost, onRemoteHostStream, onRemoteParticipant],
+  );
+
+  const placeOutgoingMediaCall = useCallback(
+    async (remoteId) => {
+      const peer = peerRef.current;
+      const outbound = await buildOutboundMediaStream(
+        localStreamRef.current,
+        screenStreamRef.current,
+      );
+      if (!peer || !outbound || mediaCallsRef.current.has(remoteId)) return;
+
+      const call = peer.call(remoteId, outbound);
+      bindMediaCall(call, remoteId);
+    },
+    [bindMediaCall],
+  );
+
+  const syncAllOutboundTracks = useCallback(async () => {
+    const tasks = [];
+    for (const call of mediaCallsRef.current.values()) {
+      tasks.push(
+        syncOutboundTracks(
+          call,
+          localStreamRef.current,
+          screenStreamRef.current,
+        ),
+      );
+    }
+    await Promise.all(tasks);
+
+    if (isHost) {
+      for (const remoteId of connectionsRef.current.keys()) {
+        await placeOutgoingMediaCall(remoteId);
+      }
+    }
+  }, [isHost, placeOutgoingMediaCall]);
+
+  useEffect(() => {
+    if (!localStream && !screenStream) return undefined;
+    void syncAllOutboundTracks();
+  }, [localStream, screenStream, syncAllOutboundTracks]);
+
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
       conn.on("open", () => {
@@ -104,6 +197,7 @@ export function useRoomDataChannel({
         if (isHost) {
           sendOnConnection(conn, createHostPresentMessage());
           onRemoteParticipant?.({ id: remoteId, name: remoteName });
+          placeOutgoingMediaCall(remoteId);
         }
       });
 
@@ -116,6 +210,16 @@ export function useRoomDataChannel({
           const payload = typeof raw === "string" ? raw : JSON.stringify(raw);
           const message = parseSignalingMessage(payload);
           if (!isSignalingMessage(message)) return;
+          if (
+            !canReceiveSignalingMessage({
+              isHost,
+              message,
+              senderId: remoteId,
+              localParticipantId: localParticipantIdRef.current,
+            })
+          ) {
+            return;
+          }
           notifyHandlers(message);
           if (!isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
             setHostPresent(true);
@@ -126,12 +230,21 @@ export function useRoomDataChannel({
         }
       });
     },
-    [isHost, notifyHandlers, onRemoteParticipant, updateConnectedState],
+    [isHost, notifyHandlers, onRemoteParticipant, placeOutgoingMediaCall, updateConnectedState],
   );
 
   const send = useCallback(
     (message) => {
       if (!isSignalingMessage(message)) return false;
+      if (
+        !canSendSignalingMessage({
+          isHost,
+          message,
+          localParticipantId: localParticipantIdRef.current,
+        })
+      ) {
+        return false;
+      }
 
       if (isHost) {
         const targetId = message.participantId;
@@ -221,6 +334,10 @@ export function useRoomDataChannel({
     let destroyed = false;
 
     const teardownPeer = () => {
+      for (const call of mediaCallsRef.current.values()) {
+        call.close();
+      }
+      mediaCallsRef.current.clear();
       for (const conn of connectionsRef.current.values()) {
         conn.close();
       }
@@ -231,6 +348,8 @@ export function useRoomDataChannel({
       peerRef.current = null;
       openCountRef.current = 0;
       signalingOpenRef.current = false;
+      localParticipantIdRef.current = "";
+      destroyOutboundAudioMixer();
     };
 
     const startHostPeer = (Peer) => {
@@ -254,7 +373,24 @@ export function useRoomDataChannel({
         bindConnection(conn, { remoteId, remoteName: "Guest" });
         conn.on("close", () => {
           connectionsRef.current.delete(remoteId);
+          mediaCallsRef.current.get(remoteId)?.close();
+          mediaCallsRef.current.delete(remoteId);
         });
+      });
+
+      peer.on("call", (call) => {
+        void (async () => {
+          const outbound = await buildOutboundMediaStream(
+            localStreamRef.current,
+            screenStreamRef.current,
+          );
+          if (outbound) {
+            call.answer(outbound);
+          } else {
+            call.answer();
+          }
+          bindMediaCall(call, call.peer);
+        })();
       });
 
       peer.on("error", (error) => {
@@ -311,9 +447,25 @@ export function useRoomDataChannel({
         });
       };
 
+      peer.on("call", (call) => {
+        void (async () => {
+          const outbound = await buildOutboundMediaStream(
+            localStreamRef.current,
+            screenStreamRef.current,
+          );
+          if (outbound) {
+            call.answer(outbound);
+          } else {
+            call.answer();
+          }
+          bindMediaCall(call, hostPeerId(roomId));
+        })();
+      });
+
       peer.on("open", (id) => {
         if (destroyed) return;
         signalingOpenRef.current = true;
+        localParticipantIdRef.current = id;
         setLocalParticipantId(id);
         setConnectionError(null);
         retryAttemptRef.current = 0;
@@ -364,6 +516,7 @@ export function useRoomDataChannel({
     };
   }, [
     bindConnection,
+    bindMediaCall,
     clearConnectRetryTimer,
     clearRetryTimer,
     configReady,

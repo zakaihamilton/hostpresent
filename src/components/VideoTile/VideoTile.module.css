@@ -1,5 +1,7 @@
 .tile {
   width: 260px;
+  flex: 0 0 260px;
+  height: 100%;
   background: var(--bg-panel);
   border-radius: calc(var(--radius) - 2px);
   overflow: hidden;
@@ -7,6 +9,23 @@
   border: 2px solid var(--border);
   transition: all 0.2s ease;
   box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 900px) {
+  .tile {
+    width: 180px;
+    flex-basis: 180px;
+  }
+
+  .placeholder {
+    font-size: 1.75rem;
+  }
+
+  .overlay {
+    bottom: 0.45rem;
+    left: 0.45rem;
+    font-size: 0.6875rem;
+  }
 }
 
 .tile:hover {

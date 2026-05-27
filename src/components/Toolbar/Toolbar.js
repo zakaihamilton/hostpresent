@@ -39,6 +39,7 @@ export function Toolbar({
   onResumeRecording,
   onStopRecording,
   showRecording = true,
+  allowScreenShare = true,
 }) {
   return (
     <footer className={styles.toolbar}>
@@ -64,15 +65,17 @@ export function Toolbar({
         </Tooltip>
       </div>
 
-      <div className={`${styles.controlGroup} ${styles.screenShareGroup}`}>
-        <ScreenShareControls
-          screenStream={screenStream}
-          shareScreenAudio={shareScreenAudio}
-          isScreenAudioShared={isScreenAudioShared}
-          onToggleScreenShare={onToggleScreenShare}
-          onShareScreenAudioChange={onShareScreenAudioChange}
-        />
-      </div>
+      {allowScreenShare
+        ? <div className={`${styles.controlGroup} ${styles.screenShareGroup}`}>
+            <ScreenShareControls
+              screenStream={screenStream}
+              shareScreenAudio={shareScreenAudio}
+              isScreenAudioShared={isScreenAudioShared}
+              onToggleScreenShare={onToggleScreenShare}
+              onShareScreenAudioChange={onShareScreenAudioChange}
+            />
+          </div>
+        : null}
 
       <div className={styles.controlGroup}>
         <Tooltip

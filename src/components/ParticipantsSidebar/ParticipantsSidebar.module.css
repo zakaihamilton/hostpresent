@@ -111,3 +111,23 @@
     transition: none;
   }
 }
+
+@media (max-width: 900px) {
+  .slot {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    width: min(100vw, 320px);
+  }
+
+  .slotClosed {
+    width: min(100vw, 320px);
+    pointer-events: none;
+  }
+
+  .sidebar {
+    width: min(100vw, 320px);
+  }
+}
