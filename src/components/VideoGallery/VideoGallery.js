@@ -1,4 +1,4 @@
-import { Mic, MicOff } from "@/components/Icons";
+import { Mic, MicOff, VideoOff } from "@/components/Icons";
 import { VideoTile } from "@/components/VideoTile";
 import styles from "./VideoGallery.module.css";
 
@@ -14,24 +14,29 @@ export function VideoGallery({
       className={`${styles.wrapper} ${visible ? "" : styles.wrapperHidden}`}
       aria-hidden={!visible}
     >
-      <div className={styles.gallery}>
-        {screenStream && localStream && (
-          <VideoTile
-            stream={localStream}
-            name="You"
-            overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
-            isSpeaking
-          />
-        )}
-        {participants.map((p) => (
-          <VideoTile
-            key={p.id}
-            stream={p.stream}
-            name={p.name}
-            overlayIcon={<Mic />}
-          />
-        ))}
-      </div>
+      {visible && (
+        <div className={styles.gallery}>
+          {screenStream && localStream && (
+            <VideoTile
+              stream={localStream}
+              name="You"
+              overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
+              isSpeaking
+            />
+          )}
+          {participants.map((participant) => (
+            <VideoTile
+              key={participant.id}
+              name={participant.name}
+              initial={participant.name.charAt(0)}
+              avatarColor={participant.avatarColor}
+              overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
+              isVideoOff={participant.isVideoMuted}
+              videoOffIcon={<VideoOff />}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

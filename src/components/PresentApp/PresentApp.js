@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Header } from "@/components/Header";
 import { ParticipantsSidebar } from "@/components/ParticipantsSidebar";
@@ -8,15 +9,21 @@ import { PrimaryView } from "@/components/PrimaryView";
 import { RecordingDownloadBanner } from "@/components/RecordingDownloadBanner";
 import { Toolbar } from "@/components/Toolbar";
 import { VideoGallery } from "@/components/VideoGallery";
-import { useSessionTimers } from "@/hooks/useSessionTimers";
-import { createMockStream } from "@/lib/mockMedia";
-import { generateMockParticipants } from "@/lib/mockParticipants";
+import {
+  useConfirmDialog,
+  useHostControls,
+  useSessionTimers,
+  useSignaling,
+} from "@/hooks";
 import styles from "./PresentApp.module.css";
+
+const SIGNALING_URL = process.env.NEXT_PUBLIC_SIGNALING_URL ?? "";
 
 export function PresentApp() {
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
-  const [mockVideoParticipants, setMockVideoParticipants] = useState([]);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+  const [videoParticipants, setVideoParticipants] = useState([]);
 
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
@@ -26,7 +33,6 @@ export function PresentApp() {
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
 
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
   const [shareScreenAudio, setShareScreenAudio] = useState(true);
   const [downloadState, setDownloadState] = useState(null);
 
@@ -41,9 +47,28 @@ export function PresentApp() {
       enabled: timersEnabled,
     });
 
+  const { confirm, dialogProps } = useConfirmDialog();
+  const signaling = useSignaling({ url: SIGNALING_URL, enabled: true });
+  const {
+    muteParticipantAudio,
+    muteParticipantVideo,
+    muteAllAudio,
+    muteAllVideo,
+    canMuteAllAudio,
+    canMuteAllVideo,
+  } = useHostControls({
+    videoParticipants,
+    audioList,
+    setVideoParticipants,
+    setAudioList,
+    signaling,
+    confirm,
+  });
+
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
   const localStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const downloadDismissTimerRef = useRef(null);
 
   const isScreenAudioShared = Boolean(
@@ -55,6 +80,10 @@ export function PresentApp() {
   }, [localStream]);
 
   useEffect(() => {
+    screenStreamRef.current = screenStream;
+  }, [screenStream]);
+
+  useEffect(() => {
     const formatTime = () =>
       new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -62,7 +91,6 @@ export function PresentApp() {
       });
 
     setTimeString(formatTime());
-    setAudioList(generateMockParticipants());
     setTimersEnabled(true);
 
     const timer = setInterval(() => setTimeString(formatTime()), 1000);
@@ -80,30 +108,6 @@ export function PresentApp() {
     };
     initLocalMedia();
 
-    const mockVideos = [
-      {
-        id: "v1",
-        name: "Elena R.",
-        stream: createMockStream("Elena R.", "#0f766e"),
-      },
-      {
-        id: "v2",
-        name: "Marcus T.",
-        stream: createMockStream("Marcus T.", "#4338ca"),
-      },
-      {
-        id: "v3",
-        name: "Sarah L.",
-        stream: createMockStream("Sarah L.", "#b91c1c"),
-      },
-      {
-        id: "v4",
-        name: "David K.",
-        stream: createMockStream("David K.", "#b45309"),
-      },
-    ];
-    setMockVideoParticipants(mockVideos);
-
     return () => {
       clearInterval(timer);
       if (downloadDismissTimerRef.current) {
@@ -114,6 +118,15 @@ export function PresentApp() {
           track.stop();
         }
       }
+      if (screenStreamRef.current) {
+        for (const track of screenStreamRef.current.getTracks()) {
+          track.stop();
+        }
+      }
+      if (mediaRecorderRef.current?.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      recordingChunksRef.current = [];
     };
   }, []);
 
@@ -372,7 +385,7 @@ export function PresentApp() {
             visible={isGalleryVisible}
             screenStream={screenStream}
             localStream={localStream}
-            participants={mockVideoParticipants}
+            participants={videoParticipants}
             isAudioMuted={isAudioMuted}
           />
 
@@ -388,11 +401,19 @@ export function PresentApp() {
         <ParticipantsSidebar
           visible={isSidebarVisible}
           audioList={audioList}
-          mockVideoParticipants={mockVideoParticipants}
+          videoParticipants={videoParticipants}
           isVideoMuted={isVideoMuted}
           isAudioMuted={isAudioMuted}
+          onMuteParticipantVideo={muteParticipantVideo}
+          onMuteParticipantAudio={muteParticipantAudio}
+          onMuteAllVideo={muteAllVideo}
+          onMuteAllAudio={muteAllAudio}
+          canMuteAllVideo={canMuteAllVideo}
+          canMuteAllAudio={canMuteAllAudio}
         />
       </main>
+
+      <ConfirmDialog {...dialogProps} />
 
       <Toolbar
         isAudioMuted={isAudioMuted}

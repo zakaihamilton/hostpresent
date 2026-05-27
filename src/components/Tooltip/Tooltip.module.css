@@ -5,9 +5,6 @@
 
 .text {
   position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%) translateY(5px);
   background: var(--tooltip-bg);
   color: var(--tooltip-text);
   padding: 0.5rem 0.75rem;
@@ -25,7 +22,13 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.text::after {
+.textTop {
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+}
+
+.textTop::after {
   content: "";
   position: absolute;
   top: 100%;
@@ -36,8 +39,31 @@
   border-color: var(--tooltip-bg) transparent transparent transparent;
 }
 
-.wrapper:hover .text {
+.wrapper:hover .textTop {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
+}
+
+.textLeft {
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%) translateX(5px);
+}
+
+.textLeft::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent var(--tooltip-bg);
+}
+
+.wrapper:hover .textLeft {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
 }

@@ -1,15 +1,137 @@
-import { Mic, MicOff, Video, VideoOff } from "@/components/Icons";
+import { useCallback, useMemo } from "react";
+import { MicOff, VideoOff } from "@/components/Icons";
 import { ParticipantItem } from "@/components/ParticipantItem";
+import { Tooltip } from "@/components/Tooltip";
+import { VirtualList } from "@/components/Widgets";
 import styles from "./ParticipantsSidebar.module.css";
+
+const PARTICIPANT_ITEM_HEIGHT = 52;
+const SECTION_LABEL_HEIGHT = 44;
+
+function buildParticipantItems({
+  isVideoMuted,
+  isAudioMuted,
+  videoParticipants,
+  audioList,
+}) {
+  const items = [
+    {
+      type: "host",
+      id: "host",
+      name: "You (Host)",
+      initial: "Y",
+      avatarColor: "#3b82f6",
+      isVideoMuted,
+      isAudioMuted,
+      hasVideo: true,
+    },
+  ];
+
+  for (const participant of videoParticipants) {
+    items.push({
+      type: "video",
+      id: participant.id,
+      name: participant.name,
+      initial: participant.name.charAt(0),
+      avatarColor: participant.avatarColor,
+      isVideoMuted: participant.isVideoMuted,
+      isAudioMuted: participant.isAudioMuted,
+      hasVideo: true,
+    });
+  }
+
+  if (audioList.length > 0) {
+    items.push({
+      type: "section",
+      id: "audio-section",
+      label: "Audio Participants",
+    });
+
+    for (const participant of audioList) {
+      items.push({
+        type: "audio",
+        id: participant.id,
+        name: participant.name,
+        initial: participant.name.charAt(0),
+        avatarColor: "#475569",
+        avatarFontSize: "10px",
+        isAudioMuted: participant.isMuted,
+        hasVideo: false,
+      });
+    }
+  }
+
+  return items;
+}
+
+function getParticipantItemSize(_index, item) {
+  return item.type === "section"
+    ? SECTION_LABEL_HEIGHT
+    : PARTICIPANT_ITEM_HEIGHT;
+}
+
+function getParticipantItemKey(item) {
+  return item.id;
+}
 
 export function ParticipantsSidebar({
   visible,
   audioList,
-  mockVideoParticipants,
+  videoParticipants,
   isVideoMuted,
   isAudioMuted,
+  onMuteParticipantVideo,
+  onMuteParticipantAudio,
+  onMuteAllVideo,
+  onMuteAllAudio,
+  canMuteAllVideo,
+  canMuteAllAudio,
 }) {
-  const totalCount = audioList.length + 5;
+  const totalCount = 1 + videoParticipants.length + audioList.length;
+  const hasRemoteParticipants =
+    videoParticipants.length > 0 || audioList.length > 0;
+
+  const items = useMemo(
+    () =>
+      buildParticipantItems({
+        isVideoMuted,
+        isAudioMuted,
+        videoParticipants,
+        audioList,
+      }),
+    [audioList, isAudioMuted, isVideoMuted, videoParticipants],
+  );
+
+  const renderItem = useCallback(
+    (item) => {
+      if (item.type === "section") {
+        return <div className={styles.sectionLabel}>{item.label}</div>;
+      }
+
+      const isHost = item.type === "host";
+
+      return (
+        <ParticipantItem
+          name={item.name}
+          initial={item.initial}
+          avatarColor={item.avatarColor}
+          avatarFontSize={item.avatarFontSize}
+          isVideoMuted={item.isVideoMuted}
+          isAudioMuted={item.isAudioMuted}
+          hasVideo={item.hasVideo}
+          onMuteVideo={
+            isHost ? undefined : () => onMuteParticipantVideo(item.id)
+          }
+          onMuteAudio={
+            isHost
+              ? undefined
+              : () => onMuteParticipantAudio(item.id, item.type)
+          }
+        />
+      );
+    },
+    [onMuteParticipantAudio, onMuteParticipantVideo],
+  );
 
   return (
     <div
@@ -21,47 +143,43 @@ export function ParticipantsSidebar({
           <span>Participants</span>
           <span className={styles.count}>{totalCount}</span>
         </div>
-        <div className={styles.list}>
-          <ParticipantItem
-            name="You (Host)"
-            initial="Y"
-            avatarColor="#3b82f6"
-            statusIcons={
-              <>
-                {isVideoMuted ? <VideoOff /> : <Video />}
-                {isAudioMuted ? <MicOff /> : <Mic />}
-              </>
-            }
-          />
 
-          {mockVideoParticipants.map((p) => (
-            <ParticipantItem
-              key={p.id}
-              name={p.name}
-              initial={p.name.charAt(0)}
-              avatarColor="#0f766e"
-              statusIcons={
-                <>
-                  <Video />
-                  <Mic />
-                </>
-              }
-            />
-          ))}
+        {hasRemoteParticipants && (
+          <div className={styles.bulkActions}>
+            <Tooltip text="Turn off all cameras" placement="left">
+              <button
+                type="button"
+                className={styles.bulkBtn}
+                onClick={onMuteAllVideo}
+                disabled={!canMuteAllVideo}
+                aria-label="Turn off all cameras"
+              >
+                <VideoOff />
+              </button>
+            </Tooltip>
+            <Tooltip text="Mute all participants" placement="left">
+              <button
+                type="button"
+                className={styles.bulkBtn}
+                onClick={onMuteAllAudio}
+                disabled={!canMuteAllAudio}
+                aria-label="Mute all participants"
+              >
+                <MicOff />
+              </button>
+            </Tooltip>
+          </div>
+        )}
 
-          <div className={styles.sectionLabel}>Audio Participants</div>
-
-          {audioList.map((p) => (
-            <ParticipantItem
-              key={p.id}
-              name={p.name}
-              initial={p.name.charAt(0)}
-              avatarColor="#475569"
-              avatarFontSize="10px"
-              statusIcons={p.isMuted ? <MicOff /> : <Mic />}
-            />
-          ))}
-        </div>
+        <VirtualList
+          className={styles.list}
+          items={items}
+          getItemSize={getParticipantItemSize}
+          renderItem={renderItem}
+          itemKey={getParticipantItemKey}
+          ariaLabel="Participants"
+          overscan={6}
+        />
       </aside>
     </div>
   );
