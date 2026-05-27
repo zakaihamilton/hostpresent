@@ -86,7 +86,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       : "";
 
   const [hostStream, setHostStream] = useState(null);
-  const [inviteBarVisible, setInviteBarVisible] = useState(true);
+  const [inviteBarVisible, setInviteBarVisible] = useState(false);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
 
   const [localStream, setLocalStream] = useState(null);

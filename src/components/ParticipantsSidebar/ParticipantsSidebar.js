@@ -242,7 +242,10 @@ export function ParticipantsSidebar({
     >
       <aside className={styles.sidebar}>
         <div className={styles.header}>
-          <span>Participants</span>
+          <div className={styles.headerTitle}>
+            <span>Participants</span>
+            <span className={styles.count}>{totalCount}</span>
+          </div>
           <div className={styles.headerActions}>
             {hasRemoteParticipants ? (
               <div className={styles.bulkActions}>
@@ -270,7 +273,6 @@ export function ParticipantsSidebar({
                 </Tooltip>
               </div>
             ) : null}
-            <span className={styles.count}>{totalCount}</span>
             {onClose
               ? <Tooltip text="Close participants" placement="left">
                   <button

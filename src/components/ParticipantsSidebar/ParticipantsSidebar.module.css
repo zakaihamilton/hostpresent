@@ -40,6 +40,13 @@
   flex-shrink: 0;
 }
 
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .headerActions {
   display: flex;
   align-items: center;
