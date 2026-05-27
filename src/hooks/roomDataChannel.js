@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   canReceiveSignalingMessage,
   canSendSignalingMessage,
+  isParticipantStatusMessage,
+  resolveParticipantStatusMessage,
 } from "@/lib/room/messageAuth";
 import {
   createHostPresentMessage,
@@ -295,17 +297,20 @@ export function useRoomDataChannel({
           const payload = typeof raw === "string" ? raw : JSON.stringify(raw);
           const message = parseSignalingMessage(payload);
           if (!isSignalingMessage(message)) return;
+          const resolvedMessage = resolveParticipantStatusMessage(message, {
+            senderId: remoteId,
+          });
           if (
             !canReceiveSignalingMessage({
               isHost,
-              message,
+              message: resolvedMessage,
               senderId: remoteId,
               localParticipantId: localParticipantIdRef.current,
             })
           ) {
             return;
           }
-          notifyHandlers(message);
+          notifyHandlers(resolvedMessage);
           if (!isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
             setHostPresent(true);
             setConnectionError(null);
@@ -328,10 +333,18 @@ export function useRoomDataChannel({
   const send = useCallback(
     (message) => {
       if (!isSignalingMessage(message)) return false;
+
+      let outboundMessage = message;
+      if (!isHost && isParticipantStatusMessage(message)) {
+        const participantId = localParticipantIdRef.current;
+        if (!participantId) return false;
+        outboundMessage = { ...message, participantId };
+      }
+
       if (
         !canSendSignalingMessage({
           isHost,
-          message,
+          message: outboundMessage,
           localParticipantId: localParticipantIdRef.current,
         })
       ) {
@@ -346,17 +359,17 @@ export function useRoomDataChannel({
             message.type === SIGNALING_MESSAGE.HOST_MUTE_VIDEO)
         ) {
           const conn = connectionsRef.current.get(targetId);
-          return sendOnConnection(conn, message);
+          return sendOnConnection(conn, outboundMessage);
         }
 
         let sent = false;
         for (const conn of connectionsRef.current.values()) {
-          if (sendOnConnection(conn, message)) sent = true;
+          if (sendOnConnection(conn, outboundMessage)) sent = true;
         }
         return sent;
       }
 
-      return sendOnConnection(hostConnectionRef.current, message);
+      return sendOnConnection(hostConnectionRef.current, outboundMessage);
     },
     [isHost],
   );

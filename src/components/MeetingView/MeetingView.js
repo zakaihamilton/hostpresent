@@ -57,6 +57,7 @@ import {
   pickOutboundVideoTrack,
   resolveOutboundAudioTrack,
 } from "@/lib/webrtc/outboundMedia";
+import { attachRemoteStreamMediaListeners } from "@/lib/webrtc/remoteParticipantMedia";
 import styles from "./MeetingView.module.css";
 
 function participantColor(id) {
@@ -115,6 +116,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const resolvedDisplayName = resolveDisplayName(displayNameInput);
   const participantProfilesRef = useRef(new Map());
   const roomConnectionRef = useRef(null);
+  const streamListenerCleanupsRef = useRef(new Map());
 
   const { meetingSeconds, recordingSeconds, resetRecordingTimer } =
     useSessionTimers({
@@ -179,11 +181,49 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     [isHost],
   );
 
+  const applyRemoteStreamMediaState = useCallback((participantId, mediaState) => {
+    setVideoParticipants((previous) =>
+      previous.map((entry) => {
+        if (entry.id !== participantId) return entry;
+
+        return {
+          ...entry,
+          ...(mediaState.isAudioMuted !== null
+            ? { isAudioMuted: mediaState.isAudioMuted }
+            : {}),
+          ...(mediaState.isVideoMuted !== null
+            ? { isVideoMuted: mediaState.isVideoMuted }
+            : {}),
+        };
+      }),
+    );
+  }, []);
+
+  const bindRemoteStreamMediaListeners = useCallback(
+    (participantId, stream) => {
+      const cleanups = streamListenerCleanupsRef.current;
+      cleanups.get(participantId)?.();
+      cleanups.delete(participantId);
+
+      if (!stream) return;
+
+      cleanups.set(
+        participantId,
+        attachRemoteStreamMediaListeners(stream, (mediaState) => {
+          applyRemoteStreamMediaState(participantId, mediaState);
+        }),
+      );
+    },
+    [applyRemoteStreamMediaState],
+  );
+
   const handleRemoteParticipant = useCallback(
     (participant) => {
       if (!participant?.id) return;
 
       if (participant.stream === null) {
+        streamListenerCleanupsRef.current.get(participant.id)?.();
+        streamListenerCleanupsRef.current.delete(participant.id);
         setVideoParticipants((previous) =>
           previous.filter((entry) => entry.id !== participant.id),
         );
@@ -192,6 +232,12 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       }
 
       const isNewConnection = participant.stream === undefined;
+      const nextMode =
+        participant.mode === PARTICIPANT_MODE.LISTENING
+          ? PARTICIPANT_MODE.LISTENING
+          : participant.mode === PARTICIPANT_MODE.AVAILABLE
+            ? PARTICIPANT_MODE.AVAILABLE
+            : undefined;
 
       setVideoParticipants((previous) => {
         const existing = previous.find((entry) => entry.id === participant.id);
@@ -203,12 +249,11 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             entry.id === participant.id
               ? {
                   ...entry,
-                  ...participant,
+                  ...(participant.stream !== undefined
+                    ? { stream: participant.stream }
+                    : {}),
                   ...(nextName ? { name: nextName } : {}),
-                  mode:
-                    participant.mode ??
-                    entry.mode ??
-                    PARTICIPANT_MODE.AVAILABLE,
+                  ...(nextMode ? { mode: nextMode } : {}),
                 }
               : entry,
           );
@@ -222,16 +267,24 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             isAudioMuted: false,
             isVideoMuted: false,
             stream: participant.stream ?? null,
-            mode: participant.mode ?? PARTICIPANT_MODE.AVAILABLE,
+            mode: nextMode ?? PARTICIPANT_MODE.AVAILABLE,
           },
         ];
       });
+
+      if (participant.stream) {
+        bindRemoteStreamMediaListeners(participant.id, participant.stream);
+      }
 
       if (isNewConnection) {
         syncProfilesToParticipant(participant.id);
       }
     },
-    [broadcastPeerLeft, syncProfilesToParticipant],
+    [
+      bindRemoteStreamMediaListeners,
+      broadcastPeerLeft,
+      syncProfilesToParticipant,
+    ],
   );
 
   const handlePeerProfileBroadcast = useCallback(
@@ -467,6 +520,23 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   ]);
 
   useEffect(() => {
+    if (isHost || !roomConnection.localParticipantId) return undefined;
+
+    publishParticipantMediaStatus({
+      audioMuted: isAudioMuted,
+      videoMuted: isVideoMuted,
+    });
+
+    return undefined;
+  }, [
+    isAudioMuted,
+    isHost,
+    isVideoMuted,
+    publishParticipantMediaStatus,
+    roomConnection.localParticipantId,
+  ]);
+
+  useEffect(() => {
     if (isHost || !roomConnection.localParticipantId) return;
 
     roomConnection.send(
@@ -586,6 +656,10 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     initLocalMedia();
 
     return () => {
+      for (const cleanup of streamListenerCleanupsRef.current.values()) {
+        cleanup();
+      }
+      streamListenerCleanupsRef.current.clear();
       if (downloadDismissTimerRef.current) {
         clearTimeout(downloadDismissTimerRef.current);
       }

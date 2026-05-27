@@ -15,30 +15,30 @@ export function VideoGallery({
       className={`${styles.wrapper} ${visible ? "" : styles.wrapperHidden}`}
       aria-hidden={!visible}
     >
-      {visible && (
-        <div className={styles.gallery}>
-          {screenStream && localStream && (
-            <VideoTile
-              stream={localStream}
-              name={localDisplayName}
-              overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
-              isSpeaking
-            />
-          )}
-          {participants.map((participant) => (
-            <VideoTile
-              key={participant.id}
-              stream={participant.stream}
-              name={participant.name}
-              initial={participant.name.charAt(0)}
-              avatarColor={participant.avatarColor}
-              overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
-              isVideoOff={participant.isVideoMuted}
-              videoOffIcon={<VideoOff />}
-            />
-          ))}
-        </div>
-      )}
+      <div className={styles.gallery}>
+        {screenStream && localStream && (
+          <VideoTile
+            stream={localStream}
+            name={localDisplayName}
+            overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
+            isMuted
+            isSpeaking
+          />
+        )}
+        {participants.map((participant) => (
+          <VideoTile
+            key={participant.id}
+            stream={participant.stream}
+            name={participant.name}
+            initial={participant.name.charAt(0)}
+            avatarColor={participant.avatarColor}
+            overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
+            isMuted={participant.isAudioMuted}
+            isVideoOff={participant.isVideoMuted}
+            videoOffIcon={<VideoOff />}
+          />
+        ))}
+      </div>
     </div>
   );
 }

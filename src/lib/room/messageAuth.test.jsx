@@ -134,6 +134,17 @@ describe("messageAuth", () => {
     ).toBe(false);
   });
 
+  it("lets the host receive participant status when participantId is inferred from sender", () => {
+    expect(
+      canReceiveSignalingMessage({
+        isHost: true,
+        message: { type: SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED },
+        senderId: "guest-1",
+        localParticipantId: "",
+      }),
+    ).toBe(true);
+  });
+
   it("lets the host receive participant status only from the sender", () => {
     const message = {
       type: SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,

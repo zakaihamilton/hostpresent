@@ -16,9 +16,10 @@ describe("VideoTile", () => {
     expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 
-  it("renders placeholder when video is off", () => {
+  it("keeps audio playback mounted when video is off", () => {
     render(
       <VideoTile
+        stream={createMediaStream()}
         name="Alex"
         initial="A"
         isVideoOff
@@ -26,7 +27,7 @@ describe("VideoTile", () => {
       />,
     );
 
-    expect(screen.queryByTestId("video-player")).not.toBeInTheDocument();
+    expect(screen.getByTestId("video-player")).toBeInTheDocument();
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(screen.getByText("Off")).toBeInTheDocument();
   });

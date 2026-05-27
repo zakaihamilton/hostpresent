@@ -77,6 +77,15 @@
   object-fit: cover;
 }
 
+.audioOnlyVideo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .overlay {
   position: absolute;
   bottom: 0.75rem;

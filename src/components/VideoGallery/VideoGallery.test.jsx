@@ -29,17 +29,25 @@ describe("VideoGallery", () => {
     expect(screen.getByTestId("video-tile")).toHaveTextContent("Alex");
   });
 
-  it("hides content when not visible", () => {
+  it("keeps streams mounted when gallery is hidden", () => {
     render(
       <VideoGallery
         visible={false}
         screenStream={null}
-        localStream={null}
-        participants={[]}
+        localStream={createMediaStream()}
+        participants={[
+          {
+            id: "p1",
+            name: "Alex",
+            avatarColor: "#000",
+            isAudioMuted: false,
+            isVideoMuted: false,
+          },
+        ]}
         isAudioMuted={false}
       />,
     );
 
-    expect(screen.queryByTestId("video-tile")).not.toBeInTheDocument();
+    expect(screen.getByTestId("video-tile")).toHaveTextContent("Alex");
   });
 });

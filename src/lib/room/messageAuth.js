@@ -43,6 +43,17 @@ export function isParticipantStatusMessage(message) {
   return PARTICIPANT_STATUS_TYPES.has(message?.type);
 }
 
+export function resolveParticipantStatusMessage(message, { senderId = "" } = {}) {
+  if (!isParticipantStatusMessage(message)) return message;
+
+  const participantId = message.participantId || senderId;
+  if (!participantId || participantId === message.participantId) {
+    return message;
+  }
+
+  return { ...message, participantId };
+}
+
 export function canRelayMessage({ role, message }) {
   if (!message?.type) return false;
   if (isHostCommandMessage(message)) {
@@ -83,7 +94,8 @@ export function canReceiveSignalingMessage({
 
   if (isHost) {
     if (!isParticipantStatusMessage(message)) return false;
-    return message.participantId === senderId;
+    const participantId = message.participantId || senderId;
+    return Boolean(participantId) && participantId === senderId;
   }
 
   if (!isHostCommandMessage(message)) return false;
