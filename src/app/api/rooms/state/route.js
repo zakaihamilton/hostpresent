@@ -18,17 +18,27 @@ export async function GET(request) {
   if (blocked) return blocked;
 
   const token = getSearchParam(request, "token");
+  const openProof = getSearchParam(request, "open");
   const auth = verifyRequestToken(token);
   if (auth.error) return auth.error;
 
   const { verified } = auth;
-  let room = await getRoomById(verified.roomId);
+  let room = await getRoomById(verified.roomId, {
+    openProof,
+    joinCode: verified.joinCode,
+  });
   if (!room) {
     room = await restoreRoomFromToken({
       roomId: verified.roomId,
       role: verified.role,
       token,
     });
+    if (openProof) {
+      room = await getRoomById(verified.roomId, {
+        openProof,
+        joinCode: room.joinCode ?? verified.joinCode,
+      });
+    }
   }
 
   const response = {
@@ -37,11 +47,15 @@ export async function GET(request) {
     status: room.status ?? ROOM_STATUS.WAITING,
     openedAt: room.openedAt ?? null,
     createdAt: room.createdAt ?? null,
-    joinCode: room.joinCode ?? null,
+    joinCode: room.joinCode ?? verified.joinCode ?? null,
   };
 
   if (verified.role === ROOM_ROLE.HOST) {
     response.participantToken = room.participantToken;
+  }
+
+  if (response.status === "open" && openProof) {
+    response.openProof = openProof;
   }
 
   return jsonOk(response);

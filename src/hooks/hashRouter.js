@@ -27,6 +27,26 @@ function isLegacyToken(value) {
   return typeof value === "string" && value.includes(".");
 }
 
+function readOpenProofFromLocation() {
+  if (typeof window === "undefined") return null;
+
+  const fromSearch = new URLSearchParams(window.location.search).get("open");
+  if (fromSearch) return fromSearch;
+
+  const hash = window.location.hash;
+  const queryIndex = hash.indexOf("?");
+  if (queryIndex >= 0) {
+    return new URLSearchParams(hash.slice(queryIndex + 1)).get("open");
+  }
+
+  return null;
+}
+
+function stripHashQuery(value) {
+  if (!value) return value;
+  const queryIndex = value.indexOf("?");
+  return queryIndex >= 0 ? value.slice(0, queryIndex) : value;
+}
 function parseLegacyRoute(parts) {
   const [viewRaw, roleRaw, third] = parts;
   const view =
@@ -92,12 +112,13 @@ function parseHash(hash) {
   }
 
   if (first === "j") {
-    if (second && isValidJoinCode(second)) {
+    const codePart = stripHashQuery(second);
+    if (codePart && isValidJoinCode(codePart)) {
       return {
         view: APP_VIEW.JOIN,
         role: APP_ROLE.PARTICIPANT,
         token: null,
-        joinCode: normalizeJoinCode(second),
+        joinCode: normalizeJoinCode(codePart),
       };
     }
     return {
@@ -108,21 +129,21 @@ function parseHash(hash) {
     };
   }
 
-  if (first === "mh" && second && isValidJoinCode(second)) {
+  if (first === "mh" && second && isValidJoinCode(stripHashQuery(second))) {
     return {
       view: APP_VIEW.MEETING,
       role: APP_ROLE.HOST,
       token: null,
-      joinCode: normalizeJoinCode(second),
+      joinCode: normalizeJoinCode(stripHashQuery(second)),
     };
   }
 
-  if (first === "mj" && second && isValidJoinCode(second)) {
+  if (first === "mj" && second && isValidJoinCode(stripHashQuery(second))) {
     return {
       view: APP_VIEW.MEETING,
       role: APP_ROLE.PARTICIPANT,
       token: null,
-      joinCode: normalizeJoinCode(second),
+      joinCode: normalizeJoinCode(stripHashQuery(second)),
     };
   }
 
@@ -159,11 +180,15 @@ function canonicalizeRoute(route) {
   };
 }
 
-function buildJoinHash(joinCode) {
-  return `#/j/${formatJoinCode(joinCode)}`;
+function buildJoinHash(joinCode, openProof = null) {
+  let hash = `#/j/${formatJoinCode(joinCode)}`;
+  if (openProof) {
+    hash += `?open=${encodeURIComponent(openProof)}`;
+  }
+  return hash;
 }
 
-function buildHash({ view, role, token, joinCode }) {
+function buildHash({ view, role, token, joinCode, openProof = null }) {
   if (joinCode) {
     const formatted = formatJoinCode(joinCode);
     if (view === APP_VIEW.MEETING) {
@@ -172,7 +197,7 @@ function buildHash({ view, role, token, joinCode }) {
         : `#/mj/${formatted}`;
     }
     if (view === APP_VIEW.JOIN || role === APP_ROLE.PARTICIPANT) {
-      return buildJoinHash(joinCode);
+      return buildJoinHash(joinCode, openProof);
     }
     if (role === APP_ROLE.HOST) {
       return `#/h/${formatted}`;
@@ -218,12 +243,14 @@ export function useHashRouter() {
     role: DEFAULT_ROLE,
     token: null,
     joinCode: null,
+    openProof: null,
     ready: false,
   }));
 
   useEffect(() => {
     const syncFromHash = () => {
       const hash = window.location.hash;
+      const openProof = readOpenProofFromLocation();
       if (!hash || hash === "#" || hash === "#/") {
         const role = readStoredWelcomeTab();
         const nextHash = buildHash({
@@ -237,12 +264,14 @@ export function useHashRouter() {
 
       const parsed = canonicalizeRoute(parseHash(hash));
       const nextHash = buildHash(parsed);
-      if (hash !== nextHash) {
+      const hashPath = hash.split("?")[0];
+      const nextPath = nextHash.split("?")[0];
+      if (hashPath !== nextPath) {
         window.location.replace(nextHash);
         return;
       }
 
-      setRoute({ ...parsed, ready: true });
+      setRoute({ ...parsed, openProof, ready: true });
     };
 
     syncFromHash();
@@ -268,14 +297,15 @@ export function useHashRouter() {
         role: role ?? APP_ROLE.PARTICIPANT,
         token: token ?? null,
         joinCode: joinCode ?? null,
+        openProof: readOpenProofFromLocation(),
         ready: true,
       });
     }
   }, []);
 
-  const navigateJoinCode = useCallback((code) => {
+  const navigateJoinCode = useCallback((code, openProof = null) => {
     writeStoredWelcomeTab(APP_ROLE.PARTICIPANT);
-    const nextHash = buildJoinHash(code);
+    const nextHash = buildJoinHash(code, openProof);
     if (window.location.hash !== nextHash) {
       window.location.hash = nextHash;
     } else {
@@ -284,6 +314,7 @@ export function useHashRouter() {
         role: APP_ROLE.PARTICIPANT,
         token: null,
         joinCode: normalizeJoinCode(code),
+        openProof,
         ready: true,
       });
     }

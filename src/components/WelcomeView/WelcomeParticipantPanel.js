@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { APP_ROLE, APP_VIEW } from "@/hooks/useHashRouter";
-import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/useRoomSession";
+import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
+import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
 import {
   extractJoinCodeFromInput,
   normalizeRoomIdInput,
@@ -38,6 +38,7 @@ function extractLegacyTokenFromInput(value) {
 export function WelcomeParticipantPanel({
   token,
   joinCode,
+  openProof,
   navigate,
   navigateJoinCode,
   navigateParticipantWelcome,
@@ -45,6 +46,7 @@ export function WelcomeParticipantPanel({
   const [roomIdInput, setRoomIdInput] = useState(joinCode ?? "");
   const [inviteLinkInput, setInviteLinkInput] = useState("");
   const [participantToken, setParticipantToken] = useState(null);
+  const [activeOpenProof, setActiveOpenProof] = useState(openProof ?? null);
   const [recentRooms, setRecentRooms] = useState([]);
   const [resolveError, setResolveError] = useState("");
   const [isResolving, setIsResolving] = useState(false);
@@ -54,10 +56,15 @@ export function WelcomeParticipantPanel({
     setRecentRooms(listParticipantRooms());
   }, []);
 
+  useEffect(() => {
+    setActiveOpenProof(openProof ?? null);
+  }, [openProof]);
+
   const { status, error, roomState } = useRoomSession({
     role: APP_ROLE.PARTICIPANT,
     token: participantToken,
     enabled: Boolean(participantToken),
+    openProof: activeOpenProof,
   });
 
   const joinWithResolved = useCallback(
@@ -70,12 +77,17 @@ export function WelcomeParticipantPanel({
       });
       setResolveError("");
       setParticipantToken(resolved.participantToken);
+      if (resolved.openProof) {
+        setActiveOpenProof(resolved.openProof);
+      }
       if (resolved.joinCode) {
         setRoomIdInput(formatJoinCode(resolved.joinCode));
       }
       touchParticipantRoom(resolved.participantToken);
       refreshRecentRooms();
-      if (resolved.joinCode) {
+      if (resolved.openProof) {
+        navigateJoinCode(resolved.joinCode, resolved.openProof);
+      } else if (resolved.joinCode) {
         navigateJoinCode(resolved.joinCode);
       }
     },
@@ -83,13 +95,13 @@ export function WelcomeParticipantPanel({
   );
 
   const resolveAndJoin = useCallback(
-    async (code) => {
+    async (code, proof = activeOpenProof) => {
       const normalized = normalizeRoomIdInput(code);
       if (!normalized) return;
       setResolveError("");
       setIsResolving(true);
       try {
-        const resolved = await resolveJoinCode(normalized);
+        const resolved = await resolveJoinCode(normalized, { openProof: proof });
         joinWithResolved(resolved);
       } catch (joinError) {
         setResolveError(joinError.message);
@@ -97,7 +109,7 @@ export function WelcomeParticipantPanel({
         setIsResolving(false);
       }
     },
-    [joinWithResolved],
+    [activeOpenProof, joinWithResolved],
   );
 
   useEffect(() => {
@@ -129,8 +141,8 @@ export function WelcomeParticipantPanel({
     if (!joinCode || resolvedJoinCodeRef.current === joinCode) return;
     resolvedJoinCodeRef.current = joinCode;
     setRoomIdInput(joinCode);
-    void resolveAndJoin(joinCode);
-  }, [joinCode, resolveAndJoin]);
+    void resolveAndJoin(joinCode, activeOpenProof);
+  }, [activeOpenProof, joinCode, resolveAndJoin]);
 
   useEffect(() => {
     if (

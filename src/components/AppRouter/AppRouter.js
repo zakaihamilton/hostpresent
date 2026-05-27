@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { MeetingView } from "@/components/MeetingView";
 import { WelcomeView } from "@/components/WelcomeView";
-import { APP_ROLE, APP_VIEW, useHashRouter } from "@/hooks/useHashRouter";
-import { useRouteToken } from "@/hooks/useRouteToken";
-import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/useRoomSession";
+import { APP_ROLE, APP_VIEW, useHashRouter } from "@/hooks/hashRouter";
+import { useRouteToken } from "@/hooks/routeToken";
+import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
 
 function ParticipantMeetingGuard({
   joinCode,
@@ -51,6 +51,7 @@ export function AppRouter() {
     role,
     token: routeToken,
     joinCode,
+    openProof,
     navigate,
     navigateJoinCode,
     navigateParticipantWelcome,
@@ -109,6 +110,7 @@ export function AppRouter() {
       role={welcomeRole}
       token={routeToken}
       joinCode={joinCode}
+      openProof={openProof}
       navigate={navigate}
       navigateJoinCode={navigateJoinCode}
       navigateParticipantWelcome={navigateParticipantWelcome}

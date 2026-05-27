@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { APP_ROLE, APP_VIEW } from "@/hooks/useHashRouter";
-import { useRoomSession, useRoomSettings } from "@/hooks/useRoomSession";
+import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
+import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
@@ -29,6 +29,7 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
   const { getSavedRoom, persistRoom, markHostRoomUsed } = useRoomSettings();
   const [hostToken, setHostToken] = useState(null);
   const [joinCode, setJoinCode] = useState(routeJoinCode ?? null);
+  const [openProof, setOpenProof] = useState(null);
   const [copyMessage, setCopyMessage] = useState("");
   const [initializing, setInitializing] = useState(true);
   const [isActionPending, setIsActionPending] = useState(false);
@@ -43,6 +44,7 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     (room) => {
       setHostToken(room.hostToken);
       setJoinCode(room.joinCode ?? null);
+      setOpenProof(room.openProof ?? null);
       markHostRoomUsed(room.hostToken);
       refreshRecentRooms();
     },
@@ -54,6 +56,12 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     token: hostToken,
     enabled: Boolean(hostToken),
   });
+
+  useEffect(() => {
+    if (roomState?.openProof) {
+      setOpenProof(roomState.openProof);
+    }
+  }, [roomState?.openProof]);
 
   useEffect(() => {
     if (!roomState?.joinCode) return;
@@ -163,7 +171,7 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
   }, [applyRoom, joinCode, routeJoinCode]);
 
   const formattedRoomId = joinCode ? formatJoinCode(joinCode) : "";
-  const inviteLink = joinCode ? buildParticipantInviteLink(joinCode) : "";
+  const inviteLink = joinCode ? buildParticipantInviteLink(joinCode, openProof) : "";
 
   const handleCopyRoomId = async () => {
     if (!formattedRoomId) return;
@@ -221,7 +229,18 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     refreshRecentRooms();
     setIsActionPending(true);
     try {
-      await openRoom(hostToken);
+      const opened = await openRoom(hostToken);
+      if (opened.openProof) {
+        setOpenProof(opened.openProof);
+        const saved = getRoomByHostToken(hostToken);
+        persistRoom({
+          roomId: opened.roomId,
+          hostToken,
+          participantToken: saved?.participantToken ?? null,
+          joinCode: opened.joinCode ?? joinCode,
+          openProof: opened.openProof,
+        });
+      }
       navigate({
         view: APP_VIEW.MEETING,
         role: APP_ROLE.HOST,
@@ -250,7 +269,8 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     <div className={shared.welcomePanel}>
       <p className={shared.helpText}>
         Share the invite link with participants. Open the room when you are
-        ready to start.
+        ready to start. After opening, copy the updated invite link so
+        participants can join immediately.
       </p>
 
       <RecentRoomsTrigger

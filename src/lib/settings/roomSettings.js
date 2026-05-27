@@ -58,6 +58,7 @@ export function saveRoom(settings) {
     hostToken: settings.hostToken,
     participantToken: settings.participantToken,
     joinCode: settings.joinCode ?? null,
+    openProof: settings.openProof ?? null,
     createdAt: settings.createdAt ?? now,
     lastUsedAt: now,
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { APP_ROLE } from "@/hooks/useHashRouter";
+import { APP_ROLE } from "@/hooks/hashRouter";
 import { resolveJoinCode } from "@/lib/room/inviteLink";
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { getParticipantRoomByJoinCode } from "@/lib/settings/participantRoomSettings";

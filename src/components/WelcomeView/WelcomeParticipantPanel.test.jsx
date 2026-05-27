@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WelcomeParticipantPanel } from "./WelcomeParticipantPanel";
 
-jest.mock("@/hooks/useRoomSession", () => ({
+jest.mock("@/hooks/roomSession", () => ({
   ROOM_SESSION_STATUS: {
     IDLE: "idle",
     LOADING: "loading",

@@ -9,46 +9,7 @@ function getMemoryStore() {
   return store;
 }
 
-async function getKvClient() {
-  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
-    return null;
-  }
-
-  try {
-    const { kv } = await import("@vercel/kv");
-    if (typeof kv?.incr !== "function") {
-      return null;
-    }
-    return kv;
-  } catch {
-    return null;
-  }
-}
-
-function rateLimitKey(key) {
-  return `ratelimit:${key}`;
-}
-
 async function incrementCounter(key, windowMs) {
-  const ttlSeconds = Math.max(1, Math.ceil(windowMs / 1000));
-  const kv = await getKvClient();
-
-  if (kv) {
-    try {
-      const storageKey = rateLimitKey(key);
-      const count = await kv.incr(storageKey);
-      if (count === 1) {
-        await kv.expire(storageKey, ttlSeconds);
-      }
-      const ttl = await kv.ttl(storageKey);
-      const retryAfterMs =
-        typeof ttl === "number" && ttl > 0 ? ttl * 1000 : windowMs;
-      return { count, retryAfterMs };
-    } catch (error) {
-      console.warn("[rate limit] KV increment failed, using memory", error);
-    }
-  }
-
   const store = getMemoryStore();
   const now = Date.now();
   const existing = store.get(key);

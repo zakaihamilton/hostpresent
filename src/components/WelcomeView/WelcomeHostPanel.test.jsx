@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { APP_ROLE, APP_VIEW } from "@/hooks/useHashRouter";
+import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 
 const createdRoom = {
@@ -9,7 +9,7 @@ const createdRoom = {
   joinCode: "ABCDEFGH",
 };
 
-jest.mock("@/hooks/useRoomSession", () => ({
+jest.mock("@/hooks/roomSession", () => ({
   ROOM_SESSION_STATUS: {
     IDLE: "idle",
     LOADING: "loading",

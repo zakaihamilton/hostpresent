@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { APP_ROLE } from "@/hooks/useHashRouter";
+import { APP_ROLE } from "@/hooks/hashRouter";
 import { WelcomeView } from "./WelcomeView";
 
 jest.mock("./SecurityNotice", () => ({

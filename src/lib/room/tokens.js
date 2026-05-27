@@ -1,6 +1,9 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { normalizeJoinCode } from "./joinCodeFormat.js";
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const OPEN_PROOF_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
 export const ROOM_ROLE = {
   HOST: "host",
   PARTICIPANT: "participant",
@@ -8,7 +11,7 @@ export const ROOM_ROLE = {
 
 const DEV_FALLBACK_SECRET = "hostpresent-dev-signing-secret";
 
-function getSigningSecret() {
+export function getSigningSecret() {
   return process.env.ROOM_SIGNING_SECRET || DEV_FALLBACK_SECRET;
 }
 
@@ -34,20 +37,7 @@ function signPayload(payload) {
   return createHmac("sha256", secret).update(payload).digest();
 }
 
-export function createRoomId() {
-  return randomUUID();
-}
-
-export function signRoomToken({ roomId, role }) {
-  const iat = Date.now();
-  const exp = iat + TOKEN_TTL_MS;
-  const payload = JSON.stringify({ roomId, role, iat, exp });
-  const payloadPart = toBase64Url(payload);
-  const signaturePart = toBase64Url(signPayload(payloadPart));
-  return `${payloadPart}.${signaturePart}`;
-}
-
-export function verifyRoomToken(token) {
+function verifySignedPayload(token) {
   if (!token || typeof token !== "string" || !token.includes(".")) {
     return null;
   }
@@ -66,35 +56,100 @@ export function verifyRoomToken(token) {
   }
 
   try {
-    const payload = JSON.parse(fromBase64Url(payloadPart).toString("utf8"));
-    if (
-      !payload?.roomId ||
-      (payload.role !== ROOM_ROLE.HOST &&
-        payload.role !== ROOM_ROLE.PARTICIPANT) ||
-      typeof payload.exp !== "number" ||
-      payload.exp < Date.now()
-    ) {
-      return null;
-    }
-
-    return {
-      roomId: payload.roomId,
-      role: payload.role,
-      iat: payload.iat,
-      exp: payload.exp,
-    };
+    return JSON.parse(fromBase64Url(payloadPart).toString("utf8"));
   } catch {
     return null;
   }
 }
 
-export function createRoomTokens(roomId) {
+export function signRoomToken({ roomId, role, joinCode = null }) {
+  const iat = Date.now();
+  const exp = iat + TOKEN_TTL_MS;
+  const payload = {
+    roomId,
+    role,
+    iat,
+    exp,
+    ...(joinCode ? { joinCode: normalizeJoinCode(joinCode) } : {}),
+  };
+  const payloadPart = toBase64Url(JSON.stringify(payload));
+  const signaturePart = toBase64Url(signPayload(payloadPart));
+  return `${payloadPart}.${signaturePart}`;
+}
+
+export function verifyRoomToken(token) {
+  const payload = verifySignedPayload(token);
+  if (
+    !payload?.roomId ||
+    (payload.role !== ROOM_ROLE.HOST &&
+      payload.role !== ROOM_ROLE.PARTICIPANT) ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    return null;
+  }
+
+  return {
+    roomId: payload.roomId,
+    role: payload.role,
+    iat: payload.iat,
+    exp: payload.exp,
+    joinCode: payload.joinCode ?? null,
+  };
+}
+
+export function signRoomOpenProof({ roomId, joinCode, openedAt }) {
+  const iat = openedAt ?? Date.now();
+  const exp = iat + OPEN_PROOF_TTL_MS;
+  const payload = {
+    type: "room_open",
+    roomId,
+    joinCode: normalizeJoinCode(joinCode),
+    openedAt: iat,
+    exp,
+  };
+  const payloadPart = toBase64Url(JSON.stringify(payload));
+  const signaturePart = toBase64Url(signPayload(payloadPart));
+  return `${payloadPart}.${signaturePart}`;
+}
+
+export function verifyRoomOpenProof(proof, { roomId, joinCode } = {}) {
+  const payload = verifySignedPayload(proof);
+  if (
+    payload?.type !== "room_open" ||
+    !payload.roomId ||
+    !payload.joinCode ||
+    typeof payload.openedAt !== "number" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    return null;
+  }
+
+  if (roomId && payload.roomId !== roomId) {
+    return null;
+  }
+
+  const normalizedJoinCode = normalizeJoinCode(joinCode ?? payload.joinCode);
+  if (payload.joinCode !== normalizedJoinCode) {
+    return null;
+  }
+
+  return {
+    roomId: payload.roomId,
+    joinCode: payload.joinCode,
+    openedAt: payload.openedAt,
+  };
+}
+
+export function createRoomTokens(roomId, joinCode = null) {
   return {
     roomId,
-    hostToken: signRoomToken({ roomId, role: ROOM_ROLE.HOST }),
+    hostToken: signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode }),
     participantToken: signRoomToken({
       roomId,
       role: ROOM_ROLE.PARTICIPANT,
+      joinCode,
     }),
   };
 }

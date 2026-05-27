@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Icons";
-import { APP_ROLE, APP_VIEW } from "@/hooks/useHashRouter";
+import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { SecurityNotice } from "./SecurityNotice";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 import { WelcomeParticipantPanel } from "./WelcomeParticipantPanel";
@@ -12,6 +12,7 @@ export function WelcomeView({
   role,
   token,
   joinCode,
+  openProof,
   navigate,
   navigateJoinCode,
   navigateParticipantWelcome,
@@ -77,6 +78,7 @@ export function WelcomeView({
             : <WelcomeParticipantPanel
                 token={token}
                 joinCode={joinCode}
+                openProof={openProof}
                 navigate={navigate}
                 navigateJoinCode={navigateJoinCode}
                 navigateParticipantWelcome={navigateParticipantWelcome}

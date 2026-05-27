@@ -1,8 +1,16 @@
 import { createJoinCode, normalizeJoinCode } from "./joinCode.js";
 import { publishToRoom } from "./pubsub.js";
-import { ROOM_ROLE, signRoomToken } from "./tokens.js";
+import {
+  ROOM_ROLE,
+  signRoomOpenProof,
+  signRoomToken,
+  verifyRoomOpenProof,
+  verifyRoomToken,
+} from "./tokens.js";
+import { deriveRoomIdFromJoinCode } from "./roomIdentity.js";
 
 const GLOBAL_STORE_KEY = "__hostpresentRoomStore";
+
 export const ROOM_STATUS = {
   WAITING: "waiting",
   OPEN: "open",
@@ -23,163 +31,220 @@ function getMemoryStore() {
   return store;
 }
 
-function roomKey(roomId) {
-  return `room:${roomId}`;
-}
-
-function joinCodeKey(joinCode) {
-  return `join:${joinCode}`;
-}
-
-async function getKvClient() {
-  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
-    return null;
-  }
-
-  try {
-    const { kv } = await import("@vercel/kv");
-    if (typeof kv?.get !== "function" || typeof kv?.set !== "function") {
-      return null;
-    }
-    return kv;
-  } catch (error) {
-    console.warn("[room store] KV client unavailable, using memory", error);
-    return null;
-  }
-}
-
-async function readRoom(roomId) {
-  const kv = await getKvClient();
-  if (kv) {
-    try {
-      const room = await kv.get(roomKey(roomId));
-      if (room) return room;
-    } catch (error) {
-      console.warn("[room store] KV read failed, using memory", error);
+function resolveRoomStatus({ roomId, joinCode, openProof }) {
+  if (openProof) {
+    const verified = verifyRoomOpenProof(openProof, { roomId, joinCode });
+    if (verified) {
+      return {
+        status: ROOM_STATUS.OPEN,
+        openedAt: verified.openedAt,
+      };
     }
   }
-  return getMemoryStore().rooms.get(roomId) ?? null;
+
+  const memory = getMemoryStore().rooms.get(roomId);
+  if (memory?.status === ROOM_STATUS.OPEN) {
+    return {
+      status: ROOM_STATUS.OPEN,
+      openedAt: memory.openedAt ?? null,
+    };
+  }
+
+  return {
+    status: ROOM_STATUS.WAITING,
+    openedAt: null,
+  };
 }
 
-async function writeRoom(roomId, room) {
+function buildRoomRecord({ roomId, joinCode, status, openedAt, createdAt }) {
+  const normalizedJoinCode = normalizeJoinCode(joinCode);
+  const hostToken = signRoomToken({
+    roomId,
+    role: ROOM_ROLE.HOST,
+    joinCode: normalizedJoinCode,
+  });
+  const participantToken = signRoomToken({
+    roomId,
+    role: ROOM_ROLE.PARTICIPANT,
+    joinCode: normalizedJoinCode,
+  });
+
+  return {
+    roomId,
+    joinCode: normalizedJoinCode,
+    hostToken,
+    participantToken,
+    status,
+    openedAt,
+    createdAt,
+  };
+}
+
+function rememberRoom(room) {
   const store = getMemoryStore();
-  const canonicalJoinCode = room.joinCode
-    ? normalizeJoinCode(room.joinCode)
-    : null;
-  const nextRoom = canonicalJoinCode
-    ? { ...room, joinCode: canonicalJoinCode }
-    : room;
-
-  store.rooms.set(roomId, nextRoom);
-  if (canonicalJoinCode) {
-    store.joinCodes.set(canonicalJoinCode, roomId);
+  store.rooms.set(room.roomId, room);
+  if (room.joinCode) {
+    store.joinCodes.set(room.joinCode, room.roomId);
   }
-
-  const kv = await getKvClient();
-  if (!kv) return;
-
-  try {
-    await kv.set(roomKey(roomId), nextRoom);
-    if (canonicalJoinCode) {
-      await kv.set(joinCodeKey(canonicalJoinCode), roomId);
-    }
-  } catch (error) {
-    console.warn("[room store] KV write failed, kept in memory only", error);
-  }
-}
-
-async function readRoomIdByJoinCode(joinCode) {
-  const canonical = normalizeJoinCode(joinCode);
-  if (!canonical) return null;
-
-  const kv = await getKvClient();
-  if (kv) {
-    try {
-      const roomId = await kv.get(joinCodeKey(canonical));
-      if (roomId) return roomId;
-    } catch (error) {
-      console.warn(
-        "[room store] KV join-code lookup failed, using memory",
-        error,
-      );
-    }
-  }
-  return getMemoryStore().joinCodes.get(canonical) ?? null;
-}
-
-async function ensureJoinCode(room) {
-  if (room.joinCode) return room;
-
-  const joinCode = createJoinCode();
-  const nextRoom = { ...room, joinCode };
-  await writeRoom(room.roomId, nextRoom);
-  return nextRoom;
 }
 
 export async function createRoomRecord({
   roomId,
+  joinCode,
   hostToken,
   participantToken,
 }) {
-  const joinCode = createJoinCode();
   const room = {
     roomId,
+    joinCode: normalizeJoinCode(joinCode),
     hostToken,
     participantToken,
-    joinCode,
     status: ROOM_STATUS.WAITING,
     createdAt: Date.now(),
     openedAt: null,
   };
-  await writeRoom(roomId, room);
+  rememberRoom(room);
   return room;
 }
 
-export async function getRoomById(roomId) {
-  const room = await readRoom(roomId);
-  if (!room) return null;
-  return ensureJoinCode(room);
+export async function getRoomById(roomId, { openProof = null, joinCode = null } = {}) {
+  const memory = getMemoryStore().rooms.get(roomId);
+  const resolvedJoinCode = joinCode ?? memory?.joinCode ?? null;
+  const { status, openedAt } = resolveRoomStatus({
+    roomId,
+    joinCode: resolvedJoinCode,
+    openProof,
+  });
+
+  if (memory) {
+    return {
+      ...memory,
+      status,
+      openedAt: status === ROOM_STATUS.OPEN ? openedAt ?? memory.openedAt : null,
+    };
+  }
+
+  if (!resolvedJoinCode) {
+    return null;
+  }
+
+  return buildRoomRecord({
+    roomId,
+    joinCode: resolvedJoinCode,
+    status,
+    openedAt,
+    createdAt: null,
+  });
 }
 
 export async function restoreRoomFromToken({ roomId, role, token }) {
+  const verified = verifyRoomToken(token);
+  const joinCode = verified?.joinCode ?? null;
+
+  if (joinCode) {
+    const derivedRoomId = deriveRoomIdFromJoinCode(joinCode);
+    if (derivedRoomId === roomId) {
+      const memory = getMemoryStore().rooms.get(roomId);
+      if (memory) return memory;
+
+      return buildRoomRecord({
+        roomId,
+        joinCode,
+        status: ROOM_STATUS.WAITING,
+        openedAt: null,
+        createdAt: Date.now(),
+      });
+    }
+  }
+
   const room = {
     roomId,
+    joinCode,
     hostToken:
       role === ROOM_ROLE.HOST
         ? token
-        : signRoomToken({ roomId, role: ROOM_ROLE.HOST }),
+        : signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode }),
     participantToken:
       role === ROOM_ROLE.PARTICIPANT
         ? token
-        : signRoomToken({ roomId, role: ROOM_ROLE.PARTICIPANT }),
-    joinCode: createJoinCode(),
+        : signRoomToken({ roomId, role: ROOM_ROLE.PARTICIPANT, joinCode }),
     status: ROOM_STATUS.WAITING,
     createdAt: Date.now(),
     openedAt: null,
   };
-  await writeRoom(roomId, room);
+  rememberRoom(room);
   return room;
 }
 
-export async function getRoomByJoinCode(joinCode) {
-  const roomId = await readRoomIdByJoinCode(joinCode);
-  if (!roomId) return null;
-  return getRoomById(roomId);
+export async function getRoomByJoinCode(joinCode, { openProof = null } = {}) {
+  const normalized = normalizeJoinCode(joinCode);
+  if (!normalized) return null;
+
+  const roomId = deriveRoomIdFromJoinCode(normalized);
+  const { status, openedAt } = resolveRoomStatus({
+    roomId,
+    joinCode: normalized,
+    openProof,
+  });
+
+  const memory = getMemoryStore().rooms.get(roomId);
+  if (memory) {
+    return {
+      ...memory,
+      status,
+      openedAt: status === ROOM_STATUS.OPEN ? openedAt ?? memory.openedAt : null,
+    };
+  }
+
+  return buildRoomRecord({
+    roomId,
+    joinCode: normalized,
+    status,
+    openedAt,
+    createdAt: null,
+  });
 }
 
-export async function openRoom(roomId) {
-  const room = await readRoom(roomId);
-  if (!room) return null;
+export async function openRoom(roomId, { joinCode = null } = {}) {
+  const memory = getMemoryStore().rooms.get(roomId);
+  const normalizedJoinCode = normalizeJoinCode(
+    joinCode ?? memory?.joinCode ?? "",
+  );
+  const openedAt = Date.now();
 
-  const withCode = await ensureJoinCode(room);
   const nextRoom = {
-    ...withCode,
+    ...(memory ?? {
+      roomId,
+      joinCode: normalizedJoinCode || null,
+      hostToken: signRoomToken({
+        roomId,
+        role: ROOM_ROLE.HOST,
+        joinCode: normalizedJoinCode || null,
+      }),
+      participantToken: signRoomToken({
+        roomId,
+        role: ROOM_ROLE.PARTICIPANT,
+        joinCode: normalizedJoinCode || null,
+      }),
+      createdAt: openedAt,
+    }),
     status: ROOM_STATUS.OPEN,
-    openedAt: Date.now(),
+    openedAt,
+    joinCode: normalizedJoinCode || memory?.joinCode || null,
   };
-  await writeRoom(roomId, nextRoom);
+
+  rememberRoom(nextRoom);
   publishToRoom(roomId, { type: "room_opened", roomId });
-  return nextRoom;
+
+  const openProof =
+    nextRoom.joinCode &&
+    signRoomOpenProof({
+      roomId,
+      joinCode: nextRoom.joinCode,
+      openedAt,
+    });
+
+  return { ...nextRoom, openProof: openProof ?? null };
 }
 
 export async function relayRoomMessage(roomId, message) {

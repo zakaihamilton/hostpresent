@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { AppRouter } from "./AppRouter";
-import { APP_ROLE, APP_VIEW } from "@/hooks/useHashRouter";
+import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 
 jest.mock("@/components/WelcomeView", () => ({
   WelcomeView: () => <div data-testid="welcome-view">Welcome</div>,
@@ -12,17 +12,17 @@ jest.mock("@/components/MeetingView", () => ({
   ),
 }));
 
-jest.mock("@/hooks/useHashRouter", () => ({
+jest.mock("@/hooks/hashRouter", () => ({
   APP_ROLE: { HOST: "host", PARTICIPANT: "participant" },
   APP_VIEW: { WELCOME: "welcome", MEETING: "meeting", JOIN: "join" },
   useHashRouter: jest.fn(),
 }));
 
-jest.mock("@/hooks/useRouteToken", () => ({
+jest.mock("@/hooks/routeToken", () => ({
   useRouteToken: jest.fn(() => ({ token: null, loading: false })),
 }));
 
-jest.mock("@/hooks/useRoomSession", () => ({
+jest.mock("@/hooks/roomSession", () => ({
   ROOM_SESSION_STATUS: {
     IDLE: "idle",
     LOADING: "loading",
@@ -35,7 +35,7 @@ jest.mock("@/hooks/useRoomSession", () => ({
 
 describe("AppRouter", () => {
   it("renders welcome view", async () => {
-    const { useHashRouter } = await import("@/hooks/useHashRouter");
+    const { useHashRouter } = await import("@/hooks/hashRouter");
     useHashRouter.mockReturnValue({
       ready: true,
       view: APP_VIEW.WELCOME,
@@ -52,8 +52,8 @@ describe("AppRouter", () => {
   });
 
   it("renders meeting view for host", async () => {
-    const { useHashRouter } = await import("@/hooks/useHashRouter");
-    const { useRouteToken } = await import("@/hooks/useRouteToken");
+    const { useHashRouter } = await import("@/hooks/hashRouter");
+    const { useRouteToken } = await import("@/hooks/routeToken");
 
     useHashRouter.mockReturnValue({
       ready: true,

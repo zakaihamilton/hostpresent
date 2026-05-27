@@ -1,11 +1,11 @@
-export { useConfirmDialog } from "./useConfirmDialog.js";
-export { APP_ROLE, APP_VIEW, useHashRouter } from "./useHashRouter.js";
-export { useHostControls } from "./useHostControls.js";
+export { useConfirmDialog } from "./confirmDialog.js";
+export { APP_ROLE, APP_VIEW, useHashRouter } from "./hashRouter.js";
+export { useHostControls } from "./hostControls.js";
 export {
   ROOM_SESSION_STATUS,
   useRoomSession,
   useRoomSettings,
-} from "./useRoomSession.js";
-export { useRouteToken } from "./useRouteToken.js";
-export { useSessionTimers } from "./useSessionTimers.js";
-export { useSignaling } from "./useSignaling.js";
+} from "./roomSession.js";
+export { useRouteToken } from "./routeToken.js";
+export { useSessionTimers } from "./sessionTimers.js";
+export { useSignaling } from "./signaling.js";
