@@ -116,6 +116,57 @@ export function ChevronDown({ size = 20 }) {
   );
 }
 
+export function ArrowLeft({ size = 20 }) {
+  return (
+    <Icon title="Back" size={size}>
+      <path d="m12 19-7-7 7-7" />
+      <path d="M19 12H5" />
+    </Icon>
+  );
+}
+
+export function Link({ size = 20 }) {
+  return (
+    <Icon title="Link" size={size}>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </Icon>
+  );
+}
+
+export function X({ size = 20 }) {
+  return (
+    <Icon title="Close" size={size}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Icon>
+  );
+}
+
+export function Sun({ size = 20 }) {
+  return (
+    <Icon title="Light mode" size={size}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </Icon>
+  );
+}
+
+export function Moon({ size = 20 }) {
+  return (
+    <Icon title="Dark mode" size={size}>
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </Icon>
+  );
+}
+
 export function ShareAudio() {
   return (
     <Icon title="Share screen audio">

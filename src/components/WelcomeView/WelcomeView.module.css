@@ -1,9 +1,13 @@
 .page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: max(1rem, env(safe-area-inset-top, 0))
+    max(1rem, env(safe-area-inset-right, 0))
+    max(1rem, env(safe-area-inset-bottom, 0))
+    max(1rem, env(safe-area-inset-left, 0));
   background: var(--bg-main);
 }
 
@@ -14,6 +18,35 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   padding: 1.75rem;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 1.25rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .panel {
+    min-height: 16rem;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .page {
+    align-items: flex-start;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0));
+  }
+
+  .card {
+    padding: 1rem 1.25rem;
+  }
+
+  .panel {
+    min-height: 12rem;
+  }
 }
 
 .header {

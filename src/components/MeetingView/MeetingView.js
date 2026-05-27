@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { X } from "@/components/Icons";
 import { Header } from "@/components/Header";
 import { MeetingJoinError } from "@/components/MeetingJoinError";
 import { MeetingLoading } from "@/components/MeetingLoading";
@@ -10,6 +11,7 @@ import { ParticipantsSidebar } from "@/components/ParticipantsSidebar";
 import { PrimaryView } from "@/components/PrimaryView";
 import { RecordingDownloadBanner } from "@/components/RecordingDownloadBanner";
 import { Toolbar } from "@/components/Toolbar";
+import { Tooltip } from "@/components/Tooltip";
 import { VideoGallery } from "@/components/VideoGallery";
 import {
   useConfirmDialog,
@@ -59,6 +61,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       : "";
 
   const [hostStream, setHostStream] = useState(null);
+  const [inviteBarVisible, setInviteBarVisible] = useState(true);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
 
   const [localStream, setLocalStream] = useState(null);
@@ -73,7 +76,6 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [shareScreenAudio, setShareScreenAudio] = useState(true);
   const [downloadState, setDownloadState] = useState(null);
-  const [timeString, setTimeString] = useState("--:--");
   const [audioList, setAudioList] = useState([]);
   const [timersEnabled, setTimersEnabled] = useState(false);
 
@@ -206,6 +208,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
   const downloadDismissTimerRef = useRef(null);
+  const inviteCopyTimerRef = useRef(null);
 
   const isScreenAudioShared = Boolean(
     screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
@@ -220,16 +223,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   }, [screenStream]);
 
   useEffect(() => {
-    const formatTime = () =>
-      new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-    setTimeString(formatTime());
     setTimersEnabled(true);
-
-    const timer = setInterval(() => setTimeString(formatTime()), 1000);
 
     const initLocalMedia = async () => {
       try {
@@ -245,9 +239,11 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     initLocalMedia();
 
     return () => {
-      clearInterval(timer);
       if (downloadDismissTimerRef.current) {
         clearTimeout(downloadDismissTimerRef.current);
+      }
+      if (inviteCopyTimerRef.current) {
+        clearTimeout(inviteCopyTimerRef.current);
       }
       if (localStreamRef.current) {
         for (const track of localStreamRef.current.getTracks()) {
@@ -493,14 +489,32 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const handleCopyInviteLink = async () => {
     if (!inviteLink) return;
+
+    if (inviteCopyTimerRef.current) {
+      clearTimeout(inviteCopyTimerRef.current);
+    }
+
     try {
       await navigator.clipboard.writeText(inviteLink);
       setInviteCopyMessage("Invite link copied");
-      setTimeout(() => setInviteCopyMessage(""), 2500);
     } catch {
       setInviteCopyMessage("Could not copy invite link");
     }
+
+    inviteCopyTimerRef.current = setTimeout(() => {
+      setInviteCopyMessage("");
+      inviteCopyTimerRef.current = null;
+    }, 2500);
   };
+
+  const inviteCopyButtonLabel = inviteCopyMessage || "Copy link";
+  const shareButtonClassName = [
+    styles.shareButton,
+    inviteCopyMessage === "Invite link copied" && styles.shareButtonSuccess,
+    inviteCopyMessage === "Could not copy invite link" && styles.shareButtonError,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
     return <MeetingLoading message="Loading room…" />;
@@ -552,7 +566,6 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       )}
 
       <Header
-        timeString={timeString}
         meetingDurationSeconds={meetingSeconds}
         roomId={formattedRoomId || null}
         isRecording={isRecording}
@@ -560,6 +573,11 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         recordingDurationSeconds={recordingSeconds}
         onBack={onBack}
         backLabel={isHost ? "Back to welcome" : "Back to join screen"}
+        onShowInviteLink={
+          isHost && inviteLink && !inviteBarVisible
+            ? () => setInviteBarVisible(true)
+            : null
+        }
       />
 
       {!isHost && !hostPresent && roomConnection.connectionError
@@ -597,11 +615,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           </div>
         : null}
 
-      {isHost && inviteLink
+      {isHost && inviteLink && inviteBarVisible
         ? <div className={styles.shareBar}>
-            <p className={styles.shareLabel}>
-              Share this invite link for participants on other devices:
-            </p>
             <div className={styles.shareRow}>
               <input
                 className={styles.shareInput}
@@ -611,15 +626,23 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
               />
               <button
                 type="button"
-                className={styles.shareButton}
+                className={shareButtonClassName}
                 onClick={handleCopyInviteLink}
+                aria-live="polite"
               >
-                Copy link
+                {inviteCopyButtonLabel}
               </button>
+              <Tooltip text="Hide invite link" placement="top">
+                <button
+                  type="button"
+                  className={styles.shareDismiss}
+                  onClick={() => setInviteBarVisible(false)}
+                  aria-label="Hide invite link"
+                >
+                  <X size={18} />
+                </button>
+              </Tooltip>
             </div>
-            {inviteCopyMessage
-              ? <p className={styles.shareFeedback}>{inviteCopyMessage}</p>
-              : null}
           </div>
         : null}
 

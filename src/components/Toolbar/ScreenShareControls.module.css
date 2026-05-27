@@ -75,16 +75,14 @@
 }
 
 .menu {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 0.5rem);
+  position: fixed;
   width: min(18rem, calc(100vw - 2rem));
   padding: 0.875rem;
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  z-index: 40;
+  z-index: 1000;
 }
 
 .menuHeading {

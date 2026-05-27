@@ -3,10 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { Header } from "./Header";
 
 describe("Header", () => {
-  it("renders logo, clock, and meeting duration", () => {
+  it("renders logo and meeting duration", () => {
     render(
       <Header
-        timeString="10:30"
         meetingDurationSeconds={125}
         isRecording={false}
         isRecordingPaused={false}
@@ -15,14 +14,12 @@ describe("Header", () => {
     );
 
     expect(screen.getByText("Host Present")).toBeInTheDocument();
-    expect(screen.getByText("10:30")).toBeInTheDocument();
     expect(screen.getByText("02:05")).toBeInTheDocument();
   });
 
   it("shows recording badge when recording", () => {
     render(
       <Header
-        timeString="10:30"
         meetingDurationSeconds={0}
         isRecording
         isRecordingPaused={false}
@@ -40,7 +37,6 @@ describe("Header", () => {
 
     render(
       <Header
-        timeString="10:30"
         meetingDurationSeconds={0}
         isRecording={false}
         isRecordingPaused={false}
@@ -52,5 +48,23 @@ describe("Header", () => {
 
     await user.click(screen.getByRole("button", { name: "Leave" }));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows invite link button when onShowInviteLink is provided", async () => {
+    const user = userEvent.setup();
+    const onShowInviteLink = jest.fn();
+
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+        onShowInviteLink={onShowInviteLink}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Show invite link" }));
+    expect(onShowInviteLink).toHaveBeenCalledTimes(1);
   });
 });

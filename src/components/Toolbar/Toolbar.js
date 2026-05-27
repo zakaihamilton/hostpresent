@@ -43,6 +43,7 @@ export function Toolbar({
 }) {
   return (
     <footer className={styles.toolbar}>
+      <div className={styles.toolbarInner}>
       <div className={styles.controlGroup}>
         <Tooltip text={isAudioMuted ? "Unmute Microphone" : "Mute Microphone"}>
           <button
@@ -150,6 +151,7 @@ export function Toolbar({
                 </>}
           </div>
         : null}
+      </div>
     </footer>
   );
 }

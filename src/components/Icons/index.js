@@ -1,9 +1,12 @@
 export {
+  ArrowLeft,
   ChevronDown,
   Gallery,
+  Link,
   Logo,
   Mic,
   MicOff,
+  Moon,
   Pause,
   Play,
   Record,
@@ -11,7 +14,9 @@ export {
   ShareAudio,
   ShareAudioOff,
   Stop,
+  Sun,
   Users,
   Video,
   VideoOff,
+  X,
 } from "./Icons.js";

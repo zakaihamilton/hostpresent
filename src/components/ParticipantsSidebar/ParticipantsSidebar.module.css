@@ -119,15 +119,25 @@
     right: 0;
     bottom: 0;
     z-index: 25;
-    width: min(100vw, 320px);
+    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
   }
 
   .slotClosed {
-    width: min(100vw, 320px);
+    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
     pointer-events: none;
   }
 
   .sidebar {
-    width: min(100vw, 320px);
+    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+@media (max-width: 480px) {
+  .slot,
+  .slotClosed,
+  .sidebar {
+    width: min(100vw, 100%);
   }
 }

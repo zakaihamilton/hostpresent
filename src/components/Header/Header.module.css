@@ -28,19 +28,63 @@
 }
 
 .backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-hover);
   color: var(--text-main);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  padding: 0.45rem 0.75rem;
   cursor: pointer;
-  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .backButton:hover {
   background: var(--btn-hover);
+}
+
+.backButton:active {
+  transform: scale(0.97);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.iconButton:hover {
+  background: var(--btn-hover);
+}
+
+.iconButton:active {
+  transform: scale(0.97);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .logo {
@@ -187,7 +231,21 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
+  .header {
+    padding: 0 max(0.75rem, env(safe-area-inset-right, 0)) 0
+      max(0.75rem, env(safe-area-inset-left, 0));
+    height: 52px;
+  }
+
+  .leading {
+    gap: 0.5rem;
+  }
+
+  .logoText {
+    display: none;
+  }
+
   .statLabel {
     display: none;
   }
@@ -197,22 +255,27 @@
     padding: 0.35rem 0.55rem;
   }
 
-  .logoText {
-    display: none;
-  }
-
-  .header {
-    padding: 0 0.75rem;
-    height: 52px;
-  }
-
-  .backButton {
-    padding: 0.4rem 0.55rem;
-    font-size: 0.75rem;
+  .statRoom .statValue {
+    max-width: 4.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .meta {
     gap: 0.35rem;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  .backButton {
+    width: 42px;
+    height: 42px;
+  }
+
+  .iconButton {
+    width: 42px;
+    height: 42px;
   }
 
   .recordingBadge {
@@ -222,5 +285,48 @@
 
   .recordingTime {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .statRoom .statValue {
+    max-width: 3.25rem;
+  }
+
+  .recordingLabel {
+    display: none;
+  }
+
+  .recordingBadge {
+    padding: 0.35rem;
+    gap: 0;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .header {
+    height: 48px;
+  }
+
+  .backButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .iconButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .stat {
+    padding: 0.25rem 0.45rem;
+  }
+
+  .statValue {
+    font-size: 0.8125rem;
+  }
+
+  .recordingBadge {
+    padding: 0.3rem 0.45rem;
   }
 }

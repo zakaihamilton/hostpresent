@@ -40,6 +40,29 @@
   }
 }
 
+@media (max-width: 480px) {
+  .wrapper {
+    max-height: 112px;
+  }
+
+  .gallery {
+    height: 100px;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .wrapper {
+    max-height: 88px;
+    flex-shrink: 0;
+  }
+
+  .gallery {
+    height: 80px;
+    gap: 0.45rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wrapper {
     transition: none;

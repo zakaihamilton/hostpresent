@@ -33,7 +33,11 @@ export function PrimaryView({
         </output>
       )}
 
-      {stream && <VideoPlayer stream={stream} isMuted={isMuted} />}
+      {stream && (
+        <div className={styles.media}>
+          <VideoPlayer stream={stream} isMuted={isMuted} />
+        </div>
+      )}
       <div className={styles.overlay}>{label}</div>
     </div>
   );

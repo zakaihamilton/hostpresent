@@ -1,4 +1,5 @@
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { themeInitScript } from "@/lib/settings/themeScript";
 import "./globals.css";
 
 export const metadata = {
@@ -17,7 +18,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         {children}
         <ServiceWorkerRegistration />
