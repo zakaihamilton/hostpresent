@@ -5,13 +5,13 @@ import {
   Pause,
   Play,
   Record,
-  ScreenShare,
   Stop,
   Users,
   Video,
   VideoOff,
 } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
+import { ScreenShareControls } from "./ScreenShareControls";
 import styles from "./Toolbar.module.css";
 
 function btnClass(...classes) {
@@ -22,6 +22,8 @@ export function Toolbar({
   isAudioMuted,
   isVideoMuted,
   screenStream,
+  shareScreenAudio,
+  isScreenAudioShared,
   isGalleryVisible,
   isSidebarVisible,
   isRecording,
@@ -29,6 +31,7 @@ export function Toolbar({
   onToggleAudio,
   onToggleVideo,
   onToggleScreenShare,
+  onShareScreenAudioChange,
   onToggleGallery,
   onToggleSidebar,
   onStartRecording,
@@ -60,16 +63,14 @@ export function Toolbar({
         </Tooltip>
       </div>
 
-      <div className={styles.controlGroup}>
-        <Tooltip text={screenStream ? "Stop Screen Sharing" : "Share Screen"}>
-          <button
-            type="button"
-            className={btnClass(screenStream && styles.btnActive)}
-            onClick={onToggleScreenShare}
-          >
-            <ScreenShare />
-          </button>
-        </Tooltip>
+      <div className={`${styles.controlGroup} ${styles.screenShareGroup}`}>
+        <ScreenShareControls
+          screenStream={screenStream}
+          shareScreenAudio={shareScreenAudio}
+          isScreenAudioShared={isScreenAudioShared}
+          onToggleScreenShare={onToggleScreenShare}
+          onShareScreenAudioChange={onShareScreenAudioChange}
+        />
       </div>
 
       <div className={styles.controlGroup}>

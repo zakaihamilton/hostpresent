@@ -17,14 +17,42 @@ function Icon({ title, size = 20, children }) {
   );
 }
 
-export function Logo() {
+export function Logo({ size = 28 }) {
   return (
-    <Icon title="Host Present logo" size={24}>
-      <path d="M2 12h20" />
-      <path d="M12 2v20" />
-      <path d="m4.93 4.93 14.14 14.14" />
-      <path d="m19.07 4.93-14.14 14.14" />
-    </Icon>
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
+      <title>Host Present logo</title>
+      <rect
+        x="5"
+        y="7"
+        width="22"
+        height="14"
+        rx="2.5"
+        fill="currentColor"
+        opacity="0.12"
+      />
+      <rect
+        x="5"
+        y="7"
+        width="22"
+        height="14"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path d="M14.5 11.5l5.5 3.25-5.5 3.25V11.5z" fill="currentColor" />
+      <path
+        d="M11 25h10"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M16 21v4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -76,6 +104,40 @@ export function ScreenShare() {
       <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
       <path d="M12 11v10" />
       <path d="m8 14 4-3 4 3" />
+    </Icon>
+  );
+}
+
+export function ChevronDown({ size = 20 }) {
+  return (
+    <Icon title="Open menu" size={size}>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  );
+}
+
+export function ShareAudio() {
+  return (
+    <Icon title="Share screen audio">
+      <path d="M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+      <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+      <path d="M12 11v10" />
+      <path d="m8 14 4-3 4 3" />
+      <path d="M18 9.5a4 4 0 0 1 0 5" />
+      <path d="M21 7a7.5 7.5 0 0 1 0 10" />
+    </Icon>
+  );
+}
+
+export function ShareAudioOff() {
+  return (
+    <Icon title="Screen audio off">
+      <path d="M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+      <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+      <path d="M12 11v10" />
+      <path d="m8 14 4-3 4 3" />
+      <line x1="18" x2="22" y1="8" y2="12" />
+      <line x1="22" x2="18" y1="8" y2="12" />
     </Icon>
   );
 }

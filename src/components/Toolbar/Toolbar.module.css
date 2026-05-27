@@ -119,3 +119,28 @@
   background: var(--warning);
   color: white;
 }
+
+.btnSuccess {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--success);
+  border-color: transparent;
+}
+
+.btnSuccess:hover {
+  background: var(--success);
+  color: white;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
+.btn:disabled:hover {
+  transform: none;
+}
+
+.screenShareGroup {
+  height: 44px;
+}

@@ -5,10 +5,11 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Header } from "@/components/Header";
 import { ParticipantsSidebar } from "@/components/ParticipantsSidebar";
 import { PrimaryView } from "@/components/PrimaryView";
+import { RecordingDownloadBanner } from "@/components/RecordingDownloadBanner";
 import { Toolbar } from "@/components/Toolbar";
 import { VideoGallery } from "@/components/VideoGallery";
 import { useSessionTimers } from "@/hooks/useSessionTimers";
-import { createMockScreenShareStream, createMockStream } from "@/lib/mockMedia";
+import { createMockStream } from "@/lib/mockMedia";
 import { generateMockParticipants } from "@/lib/mockParticipants";
 import styles from "./PresentApp.module.css";
 
@@ -24,8 +25,10 @@ export function PresentApp() {
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
 
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
-  const [isGalleryVisible, setIsGalleryVisible] = useState(true);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+  const [shareScreenAudio, setShareScreenAudio] = useState(true);
+  const [downloadState, setDownloadState] = useState(null);
 
   const [timeString, setTimeString] = useState("--:--");
   const [audioList, setAudioList] = useState([]);
@@ -41,6 +44,11 @@ export function PresentApp() {
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
   const localStreamRef = useRef(null);
+  const downloadDismissTimerRef = useRef(null);
+
+  const isScreenAudioShared = Boolean(
+    screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
+  );
 
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -98,6 +106,9 @@ export function PresentApp() {
 
     return () => {
       clearInterval(timer);
+      if (downloadDismissTimerRef.current) {
+        clearTimeout(downloadDismissTimerRef.current);
+      }
       if (localStreamRef.current) {
         for (const track of localStreamRef.current.getTracks()) {
           track.stop();
@@ -134,7 +145,14 @@ export function PresentApp() {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: true,
+          audio: shareScreenAudio
+            ? {
+                suppressLocalAudioPlayback: false,
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false,
+              }
+            : false,
         });
 
         stream.getVideoTracks()[0].onended = () => {
@@ -143,19 +161,88 @@ export function PresentApp() {
 
         setScreenStream(stream);
         setErrorMsg("");
+
+        if (shareScreenAudio && stream.getAudioTracks().length === 0) {
+          setErrorMsg(
+            "Screen shared without audio. Enable “Share tab audio” in the browser picker, or turn on Share Audio before sharing.",
+          );
+        }
       } catch (err) {
-        console.warn(
-          "Screen sharing restricted. Falling back to mock stream.",
-          err,
-        );
-        const mockStream = createMockScreenShareStream();
-        setScreenStream(mockStream);
-        setErrorMsg(
-          "Screen sharing is restricted in this embedded view. Using a mock screen share for demonstration. Export the code to use real screen sharing.",
-        );
+        console.warn("Screen sharing failed:", err);
+        if (err?.name === "NotAllowedError") {
+          setErrorMsg(
+            "Screen sharing was cancelled or denied. Allow screen capture and try again.",
+          );
+        } else {
+          setErrorMsg(
+            "Could not start screen sharing. Check browser permissions and try again.",
+          );
+        }
       }
     }
   };
+
+  const setShareScreenAudioPreference = (includeAudio) => {
+    setShareScreenAudio(includeAudio);
+  };
+
+  const dismissDownloadBanner = useCallback(() => {
+    if (downloadDismissTimerRef.current) {
+      clearTimeout(downloadDismissTimerRef.current);
+      downloadDismissTimerRef.current = null;
+    }
+    setDownloadState(null);
+  }, []);
+
+  const updateDownloadProgress = useCallback((phase, progress, filename) => {
+    setDownloadState({ phase, progress, filename });
+  }, []);
+
+  const finalizeRecordingDownload = useCallback(async () => {
+    const filename = `Host-Present-Meeting-${new Date().toISOString().slice(0, 10)}.mp4`;
+    const chunks = recordingChunksRef.current;
+    const chunkCount = chunks.length;
+
+    updateDownloadProgress("building", 15, filename);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    let processed = 0;
+    for (let index = 0; index < chunkCount; index += 1) {
+      processed += 1;
+      const progress =
+        15 + Math.round((processed / Math.max(chunkCount, 1)) * 55);
+      updateDownloadProgress("building", progress, filename);
+      if (index % 4 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    const blob = new Blob(chunks, { type: "video/mp4" });
+    updateDownloadProgress("saving", 85, filename);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.style.display = "none";
+    anchor.href = url;
+    anchor.download = filename;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+
+    setTimeout(() => {
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+
+    recordingChunksRef.current = [];
+    updateDownloadProgress("complete", 100, filename);
+
+    downloadDismissTimerRef.current = setTimeout(() => {
+      setDownloadState(null);
+      downloadDismissTimerRef.current = null;
+    }, 5000);
+  }, [updateDownloadProgress]);
 
   const startRecording = useCallback(() => {
     if (!localStream) return;
@@ -164,9 +251,13 @@ export function PresentApp() {
       ? screenStream.getVideoTracks()[0]
       : localStream.getVideoTracks()[0];
     const hostAudioTrack = localStream.getAudioTracks()[0];
+    const screenAudioTracks = screenStream?.getAudioTracks() ?? [];
 
     const tracksToRecord = [];
     if (activeVideoTrack) tracksToRecord.push(activeVideoTrack);
+    for (const track of screenAudioTracks) {
+      if (track.readyState === "live") tracksToRecord.push(track);
+    }
     if (hostAudioTrack) tracksToRecord.push(hostAudioTrack);
 
     const compositeStream = new MediaStream(tracksToRecord);
@@ -197,29 +288,19 @@ export function PresentApp() {
     };
 
     recorder.onstop = () => {
-      const blob = new Blob(recordingChunksRef.current, { type: "video/mp4" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = `Host-Present-Meeting-${new Date().toISOString().slice(0, 10)}.mp4`;
-
-      document.body.appendChild(a);
-      a.click();
-
-      setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }, 100);
-
-      recordingChunksRef.current = [];
+      void finalizeRecordingDownload();
     };
 
     recorder.start(1000);
     resetRecordingTimer();
     setIsRecording(true);
     setIsRecordingPaused(false);
-  }, [localStream, screenStream, resetRecordingTimer]);
+  }, [
+    localStream,
+    screenStream,
+    resetRecordingTimer,
+    finalizeRecordingDownload,
+  ]);
 
   const pauseRecording = () => {
     if (
@@ -246,6 +327,7 @@ export function PresentApp() {
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state !== "inactive"
     ) {
+      updateDownloadProgress("preparing", 5);
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsRecordingPaused(false);
@@ -254,6 +336,11 @@ export function PresentApp() {
   };
 
   const activeMainStream = screenStream || localStream;
+  const primaryLabel = screenStream
+    ? isScreenAudioShared
+      ? "You are sharing your screen with audio"
+      : "You are sharing your screen"
+    : "You (Host)";
 
   return (
     <div className={styles.app}>
@@ -276,6 +363,11 @@ export function PresentApp() {
         <div className={styles.stage}>
           <ErrorBanner message={errorMsg} onDismiss={() => setErrorMsg("")} />
 
+          <RecordingDownloadBanner
+            downloadState={downloadState}
+            onDismiss={dismissDownloadBanner}
+          />
+
           <VideoGallery
             visible={isGalleryVisible}
             screenStream={screenStream}
@@ -286,7 +378,7 @@ export function PresentApp() {
 
           <PrimaryView
             stream={activeMainStream}
-            label={screenStream ? "You are sharing your screen" : "You (Host)"}
+            label={primaryLabel}
             isRecording={isRecording}
             isRecordingPaused={isRecordingPaused}
             recordingDurationSeconds={recordingSeconds}
@@ -306,6 +398,8 @@ export function PresentApp() {
         isAudioMuted={isAudioMuted}
         isVideoMuted={isVideoMuted}
         screenStream={screenStream}
+        shareScreenAudio={shareScreenAudio}
+        isScreenAudioShared={isScreenAudioShared}
         isGalleryVisible={isGalleryVisible}
         isSidebarVisible={isSidebarVisible}
         isRecording={isRecording}
@@ -313,6 +407,7 @@ export function PresentApp() {
         onToggleAudio={toggleAudio}
         onToggleVideo={toggleVideo}
         onToggleScreenShare={toggleScreenShare}
+        onShareScreenAudioChange={setShareScreenAudioPreference}
         onToggleGallery={() => setIsGalleryVisible(!isGalleryVisible)}
         onToggleSidebar={() => setIsSidebarVisible(!isSidebarVisible)}
         onStartRecording={startRecording}

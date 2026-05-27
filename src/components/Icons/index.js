@@ -1,4 +1,5 @@
 export {
+  ChevronDown,
   Gallery,
   Logo,
   Mic,
@@ -7,6 +8,8 @@ export {
   Play,
   Record,
   ScreenShare,
+  ShareAudio,
+  ShareAudioOff,
   Stop,
   Users,
   Video,
