@@ -1,7 +1,7 @@
 import { getPeerJsConfigFromApi } from "./peerClient.js";
 
 export async function fetchPeerJsConfig() {
-  const response = await fetch("/api/rooms/config");
+  const response = await fetch("/api/rooms/config", { cache: "no-store" });
   if (!response.ok) {
     throw new Error("Could not load signaling configuration.");
   }

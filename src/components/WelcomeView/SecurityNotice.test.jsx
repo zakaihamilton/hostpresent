@@ -34,7 +34,9 @@ describe("SecurityNotice", () => {
     const { container } = render(<SecurityNotice />);
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith("/api/rooms/config");
+      expect(fetch).toHaveBeenCalledWith("/api/rooms/config", {
+        cache: "no-store",
+      });
     });
 
     expect(container).toBeEmptyDOMElement();

@@ -1,4 +1,4 @@
-const CACHE_NAME = "hostpresent-v1";
+const CACHE_NAME = "hostpresent-v2";
 const SHELL_URLS = ["/", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -25,6 +25,12 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   if (event.request.mode === "navigate") {
     event.respondWith(fetch(event.request).catch(() => caches.match("/")));
