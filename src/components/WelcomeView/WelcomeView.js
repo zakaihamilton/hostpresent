@@ -1,32 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Logo } from "@/components/Icons";
+import { GitHub, LinkedIn, Logo } from "@/components/Icons";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Tooltip } from "@/components/Tooltip";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { SecurityNotice } from "./SecurityNotice";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 import { WelcomeParticipantPanel } from "./WelcomeParticipantPanel";
 import styles from "./WelcomeView.module.css";
 
+const AUTHOR_GITHUB_URL = "https://github.com/zakaihamilton/hostpresent";
+const AUTHOR_LINKEDIN_URL = "https://www.linkedin.com/in/zakai-hamilton";
+
 export function WelcomeView({
   role,
   token,
   joinCode,
+  autoJoinFromRoute = false,
   navigate,
   navigateJoinCode,
   navigateParticipantWelcome,
 }) {
-  const [activeTab, setActiveTab] = useState(role);
-
-  useEffect(() => {
-    setActiveTab(role);
-  }, [role]);
-
   const switchTab = (nextRole) => {
-    setActiveTab(nextRole);
     navigate({
       view: APP_VIEW.WELCOME,
       role: nextRole,
+      token: null,
       joinCode: nextRole === APP_ROLE.HOST ? joinCode : null,
     });
   };
@@ -35,9 +34,12 @@ export function WelcomeView({
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <div className={styles.titleRow}>
-            <Logo size={32} />
-            <h1 className={styles.title}>Host Present</h1>
+          <div className={styles.headerTop}>
+            <div className={styles.titleRow}>
+              <Logo size={32} />
+              <h1 className={styles.title}>Host Present</h1>
+            </div>
+            <ThemeToggle className={styles.themeToggle} />
           </div>
           <p className={styles.subtitle}>
             Start a meeting as host or join as a participant.
@@ -50,8 +52,8 @@ export function WelcomeView({
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === APP_ROLE.HOST}
-            className={`${styles.tab} ${activeTab === APP_ROLE.HOST ? styles.tabActive : ""}`}
+            aria-selected={role === APP_ROLE.HOST}
+            className={`${styles.tab} ${role === APP_ROLE.HOST ? styles.tabActive : ""}`}
             onClick={() => switchTab(APP_ROLE.HOST)}
           >
             Host
@@ -59,8 +61,8 @@ export function WelcomeView({
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === APP_ROLE.PARTICIPANT}
-            className={`${styles.tab} ${activeTab === APP_ROLE.PARTICIPANT ? styles.tabActive : ""}`}
+            aria-selected={role === APP_ROLE.PARTICIPANT}
+            className={`${styles.tab} ${role === APP_ROLE.PARTICIPANT ? styles.tabActive : ""}`}
             onClick={() => switchTab(APP_ROLE.PARTICIPANT)}
           >
             Participant
@@ -68,7 +70,7 @@ export function WelcomeView({
         </div>
 
         <div className={styles.panel}>
-          {activeTab === APP_ROLE.HOST
+          {role === APP_ROLE.HOST
             ? <WelcomeHostPanel
                 joinCode={joinCode}
                 legacyToken={token}
@@ -77,11 +79,38 @@ export function WelcomeView({
             : <WelcomeParticipantPanel
                 token={token}
                 joinCode={joinCode}
+                autoJoinFromRoute={autoJoinFromRoute}
                 navigate={navigate}
                 navigateJoinCode={navigateJoinCode}
                 navigateParticipantWelcome={navigateParticipantWelcome}
               />}
         </div>
+
+        <footer className={styles.footer}>
+          <span className={styles.footerText}>Zakai Hamilton</span>
+          <Tooltip text="GitHub Repository" placement="top">
+            <a
+              href={AUTHOR_GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.githubLink}
+              aria-label="GitHub Repository"
+            >
+              <GitHub size={18} />
+            </a>
+          </Tooltip>
+          <Tooltip text="LinkedIn Profile" placement="top">
+            <a
+              href={AUTHOR_LINKEDIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.linkedinLink}
+              aria-label="LinkedIn Profile"
+            >
+              <LinkedIn size={18} />
+            </a>
+          </Tooltip>
+        </footer>
       </div>
     </div>
   );

@@ -113,6 +113,7 @@ export function AppRouter() {
       role={welcomeRole}
       token={routeToken}
       joinCode={joinCode}
+      autoJoinFromRoute={view === APP_VIEW.JOIN}
       navigate={navigate}
       navigateJoinCode={navigateJoinCode}
       navigateParticipantWelcome={navigateParticipantWelcome}

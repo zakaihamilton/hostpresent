@@ -31,14 +31,24 @@ describe("WelcomeView", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Host Present" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Switch to (light|dark) mode/ }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("host-panel")).toBeInTheDocument();
+    expect(screen.getByText("Zakai Hamilton")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "GitHub Repository" }),
+    ).toHaveAttribute("href", "https://github.com/zakaihamilton/hostpresent");
+    expect(
+      screen.getByRole("link", { name: "LinkedIn Profile" }),
+    ).toHaveAttribute("href", "https://www.linkedin.com/in/zakai-hamilton");
   });
 
-  it("switches to participant tab", async () => {
+  it("switches to participant tab via navigation", async () => {
     const user = userEvent.setup();
     const navigate = jest.fn();
 
-    render(
+    const { rerender } = render(
       <WelcomeView
         role={APP_ROLE.HOST}
         token={null}
@@ -50,11 +60,24 @@ describe("WelcomeView", () => {
     );
 
     await user.click(screen.getByRole("tab", { name: "Participant" }));
-    expect(screen.getByTestId("participant-panel")).toBeInTheDocument();
     expect(navigate).toHaveBeenCalledWith({
       view: "welcome",
       role: APP_ROLE.PARTICIPANT,
+      token: null,
       joinCode: null,
     });
+
+    rerender(
+      <WelcomeView
+        role={APP_ROLE.PARTICIPANT}
+        token={null}
+        joinCode={null}
+        navigate={navigate}
+        navigateJoinCode={() => {}}
+        navigateParticipantWelcome={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("participant-panel")).toBeInTheDocument();
   });
 });

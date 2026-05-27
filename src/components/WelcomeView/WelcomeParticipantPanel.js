@@ -47,6 +47,7 @@ function extractLegacyTokenFromInput(value) {
 export function WelcomeParticipantPanel({
   token,
   joinCode,
+  autoJoinFromRoute = false,
   navigate,
   navigateJoinCode,
   navigateParticipantWelcome,
@@ -129,11 +130,13 @@ export function WelcomeParticipantPanel({
   }, [joinCode]);
 
   useEffect(() => {
-    if (!joinCode || resolvedJoinCodeRef.current === joinCode) return;
+    if (!autoJoinFromRoute || !joinCode || resolvedJoinCodeRef.current === joinCode) {
+      return;
+    }
     resolvedJoinCodeRef.current = joinCode;
     setRoomIdInput(formatRoomIdInput(joinCode));
     void resolveAndJoin(joinCode);
-  }, [joinCode, resolveAndJoin]);
+  }, [autoJoinFromRoute, joinCode, resolveAndJoin]);
 
   const joinWithToken = (nextToken) => {
     if (!nextToken) return;

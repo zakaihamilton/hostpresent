@@ -60,11 +60,23 @@
   margin-bottom: 1.25rem;
 }
 
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.375rem;
+}
+
 .titleRow {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.375rem;
+  min-width: 0;
+}
+
+.themeToggle {
+  flex-shrink: 0;
 }
 
 .titleRow svg {
@@ -113,4 +125,58 @@
 
 .panel {
   min-height: 20rem;
+}
+
+.footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  color: var(--text-muted);
+}
+
+.footerText {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.githubLink,
+.linkedinLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.githubLink:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+  border-color: var(--border);
+  transform: translateY(-1px);
+}
+
+.linkedinLink:hover {
+  color: #0077b5;
+  background: rgb(0 119 181 / 8%);
+  border-color: rgb(0 119 181 / 20%);
+  transform: translateY(-1px);
+}
+
+.githubLink:focus-visible,
+.linkedinLink:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
