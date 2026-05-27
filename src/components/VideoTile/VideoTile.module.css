@@ -1,7 +1,7 @@
 .tile {
   width: 260px;
   background: var(--bg-panel);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) - 2px);
   overflow: hidden;
   position: relative;
   border: 2px solid var(--border);

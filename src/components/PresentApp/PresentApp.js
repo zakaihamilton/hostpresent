@@ -7,6 +7,7 @@ import { ParticipantsSidebar } from "@/components/ParticipantsSidebar";
 import { PrimaryView } from "@/components/PrimaryView";
 import { Toolbar } from "@/components/Toolbar";
 import { VideoGallery } from "@/components/VideoGallery";
+import { useSessionTimers } from "@/hooks/useSessionTimers";
 import { createMockScreenShareStream, createMockStream } from "@/lib/mockMedia";
 import { generateMockParticipants } from "@/lib/mockParticipants";
 import styles from "./PresentApp.module.css";
@@ -28,6 +29,14 @@ export function PresentApp() {
 
   const [timeString, setTimeString] = useState("--:--");
   const [audioList, setAudioList] = useState([]);
+  const [timersEnabled, setTimersEnabled] = useState(false);
+
+  const { meetingSeconds, recordingSeconds, resetRecordingTimer } =
+    useSessionTimers({
+      isRecording,
+      isRecordingPaused,
+      enabled: timersEnabled,
+    });
 
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
@@ -46,6 +55,7 @@ export function PresentApp() {
 
     setTimeString(formatTime());
     setAudioList(generateMockParticipants());
+    setTimersEnabled(true);
 
     const timer = setInterval(() => setTimeString(formatTime()), 1000);
 
@@ -206,9 +216,10 @@ export function PresentApp() {
     };
 
     recorder.start(1000);
+    resetRecordingTimer();
     setIsRecording(true);
     setIsRecordingPaused(false);
-  }, [localStream, screenStream]);
+  }, [localStream, screenStream, resetRecordingTimer]);
 
   const pauseRecording = () => {
     if (
@@ -238,6 +249,7 @@ export function PresentApp() {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsRecordingPaused(false);
+      resetRecordingTimer();
     }
   };
 
@@ -245,10 +257,19 @@ export function PresentApp() {
 
   return (
     <div className={styles.app}>
+      {isRecording && (
+        <div
+          className={`${styles.recordingBar} ${isRecordingPaused ? styles.recordingBarPaused : ""}`}
+          aria-hidden
+        />
+      )}
+
       <Header
         timeString={timeString}
+        meetingDurationSeconds={meetingSeconds}
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
+        recordingDurationSeconds={recordingSeconds}
       />
 
       <main className={styles.workspace}>
@@ -266,6 +287,9 @@ export function PresentApp() {
           <PrimaryView
             stream={activeMainStream}
             label={screenStream ? "You are sharing your screen" : "You (Host)"}
+            isRecording={isRecording}
+            isRecordingPaused={isRecordingPaused}
+            recordingDurationSeconds={recordingSeconds}
           />
         </div>
 

@@ -1,26 +1,27 @@
 :root {
-  --bg-main: #f3f4f6;
+  --bg-main: #eef1f6;
   --bg-panel: #ffffff;
-  --bg-hover: #f3f4f6;
-  --btn-hover: #e5e7eb;
-  --border: #e5e7eb;
+  --bg-hover: #f4f6f9;
+  --btn-hover: #e8ecf2;
+  --border: #dde3ec;
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
   --danger: #ef4444;
   --danger-hover: #dc2626;
   --warning: #f59e0b;
   --success: #10b981;
-  --text-main: #111827;
-  --text-muted: #6b7280;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --tooltip-bg: rgba(17, 24, 39, 0.85);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --tooltip-bg: rgba(15, 23, 42, 0.9);
   --tooltip-text: #ffffff;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.06);
   --shadow-md:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
   --shadow-lg:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    0 12px 24px -6px rgba(15, 23, 42, 0.12), 0 4px 8px -2px
+    rgba(15, 23, 42, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,10 +33,10 @@
     --border: #27272a;
     --text-main: #f9fafb;
     --text-muted: #a1a1aa;
-    --tooltip-bg: rgba(255, 255, 255, 0.9);
+    --tooltip-bg: rgba(255, 255, 255, 0.92);
     --tooltip-text: #09090b;
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 24px -6px rgba(0, 0, 0, 0.55);
   }
 
   html {
@@ -67,8 +68,8 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {

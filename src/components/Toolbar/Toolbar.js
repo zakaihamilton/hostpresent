@@ -98,7 +98,9 @@ export function Toolbar({
         </Tooltip>
       </div>
 
-      <div className={styles.controlGroup}>
+      <div
+        className={`${styles.controlGroup} ${styles.recordingGroup} ${isRecording ? styles.recordingGroupActive : ""} ${isRecordingPaused ? styles.recordingGroupPaused : ""}`}
+      >
         {!isRecording
           ? <Tooltip text="Start Local Recording">
               <button
