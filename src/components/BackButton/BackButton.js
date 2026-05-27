@@ -4,7 +4,7 @@ import styles from "./BackButton.module.css";
 
 export function BackButton({ label = "Back", onClick, className = "" }) {
   return (
-    <Tooltip text={label} placement="left">
+    <Tooltip text={label} placement="right">
       <button
         type="button"
         className={`${styles.button} ${className}`.trim()}

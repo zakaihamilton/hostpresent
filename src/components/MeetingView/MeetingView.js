@@ -22,6 +22,7 @@ import {
 import { useRoomSession, ROOM_SESSION_STATUS } from "@/hooks/roomSession";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { buildRecordingFilename } from "@/lib/recordingFilename";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   createHostAudioMutedMessage,
@@ -790,7 +791,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   }, []);
 
   const finalizeRecordingDownload = useCallback(async () => {
-    const filename = `Host-Present-Meeting-${new Date().toISOString().slice(0, 10)}.mp4`;
+    const filename = buildRecordingFilename();
     const chunks = recordingChunksRef.current;
     const chunkCount = chunks.length;
 

@@ -33,6 +33,20 @@ function computePosition(anchorRect, tooltipRect, placement) {
     return { top, left };
   }
 
+  if (placement === "right") {
+    const top = clamp(
+      anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2,
+      VIEWPORT_PADDING,
+      window.innerHeight - tooltipRect.height - VIEWPORT_PADDING,
+    );
+    const left = clamp(
+      anchorRect.right + GAP,
+      VIEWPORT_PADDING,
+      window.innerWidth - tooltipRect.width - VIEWPORT_PADDING,
+    );
+    return { top, left };
+  }
+
   const top = clamp(
     anchorRect.top - GAP - tooltipRect.height,
     VIEWPORT_PADDING,
