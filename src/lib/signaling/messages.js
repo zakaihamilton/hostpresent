@@ -1,5 +1,9 @@
 export const SIGNALING_MESSAGE = {
   HOST_PRESENT: "host_present",
+  HOST_AUDIO_MUTED: "host_audio_muted",
+  HOST_AUDIO_UNMUTED: "host_audio_unmuted",
+  HOST_VIDEO_MUTED: "host_video_muted",
+  HOST_VIDEO_UNMUTED: "host_video_unmuted",
   HOST_MUTE_AUDIO: "host_mute_audio",
   HOST_MUTE_VIDEO: "host_mute_video",
   HOST_MUTE_ALL_AUDIO: "host_mute_all_audio",
@@ -13,10 +17,44 @@ export const SIGNALING_MESSAGE = {
   PARTICIPANT_PROFILE_BROADCAST: "participant_profile_broadcast",
 };
 
-export function createHostPresentMessage({ displayName = "" } = {}) {
+export function createHostPresentMessage({
+  displayName = "",
+  audioMuted = false,
+  videoMuted = false,
+} = {}) {
   return {
     type: SIGNALING_MESSAGE.HOST_PRESENT,
     displayName: typeof displayName === "string" ? displayName.trim() : "",
+    audioMuted: Boolean(audioMuted),
+    videoMuted: Boolean(videoMuted),
+    timestamp: Date.now(),
+  };
+}
+
+export function createHostAudioMutedMessage() {
+  return {
+    type: SIGNALING_MESSAGE.HOST_AUDIO_MUTED,
+    timestamp: Date.now(),
+  };
+}
+
+export function createHostAudioUnmutedMessage() {
+  return {
+    type: SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED,
+    timestamp: Date.now(),
+  };
+}
+
+export function createHostVideoMutedMessage() {
+  return {
+    type: SIGNALING_MESSAGE.HOST_VIDEO_MUTED,
+    timestamp: Date.now(),
+  };
+}
+
+export function createHostVideoUnmutedMessage() {
+  return {
+    type: SIGNALING_MESSAGE.HOST_VIDEO_UNMUTED,
     timestamp: Date.now(),
   };
 }

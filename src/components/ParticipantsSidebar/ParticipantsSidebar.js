@@ -26,6 +26,8 @@ function buildParticipantItems({
   isHost,
   isVideoMuted,
   isAudioMuted,
+  hostIsAudioMuted,
+  hostIsVideoMuted,
   localDisplayName,
   localParticipantMode,
   hostDisplayName,
@@ -45,9 +47,9 @@ function buildParticipantItems({
         name: resolveDisplayName(hostDisplayName),
         initial: displayNameInitial(hostDisplayName),
         avatarColor: "#6366f1",
-        isVideoMuted: false,
-        isAudioMuted: false,
-        hasVideo: false,
+        isVideoMuted: hostIsVideoMuted,
+        isAudioMuted: hostIsAudioMuted,
+        hasVideo: true,
       },
       {
         type: "self",
@@ -146,6 +148,8 @@ export function ParticipantsSidebar({
   videoParticipants,
   peerParticipants = [],
   hostDisplayName = "Host",
+  hostIsAudioMuted = false,
+  hostIsVideoMuted = false,
   isVideoMuted,
   isAudioMuted,
   isHost = true,
@@ -171,6 +175,8 @@ export function ParticipantsSidebar({
         isHost,
         isVideoMuted,
         isAudioMuted,
+        hostIsAudioMuted,
+        hostIsVideoMuted,
         localDisplayName,
         localParticipantMode,
         hostDisplayName,
@@ -181,6 +187,8 @@ export function ParticipantsSidebar({
     [
       audioList,
       hostDisplayName,
+      hostIsAudioMuted,
+      hostIsVideoMuted,
       isAudioMuted,
       isHost,
       isVideoMuted,
@@ -236,6 +244,32 @@ export function ParticipantsSidebar({
         <div className={styles.header}>
           <span>Participants</span>
           <div className={styles.headerActions}>
+            {hasRemoteParticipants ? (
+              <div className={styles.bulkActions}>
+                <Tooltip text="Turn off all cameras" placement="left">
+                  <button
+                    type="button"
+                    className={styles.bulkBtn}
+                    onClick={onMuteAllVideo}
+                    disabled={!canMuteAllVideo}
+                    aria-label="Turn off all cameras"
+                  >
+                    <VideoOff />
+                  </button>
+                </Tooltip>
+                <Tooltip text="Mute all participants" placement="left">
+                  <button
+                    type="button"
+                    className={styles.bulkBtn}
+                    onClick={onMuteAllAudio}
+                    disabled={!canMuteAllAudio}
+                    aria-label="Mute all participants"
+                  >
+                    <MicOff />
+                  </button>
+                </Tooltip>
+              </div>
+            ) : null}
             <span className={styles.count}>{totalCount}</span>
             {onClose
               ? <Tooltip text="Close participants" placement="left">
@@ -251,33 +285,6 @@ export function ParticipantsSidebar({
               : null}
           </div>
         </div>
-
-        {hasRemoteParticipants && (
-          <div className={styles.bulkActions}>
-            <Tooltip text="Turn off all cameras" placement="left">
-              <button
-                type="button"
-                className={styles.bulkBtn}
-                onClick={onMuteAllVideo}
-                disabled={!canMuteAllVideo}
-                aria-label="Turn off all cameras"
-              >
-                <VideoOff />
-              </button>
-            </Tooltip>
-            <Tooltip text="Mute all participants" placement="left">
-              <button
-                type="button"
-                className={styles.bulkBtn}
-                onClick={onMuteAllAudio}
-                disabled={!canMuteAllAudio}
-                aria-label="Mute all participants"
-              >
-                <MicOff />
-              </button>
-            </Tooltip>
-          </div>
-        )}
 
         <VirtualList
           className={styles.list}

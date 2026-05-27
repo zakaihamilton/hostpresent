@@ -1,5 +1,9 @@
 export {
   SIGNALING_MESSAGE,
+  createHostAudioMutedMessage,
+  createHostAudioUnmutedMessage,
+  createHostVideoMutedMessage,
+  createHostVideoUnmutedMessage,
   createHostMuteAllAudioMessage,
   createHostMuteAllVideoMessage,
   createHostMuteAudioMessage,

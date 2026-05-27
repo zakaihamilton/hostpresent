@@ -1,18 +1,25 @@
 .page {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: max(1rem, env(safe-area-inset-top, 0))
     max(1rem, env(safe-area-inset-right, 0))
     max(1rem, env(safe-area-inset-bottom, 0))
     max(1rem, env(safe-area-inset-left, 0));
   background: var(--bg-main);
+  box-sizing: border-box;
 }
 
 .card {
   width: min(100%, 560px);
+  flex-shrink: 0;
+  margin-block: auto;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -36,11 +43,11 @@
 
 @media (max-height: 500px) and (orientation: landscape) {
   .page {
-    align-items: flex-start;
     padding-top: max(0.75rem, env(safe-area-inset-top, 0));
   }
 
   .card {
+    margin-block: 0 auto;
     padding: 1rem 1.25rem;
   }
 

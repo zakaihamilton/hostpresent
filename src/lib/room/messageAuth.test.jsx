@@ -52,6 +52,31 @@ describe("messageAuth", () => {
     ).toBe(false);
   });
 
+  it("lets participants receive host media status broadcasts", () => {
+    expect(
+      canReceiveSignalingMessage({
+        isHost: false,
+        message: { type: SIGNALING_MESSAGE.HOST_AUDIO_MUTED },
+        senderId: "hp-room",
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(true);
+    expect(
+      canSendSignalingMessage({
+        isHost: true,
+        message: { type: SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED },
+        localParticipantId: "",
+      }),
+    ).toBe(true);
+    expect(
+      canSendSignalingMessage({
+        isHost: false,
+        message: { type: SIGNALING_MESSAGE.HOST_AUDIO_MUTED },
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(false);
+  });
+
   it("lets participants receive recording state broadcasts", () => {
     const message = {
       type: SIGNALING_MESSAGE.RECORDING_STATE,

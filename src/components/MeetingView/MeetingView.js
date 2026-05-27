@@ -24,8 +24,16 @@ import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
+  createHostAudioMutedMessage,
+  createHostAudioUnmutedMessage,
+  createHostVideoMutedMessage,
+  createHostVideoUnmutedMessage,
+  createParticipantAudioMutedMessage,
+  createParticipantAudioUnmutedMessage,
   createParticipantProfileBroadcastMessage,
   createParticipantProfileMessage,
+  createParticipantVideoMutedMessage,
+  createParticipantVideoUnmutedMessage,
   createRecordingStateMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
@@ -97,6 +105,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const [timersEnabled, setTimersEnabled] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState(() => loadDisplayName());
   const [hostDisplayName, setHostDisplayName] = useState("Host");
+  const [hostAudioMuted, setHostAudioMuted] = useState(false);
+  const [hostVideoMuted, setHostVideoMuted] = useState(false);
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
@@ -282,6 +292,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     roomId: roomState?.roomId ?? null,
     enabled: Boolean(token && roomState?.roomId),
     displayName: resolvedDisplayName,
+    hostAudioMuted: isHost ? isAudioMuted : false,
+    hostVideoMuted: isHost ? isVideoMuted : false,
     localStream,
     screenStream,
     onRemoteParticipant: isHost ? handleRemoteParticipant : undefined,
@@ -289,6 +301,36 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   });
 
   roomConnectionRef.current = roomConnection;
+
+  const publishParticipantMediaStatus = useCallback(
+    ({ audioMuted, videoMuted }) => {
+      const participantId = roomConnection.localParticipantId;
+      if (!participantId) return;
+
+      if (typeof audioMuted === "boolean") {
+        roomConnection.send(
+          audioMuted
+            ? createParticipantAudioMutedMessage({
+                participantId,
+                participantType: "video",
+              })
+            : createParticipantAudioUnmutedMessage({
+                participantId,
+                participantType: "video",
+              }),
+        );
+      }
+
+      if (typeof videoMuted === "boolean") {
+        roomConnection.send(
+          videoMuted
+            ? createParticipantVideoMutedMessage({ participantId })
+            : createParticipantVideoUnmutedMessage({ participantId }),
+        );
+      }
+    },
+    [roomConnection],
+  );
 
   const handleBack = useCallback(() => {
     roomConnection.disconnect();
@@ -317,11 +359,39 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     if (isHost) return undefined;
 
     return roomConnection.subscribe((message) => {
-      if (
-        message.type === SIGNALING_MESSAGE.HOST_PRESENT &&
-        message.displayName
-      ) {
+      if (message.type !== SIGNALING_MESSAGE.HOST_PRESENT) return;
+
+      if (message.displayName) {
         setHostDisplayName(resolveDisplayName(message.displayName));
+      }
+      if (typeof message.audioMuted === "boolean") {
+        setHostAudioMuted(message.audioMuted);
+      }
+      if (typeof message.videoMuted === "boolean") {
+        setHostVideoMuted(message.videoMuted);
+      }
+    });
+  }, [isHost, roomConnection]);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+
+    return roomConnection.subscribe((message) => {
+      switch (message.type) {
+        case SIGNALING_MESSAGE.HOST_AUDIO_MUTED:
+          setHostAudioMuted(true);
+          break;
+        case SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED:
+          setHostAudioMuted(false);
+          break;
+        case SIGNALING_MESSAGE.HOST_VIDEO_MUTED:
+          setHostVideoMuted(true);
+          break;
+        case SIGNALING_MESSAGE.HOST_VIDEO_UNMUTED:
+          setHostVideoMuted(false);
+          break;
+        default:
+          break;
       }
     });
   }, [isHost, roomConnection]);
@@ -355,6 +425,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             track.enabled = false;
           });
           setIsAudioMuted(true);
+          publishParticipantMediaStatus({ audioMuted: true });
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_VIDEO:
           if (message.participantId && message.participantId !== localId) return;
@@ -362,18 +433,21 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             track.enabled = false;
           });
           setIsVideoMuted(true);
+          publishParticipantMediaStatus({ videoMuted: true });
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO:
           localStream?.getAudioTracks().forEach((track) => {
             track.enabled = false;
           });
           setIsAudioMuted(true);
+          publishParticipantMediaStatus({ audioMuted: true });
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO:
           localStream?.getVideoTracks().forEach((track) => {
             track.enabled = false;
           });
           setIsVideoMuted(true);
+          publishParticipantMediaStatus({ videoMuted: true });
           break;
         case SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST:
           if (message.participantId === localId) return;
@@ -383,7 +457,14 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           break;
       }
     });
-  }, [handlePeerProfileBroadcast, isHost, localStream, resetRecordingTimer, roomConnection]);
+  }, [
+    handlePeerProfileBroadcast,
+    isHost,
+    localStream,
+    publishParticipantMediaStatus,
+    resetRecordingTimer,
+    roomConnection,
+  ]);
 
   useEffect(() => {
     if (isHost || !roomConnection.localParticipantId) return;
@@ -530,21 +611,45 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   }, []);
 
   const toggleAudio = () => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-      });
-      setIsAudioMuted(!localStream.getAudioTracks()[0].enabled);
+    if (!localStream) return;
+
+    localStream.getAudioTracks().forEach((track) => {
+      track.enabled = !track.enabled;
+    });
+    const nextMuted = !localStream.getAudioTracks()[0]?.enabled;
+    setIsAudioMuted(nextMuted);
+
+    if (isHost) {
+      roomConnection.send(
+        nextMuted
+          ? createHostAudioMutedMessage()
+          : createHostAudioUnmutedMessage(),
+      );
+      return;
     }
+
+    publishParticipantMediaStatus({ audioMuted: nextMuted });
   };
 
   const toggleVideo = () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-      });
-      setIsVideoMuted(!localStream.getVideoTracks()[0].enabled);
+    if (!localStream) return;
+
+    localStream.getVideoTracks().forEach((track) => {
+      track.enabled = !track.enabled;
+    });
+    const nextMuted = !localStream.getVideoTracks()[0]?.enabled;
+    setIsVideoMuted(nextMuted);
+
+    if (isHost) {
+      roomConnection.send(
+        nextMuted
+          ? createHostVideoMutedMessage()
+          : createHostVideoUnmutedMessage(),
+      );
+      return;
     }
+
+    publishParticipantMediaStatus({ videoMuted: nextMuted });
   };
 
   const toggleScreenShare = async () => {
@@ -939,6 +1044,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             stream={primaryStream}
             label={primaryLabel}
             isMuted={primaryMuted}
+            isAudioMuted={viewingHostStream ? hostAudioMuted : false}
+            isVideoMuted={viewingHostStream ? hostVideoMuted : false}
             isRecording={isRecording}
             isRecordingPaused={isRecordingPaused}
             recordingDurationSeconds={recordingSeconds}
@@ -951,6 +1058,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           videoParticipants={videoParticipants}
           peerParticipants={peerParticipants}
           hostDisplayName={hostDisplayName}
+          hostIsAudioMuted={hostAudioMuted}
+          hostIsVideoMuted={hostVideoMuted}
           isVideoMuted={isVideoMuted}
           isAudioMuted={isAudioMuted}
           isHost={isHost}

@@ -73,18 +73,16 @@
 
 .bulkActions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 0.35rem;
-  padding: 0 0.75rem 0.75rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .bulkBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-hover);

@@ -1,3 +1,4 @@
+import { MicOff, VideoOff } from "@/components/Icons";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./PrimaryView.module.css";
@@ -9,6 +10,8 @@ export function PrimaryView({
   isRecordingPaused,
   recordingDurationSeconds,
   isMuted = true,
+  isAudioMuted = false,
+  isVideoMuted = false,
 }) {
   return (
     <div
@@ -38,7 +41,11 @@ export function PrimaryView({
           <VideoPlayer stream={stream} isMuted={isMuted} />
         </div>
       )}
-      <div className={styles.overlay}>{label}</div>
+      <div className={styles.overlay}>
+        {isAudioMuted ? <MicOff aria-hidden /> : null}
+        {isVideoMuted ? <VideoOff aria-hidden /> : null}
+        {label}
+      </div>
     </div>
   );
 }

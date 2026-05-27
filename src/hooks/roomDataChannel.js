@@ -55,6 +55,8 @@ export function useRoomDataChannel({
   roomId,
   enabled = true,
   displayName = "",
+  hostAudioMuted = false,
+  hostVideoMuted = false,
   localStream = null,
   screenStream = null,
   onRemoteParticipant,
@@ -86,11 +88,29 @@ export function useRoomDataChannel({
   const localParticipantIdRef = useRef("");
   const teardownPeerRef = useRef(() => {});
   const displayNameRef = useRef("");
+  const hostAudioMutedRef = useRef(false);
+  const hostVideoMutedRef = useRef(false);
 
   useEffect(() => {
     displayNameRef.current =
       typeof displayName === "string" ? displayName.trim() : "";
   }, [displayName]);
+
+  useEffect(() => {
+    if (!isHost) return;
+    hostAudioMutedRef.current = Boolean(hostAudioMuted);
+    hostVideoMutedRef.current = Boolean(hostVideoMuted);
+  }, [hostAudioMuted, hostVideoMuted, isHost]);
+
+  const createHostPresencePayload = useCallback(
+    () =>
+      createHostPresentMessage({
+        displayName: displayNameRef.current,
+        audioMuted: hostAudioMutedRef.current,
+        videoMuted: hostVideoMutedRef.current,
+      }),
+    [],
+  );
 
   const updateConnectedState = useCallback((delta) => {
     openCountRef.current = Math.max(0, openCountRef.current + delta);
@@ -260,10 +280,7 @@ export function useRoomDataChannel({
       conn.on("open", () => {
         updateConnectedState(1);
         if (isHost) {
-          sendOnConnection(
-            conn,
-            createHostPresentMessage({ displayName: displayNameRef.current }),
-          );
+          sendOnConnection(conn, createHostPresencePayload());
           onRemoteParticipant?.({ id: remoteId, name: remoteName });
           placeOutgoingMediaCall(remoteId);
         }
@@ -298,7 +315,14 @@ export function useRoomDataChannel({
         }
       });
     },
-    [isHost, notifyHandlers, onRemoteParticipant, placeOutgoingMediaCall, updateConnectedState],
+    [
+      createHostPresencePayload,
+      isHost,
+      notifyHandlers,
+      onRemoteParticipant,
+      placeOutgoingMediaCall,
+      updateConnectedState,
+    ],
   );
 
   const send = useCallback(
@@ -657,8 +681,7 @@ export function useRoomDataChannel({
   useEffect(() => {
     if (!enabled || !isHost || !token) return undefined;
 
-    const announce = () =>
-      send(createHostPresentMessage({ displayName: displayNameRef.current }));
+    const announce = () => send(createHostPresencePayload());
     announce();
     hostPresentTimerRef.current = setInterval(
       announce,
@@ -670,7 +693,7 @@ export function useRoomDataChannel({
         clearInterval(hostPresentTimerRef.current);
       }
     };
-  }, [displayName, enabled, isHost, send, token]);
+  }, [createHostPresencePayload, enabled, isHost, send, token]);
 
   const status = connectionError && !isConnected
     ? "error"
