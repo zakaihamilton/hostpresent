@@ -1,0 +1,55 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.groupCompact {
+  gap: 0.35rem;
+}
+
+.option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.groupCompact .option {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.55rem;
+}
+
+.option:hover {
+  background: var(--btn-hover);
+}
+
+.optionActive {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.45);
+  color: var(--primary);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .groupCompact {
+    width: 100%;
+  }
+
+  .groupCompact .option {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

@@ -8,6 +8,7 @@ export function VideoGallery({
   localStream,
   participants,
   isAudioMuted,
+  localDisplayName = "You",
 }) {
   return (
     <div
@@ -19,7 +20,7 @@ export function VideoGallery({
           {screenStream && localStream && (
             <VideoTile
               stream={localStream}
-              name="You"
+              name={localDisplayName}
               overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
               isSpeaking
             />

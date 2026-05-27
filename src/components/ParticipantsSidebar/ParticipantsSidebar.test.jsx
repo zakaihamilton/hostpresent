@@ -31,7 +31,7 @@ describe("ParticipantsSidebar", () => {
 
     expect(screen.getByText("Participants")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("You (Host)")).toBeInTheDocument();
+    expect(screen.getByText("Guest")).toBeInTheDocument();
     expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 

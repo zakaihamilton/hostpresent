@@ -14,12 +14,18 @@ import {
 import {
   connectionRetryDelayMs,
   hostPeerId,
+  HOST_ID_RETRY_DELAY_MS,
+  hostSignalingRetryExhaustedError,
+  hostSignalingTimeoutError,
   isRetryablePeerError,
   isWaitingForHostMessage,
   loadPeer,
   MAX_SIGNALING_RETRIES,
+  participantSignalingRetryExhaustedError,
+  participantSignalingTimeoutError,
   peerErrorMessage,
   SIGNALING_CONNECT_TIMEOUT_MS,
+  SIGNALING_ERROR,
 } from "@/lib/webrtc/peerClient";
 import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
 import {
@@ -28,8 +34,7 @@ import {
   syncOutboundTracks,
 } from "@/lib/webrtc/outboundMedia";
 
-const SIGNALING_NOT_CONFIGURED_ERROR =
-  "Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.";
+const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
@@ -49,6 +54,7 @@ export function useRoomDataChannel({
   token,
   roomId,
   enabled = true,
+  displayName = "",
   localStream = null,
   screenStream = null,
   onRemoteParticipant,
@@ -75,8 +81,16 @@ export function useRoomDataChannel({
   const signalingOpenRef = useRef(false);
   const retryTimerRef = useRef(null);
   const connectRetryTimerRef = useRef(null);
+  const connectTimeoutRef = useRef(null);
   const retryAttemptRef = useRef(0);
   const localParticipantIdRef = useRef("");
+  const teardownPeerRef = useRef(() => {});
+  const displayNameRef = useRef("");
+
+  useEffect(() => {
+    displayNameRef.current =
+      typeof displayName === "string" ? displayName.trim() : "";
+  }, [displayName]);
 
   const updateConnectedState = useCallback((delta) => {
     openCountRef.current = Math.max(0, openCountRef.current + delta);
@@ -112,6 +126,56 @@ export function useRoomDataChannel({
       connectRetryTimerRef.current = null;
     }
   }, []);
+
+  const clearConnectTimeout = useCallback(() => {
+    if (connectTimeoutRef.current) {
+      window.clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleConnectTimeout = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    clearConnectTimeout();
+    connectTimeoutRef.current = window.setTimeout(() => {
+      if (signalingOpenRef.current) {
+        if (isHost) return;
+        setConnectionError((previous) => {
+          if (isWaitingForHostMessage(previous)) return previous;
+          if (openCountRef.current > 0) return null;
+          return previous ?? "Waiting for the host to join…";
+        });
+        return;
+      }
+
+      if (openCountRef.current > 0) return;
+      if (retryTimerRef.current || connectRetryTimerRef.current) return;
+
+      setConnectionError((previous) => {
+        if (isWaitingForHostMessage(previous)) return previous;
+        return isHost
+          ? hostSignalingTimeoutError()
+          : participantSignalingTimeoutError();
+      });
+    }, SIGNALING_CONNECT_TIMEOUT_MS);
+  }, [clearConnectTimeout, isHost]);
+
+  const disconnect = useCallback(() => {
+    clearRetryTimer();
+    clearConnectRetryTimer();
+    clearConnectTimeout();
+    if (hostPresentTimerRef.current) {
+      clearInterval(hostPresentTimerRef.current);
+      hostPresentTimerRef.current = null;
+    }
+    teardownPeerRef.current();
+    retryAttemptRef.current = 0;
+    setConnectionError(null);
+    setIsConnected(false);
+    setHostPresent(isHost);
+    setLocalParticipantId("");
+  }, [clearConnectRetryTimer, clearConnectTimeout, clearRetryTimer, isHost]);
 
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -196,7 +260,10 @@ export function useRoomDataChannel({
       conn.on("open", () => {
         updateConnectedState(1);
         if (isHost) {
-          sendOnConnection(conn, createHostPresentMessage());
+          sendOnConnection(
+            conn,
+            createHostPresentMessage({ displayName: displayNameRef.current }),
+          );
           onRemoteParticipant?.({ id: remoteId, name: remoteName });
           placeOutgoingMediaCall(remoteId);
         }
@@ -270,6 +337,27 @@ export function useRoomDataChannel({
     [isHost],
   );
 
+  const sendToParticipant = useCallback(
+    (participantId, message) => {
+      if (!isHost || !participantId || !isSignalingMessage(message)) {
+        return false;
+      }
+      if (
+        !canSendSignalingMessage({
+          isHost,
+          message,
+          localParticipantId: localParticipantIdRef.current,
+        })
+      ) {
+        return false;
+      }
+
+      const conn = connectionsRef.current.get(participantId);
+      return sendOnConnection(conn, message);
+    },
+    [isHost],
+  );
+
   const schedulePeerRetry = useCallback(
     (restart) => {
       if (!peerConfigRef.current) return;
@@ -277,8 +365,8 @@ export function useRoomDataChannel({
       if (retryAttemptRef.current >= MAX_SIGNALING_RETRIES) {
         setConnectionError(
           isHost
-            ? "Unable to connect to the signaling server. Verify SIGNALING_SERVER_URL is set on the server and that your PeerJS server is running."
-            : "Could not connect to the meeting. Make sure the host has joined and the signaling server is reachable.",
+            ? hostSignalingRetryExhaustedError()
+            : participantSignalingRetryExhaustedError(),
         );
         return;
       }
@@ -289,8 +377,9 @@ export function useRoomDataChannel({
       retryTimerRef.current = window.setTimeout(() => {
         restart();
       }, delay);
+      scheduleConnectTimeout();
     },
-    [clearRetryTimer, isHost],
+    [clearRetryTimer, isHost, scheduleConnectTimeout],
   );
 
   useEffect(() => {
@@ -314,7 +403,7 @@ export function useRoomDataChannel({
       })
       .catch(() => {
         if (cancelled) return;
-        setConnectionError("Could not load signaling configuration.");
+        setConnectionError(SIGNALING_ERROR.CONFIG_LOAD_FAILED);
         setConfigReady(true);
       });
 
@@ -352,11 +441,13 @@ export function useRoomDataChannel({
       localParticipantIdRef.current = "";
       destroyOutboundAudioMixer();
     };
+    teardownPeerRef.current = teardownPeer;
 
     const startHostPeer = (Peer) => {
       if (destroyed) return;
 
       teardownPeer();
+      scheduleConnectTimeout();
       const options = peerConfigRef.current ?? peerConfig;
       const peer = new Peer(hostPeerId(roomId), options);
       peerRef.current = peer;
@@ -364,6 +455,7 @@ export function useRoomDataChannel({
       peer.on("open", () => {
         if (destroyed) return;
         signalingOpenRef.current = true;
+        clearConnectTimeout();
         setConnectionError(null);
         retryAttemptRef.current = 0;
       });
@@ -399,7 +491,17 @@ export function useRoomDataChannel({
         console.warn("[peer] host error", error);
 
         if (error?.type === "unavailable-id") {
-          schedulePeerRetry(() => startHostPeer(Peer));
+          setConnectionError(SIGNALING_ERROR.HOST_ID_RECONNECTING);
+          clearRetryTimer();
+          retryAttemptRef.current += 1;
+          if (retryAttemptRef.current >= MAX_SIGNALING_RETRIES) {
+            setConnectionError(hostSignalingRetryExhaustedError());
+            return;
+          }
+          retryTimerRef.current = window.setTimeout(() => {
+            startHostPeer(Peer);
+          }, HOST_ID_RETRY_DELAY_MS);
+          scheduleConnectTimeout();
           return;
         }
 
@@ -417,6 +519,7 @@ export function useRoomDataChannel({
       if (destroyed) return;
 
       teardownPeer();
+      scheduleConnectTimeout();
       const options = peerConfigRef.current ?? peerConfig;
       const peer = new Peer(undefined, options);
       peerRef.current = peer;
@@ -466,6 +569,7 @@ export function useRoomDataChannel({
       peer.on("open", (id) => {
         if (destroyed) return;
         signalingOpenRef.current = true;
+        clearConnectTimeout();
         localParticipantIdRef.current = id;
         setLocalParticipantId(id);
         setConnectionError(null);
@@ -510,57 +614,51 @@ export function useRoomDataChannel({
       destroyed = true;
       clearRetryTimer();
       clearConnectRetryTimer();
+      clearConnectTimeout();
       if (hostPresentTimerRef.current) {
         clearInterval(hostPresentTimerRef.current);
+        hostPresentTimerRef.current = null;
       }
-      teardownPeer();
+      teardownPeerRef.current();
     };
   }, [
     bindConnection,
     bindMediaCall,
     clearConnectRetryTimer,
+    clearConnectTimeout,
     clearRetryTimer,
     configReady,
     enabled,
     isHost,
     peerConfig,
     roomId,
+    scheduleConnectTimeout,
     schedulePeerRetry,
     token,
   ]);
 
   useEffect(() => {
-    if (!configReady || !peerConfig || !enabled || !token || !roomId) {
-      return undefined;
-    }
+    if (enabled) return undefined;
+    disconnect();
+    return undefined;
+  }, [disconnect, enabled]);
 
-    const timer = window.setTimeout(() => {
-      if (signalingOpenRef.current) {
-        if (isHost) return;
-        setConnectionError((previous) => {
-          if (isWaitingForHostMessage(previous)) return previous;
-          if (openCountRef.current > 0) return null;
-          return previous ?? "Waiting for the host to join…";
-        });
-        return;
-      }
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return undefined;
 
-      if (openCountRef.current > 0) return;
-      setConnectionError((previous) => {
-        if (isWaitingForHostMessage(previous)) return previous;
-        return isHost
-          ? "Unable to connect to the signaling server. Check .env.local and that your PeerJS server is running."
-          : "Could not connect to the meeting. Make sure the host has joined and the signaling server is reachable.";
-      });
-    }, SIGNALING_CONNECT_TIMEOUT_MS);
+    const handlePageHide = () => {
+      disconnect();
+    };
 
-    return () => window.clearTimeout(timer);
-  }, [configReady, enabled, isHost, peerConfig, roomId, token]);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [disconnect, enabled]);
 
   useEffect(() => {
     if (!enabled || !isHost || !token) return undefined;
 
-    const announce = () => send(createHostPresentMessage());
+    const announce = () =>
+      send(createHostPresentMessage({ displayName: displayNameRef.current }));
     announce();
     hostPresentTimerRef.current = setInterval(
       announce,
@@ -572,7 +670,7 @@ export function useRoomDataChannel({
         clearInterval(hostPresentTimerRef.current);
       }
     };
-  }, [enabled, isHost, send, token]);
+  }, [displayName, enabled, isHost, send, token]);
 
   const status = connectionError && !isConnected
     ? "error"
@@ -582,7 +680,9 @@ export function useRoomDataChannel({
 
   return {
     send,
+    sendToParticipant,
     subscribe,
+    disconnect,
     isConnected,
     hostPresent,
     localParticipantId,

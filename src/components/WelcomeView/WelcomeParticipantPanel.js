@@ -17,6 +17,15 @@ import {
   saveParticipantRoom,
   touchParticipantRoom,
 } from "@/lib/settings/participantRoomSettings";
+import {
+  loadDisplayName,
+  loadParticipantMode,
+  normalizeDisplayNameInput,
+  saveDisplayName,
+  saveParticipantMode,
+} from "@/lib/settings/displayNameSettings";
+import { DisplayNameField } from "@/components/DisplayNameField";
+import { ParticipantModeToggle } from "@/components/ParticipantModeToggle";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import shared from "./WelcomeShared.module.css";
 
@@ -49,6 +58,10 @@ export function WelcomeParticipantPanel({
   const [recentRooms, setRecentRooms] = useState([]);
   const [resolveError, setResolveError] = useState("");
   const [isResolving, setIsResolving] = useState(false);
+  const [displayName, setDisplayName] = useState(() => loadDisplayName());
+  const [participantMode, setParticipantMode] = useState(() =>
+    loadParticipantMode(),
+  );
   const resolvedJoinCodeRef = useRef(null);
 
   const refreshRecentRooms = useCallback(() => {
@@ -186,6 +199,17 @@ export function WelcomeParticipantPanel({
     refreshRecentRooms();
   };
 
+  const handleDisplayNameChange = (value) => {
+    const normalized = normalizeDisplayNameInput(value);
+    setDisplayName(normalized);
+    saveDisplayName(normalized);
+  };
+
+  const handleParticipantModeChange = (mode) => {
+    setParticipantMode(mode);
+    saveParticipantMode(mode);
+  };
+
   const recentRoomsTrigger = (
     <RecentRoomsTrigger
       rooms={recentRooms}
@@ -217,6 +241,26 @@ export function WelcomeParticipantPanel({
       </p>
 
       {recentRoomsTrigger}
+
+      <DisplayNameField
+        id="participant-display-name"
+        label="Your name"
+        value={displayName}
+        onChange={handleDisplayNameChange}
+        placeholder="How should others see you?"
+      />
+
+      <div className={shared.fieldGroup}>
+        <span className={shared.label}>Participation mode</span>
+        <ParticipantModeToggle
+          value={participantMode}
+          onChange={handleParticipantModeChange}
+        />
+        <p className={shared.helpText}>
+          Choose Available if you may speak on camera, or Listening only if you
+          are observing the meeting.
+        </p>
+      </div>
 
       <div className={shared.fieldGroup}>
         <label className={shared.label} htmlFor="participant-room-id">

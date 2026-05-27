@@ -6,6 +6,26 @@ export { DEFAULT_SIGNALING_PATH };
 const SIGNALING_CONFIG_HINT =
   "Set SIGNALING_SERVER_URL to your PeerJS hostname (no https://) in Vercel env vars or .env.local, then redeploy.";
 
+export const SIGNALING_ERROR = {
+  NOT_CONFIGURED:
+    "Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.",
+  CONFIG_LOAD_FAILED: "Could not load signaling configuration.",
+  HOST_TIMEOUT: "Could not reach the PeerJS server in time.",
+  HOST_RETRY_EXHAUSTED:
+    "Could not connect to the PeerJS server after several attempts.",
+  PARTICIPANT_TIMEOUT: "Could not connect to the meeting in time.",
+  PARTICIPANT_RETRY_EXHAUSTED:
+    "Could not connect to the meeting after several attempts.",
+  HOST_ID_RECONNECTING:
+    "Another host session may still be disconnecting. Reconnecting…",
+};
+
+export const HOST_SIGNING_REACHABILITY_HINT =
+  "SIGNALING_SERVER_URL is set, but the browser could not connect to the PeerJS server. Confirm the PeerJS process is running, the host/path/port match your env vars, and that WebSockets are allowed.";
+
+export const PARTICIPANT_REACHABILITY_HINT =
+  "Ask the host to join the meeting first. If they are already in the room, the PeerJS server may be down, restarting, or blocked by your network.";
+
 function normalizeSignalingHost(value) {
   if (!value || typeof value !== "string") return null;
   return value.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -38,19 +58,71 @@ export function isWaitingForHostMessage(message) {
   return typeof message === "string" && message.includes("Waiting for the host");
 }
 
+export function isSignalingRetryMessage(message) {
+  if (!message) return false;
+  return (
+    message.includes("Retrying…") ||
+    message.includes("Reconnecting…") ||
+    message === SIGNALING_ERROR.HOST_ID_RECONNECTING
+  );
+}
+
+export function isSignalingConfigError(message) {
+  if (!message) return false;
+  return (
+    message.includes(SIGNALING_ERROR.NOT_CONFIGURED) ||
+    message.includes(SIGNALING_ERROR.CONFIG_LOAD_FAILED)
+  );
+}
+
+export function isSignalingServerReachabilityError(message) {
+  if (!message) return false;
+  return (
+    message.includes(SIGNALING_ERROR.HOST_TIMEOUT) ||
+    message.includes(SIGNALING_ERROR.HOST_RETRY_EXHAUSTED) ||
+    message.includes(SIGNALING_ERROR.PARTICIPANT_TIMEOUT) ||
+    message.includes(SIGNALING_ERROR.PARTICIPANT_RETRY_EXHAUSTED) ||
+    message.includes("Could not reach the signaling server") ||
+    message.includes("Unable to connect to the signaling server") ||
+    message.includes("Could not connect to the meeting")
+  );
+}
+
 export function isFatalSignalingError(message) {
   if (!message) return false;
   if (isWaitingForHostMessage(message)) return false;
-  if (message.includes("Signaling server is not configured")) return true;
-  if (message.includes("Could not reach the signaling server")) return true;
-  if (message.includes("Unable to connect to the signaling server")) return true;
-  if (message.includes("Could not connect to the meeting")) return true;
-  if (message.includes("Could not load signaling configuration")) return true;
+  if (isSignalingRetryMessage(message)) return false;
+  if (isSignalingConfigError(message)) return true;
+  if (isSignalingServerReachabilityError(message)) return true;
   return false;
 }
 
+export function getSignalingErrorHint(message, { isHost = false } = {}) {
+  if (isSignalingConfigError(message)) {
+    return SIGNALING_CONFIG_HINT;
+  }
+  return isHost ? HOST_SIGNING_REACHABILITY_HINT : PARTICIPANT_REACHABILITY_HINT;
+}
+
+export function hostSignalingTimeoutError() {
+  return SIGNALING_ERROR.HOST_TIMEOUT;
+}
+
+export function hostSignalingRetryExhaustedError() {
+  return SIGNALING_ERROR.HOST_RETRY_EXHAUSTED;
+}
+
+export function participantSignalingTimeoutError() {
+  return SIGNALING_ERROR.PARTICIPANT_TIMEOUT;
+}
+
+export function participantSignalingRetryExhaustedError() {
+  return SIGNALING_ERROR.PARTICIPANT_RETRY_EXHAUSTED;
+}
+
 export const MAX_SIGNALING_RETRIES = 5;
-export const SIGNALING_CONNECT_TIMEOUT_MS = 20000;
+export const SIGNALING_CONNECT_TIMEOUT_MS = 45000;
+export const HOST_ID_RETRY_DELAY_MS = 1500;
 
 function readSignalingPortFromEnv() {
   return Number(process.env.SIGNALING_SERVER_PORT ?? DEFAULT_SIGNALING_PORT);

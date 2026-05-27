@@ -1,0 +1,53 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fieldCompact {
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.fieldCompact .label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  padding: 0.625rem 0.75rem;
+  min-width: 0;
+}
+
+.fieldCompact .input {
+  font-size: 0.8125rem;
+  padding: 0.45rem 0.6rem;
+  min-width: 8rem;
+  max-width: 12rem;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+@media (max-width: 480px) {
+  .fieldCompact .input {
+    max-width: none;
+    width: 100%;
+  }
+}

@@ -13,6 +13,12 @@ import {
   getRoomByJoinCode,
   listHostRooms,
 } from "@/lib/settings/roomSettings";
+import {
+  loadDisplayName,
+  normalizeDisplayNameInput,
+  saveDisplayName,
+} from "@/lib/settings/displayNameSettings";
+import { DisplayNameField } from "@/components/DisplayNameField";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import shared from "./WelcomeShared.module.css";
 
@@ -34,6 +40,7 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
   const [initializing, setInitializing] = useState(true);
   const [isActionPending, setIsActionPending] = useState(false);
   const [recentRooms, setRecentRooms] = useState([]);
+  const [displayName, setDisplayName] = useState(() => loadDisplayName());
   const initRef = useRef(false);
 
   const refreshRecentRooms = useCallback(() => {
@@ -208,6 +215,12 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     });
   };
 
+  const handleDisplayNameChange = (value) => {
+    const normalized = normalizeDisplayNameInput(value);
+    setDisplayName(normalized);
+    saveDisplayName(normalized);
+  };
+
   const handleJoinMeeting = () => {
     if (!hostToken) return;
     const meetingJoinCode =
@@ -258,6 +271,14 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
         onSelect={handleSelectRoom}
         onClear={handleClearRecentRooms}
         emptyMessage="Rooms you create will appear here for quick reuse."
+      />
+
+      <DisplayNameField
+        id="host-display-name"
+        label="Your name"
+        value={displayName}
+        onChange={handleDisplayNameChange}
+        placeholder="How should participants see you?"
       />
 
       <div className={shared.fieldGroup}>

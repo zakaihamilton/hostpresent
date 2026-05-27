@@ -3,54 +3,106 @@ import { MicOff, VideoOff, X } from "@/components/Icons";
 import { ParticipantItem } from "@/components/ParticipantItem";
 import { Tooltip } from "@/components/Tooltip";
 import { VirtualList } from "@/components/Widgets";
+import {
+  PARTICIPANT_MODE,
+  displayNameInitial,
+  participantModeLabel,
+  resolveDisplayName,
+} from "@/lib/settings/displayNameSettings";
 import styles from "./ParticipantsSidebar.module.css";
 
 const PARTICIPANT_ITEM_HEIGHT = 52;
 const SECTION_LABEL_HEIGHT = 44;
 
+function getModeLabel(mode) {
+  return participantModeLabel(
+    mode === PARTICIPANT_MODE.LISTENING
+      ? PARTICIPANT_MODE.LISTENING
+      : PARTICIPANT_MODE.AVAILABLE,
+  );
+}
+
 function buildParticipantItems({
   isHost,
   isVideoMuted,
   isAudioMuted,
+  localDisplayName,
+  localParticipantMode,
+  hostDisplayName,
+  peerParticipants,
   videoParticipants,
   audioList,
 }) {
-  const items = isHost
-    ? [
-        {
-          type: "host",
-          id: "host",
-          name: "You (Host)",
-          initial: "Y",
-          avatarColor: "#3b82f6",
-          isVideoMuted,
-          isAudioMuted,
-          hasVideo: true,
-        },
-      ]
-    : [
-        {
-          type: "video",
-          id: "self",
-          name: "You",
-          initial: "Y",
-          avatarColor: "#3b82f6",
-          isVideoMuted,
-          isAudioMuted,
-          hasVideo: true,
-        },
-      ];
+  const selfName = resolveDisplayName(localDisplayName);
+  const selfInitial = displayNameInitial(localDisplayName);
+  const selfModeLabel = !isHost ? getModeLabel(localParticipantMode) : null;
+
+  if (!isHost) {
+    const items = [
+      {
+        type: "host-remote",
+        id: "host",
+        name: resolveDisplayName(hostDisplayName),
+        initial: displayNameInitial(hostDisplayName),
+        avatarColor: "#6366f1",
+        isVideoMuted: false,
+        isAudioMuted: false,
+        hasVideo: false,
+      },
+      {
+        type: "self",
+        id: "self",
+        name: selfName,
+        initial: selfInitial,
+        avatarColor: "#3b82f6",
+        isVideoMuted,
+        isAudioMuted,
+        hasVideo: true,
+        modeLabel: selfModeLabel,
+      },
+    ];
+
+    for (const participant of peerParticipants) {
+      items.push({
+        type: "peer",
+        id: participant.id,
+        name: participant.name,
+        initial: displayNameInitial(participant.name),
+        avatarColor: participant.avatarColor,
+        isVideoMuted: false,
+        isAudioMuted: false,
+        hasVideo: false,
+        modeLabel: getModeLabel(participant.mode),
+      });
+    }
+
+    return items;
+  }
+
+  const items = [
+    {
+      type: "host",
+      id: "host",
+      name: selfName,
+      initial: selfInitial,
+      avatarColor: "#3b82f6",
+      isVideoMuted,
+      isAudioMuted,
+      hasVideo: true,
+    },
+  ];
 
   for (const participant of videoParticipants) {
     items.push({
       type: "video",
       id: participant.id,
       name: participant.name,
-      initial: participant.name.charAt(0),
+      initial: displayNameInitial(participant.name),
       avatarColor: participant.avatarColor,
       isVideoMuted: participant.isVideoMuted,
       isAudioMuted: participant.isAudioMuted,
       hasVideo: true,
+      modeLabel: getModeLabel(participant.mode),
     });
   }
 
@@ -92,9 +144,13 @@ export function ParticipantsSidebar({
   visible,
   audioList,
   videoParticipants,
+  peerParticipants = [],
+  hostDisplayName = "Host",
   isVideoMuted,
   isAudioMuted,
   isHost = true,
+  localDisplayName = "",
+  localParticipantMode = PARTICIPANT_MODE.AVAILABLE,
   onClose,
   onMuteParticipantVideo,
   onMuteParticipantAudio,
@@ -103,7 +159,9 @@ export function ParticipantsSidebar({
   canMuteAllVideo,
   canMuteAllAudio,
 }) {
-  const totalCount = 1 + videoParticipants.length + audioList.length;
+  const totalCount = isHost
+    ? 1 + videoParticipants.length + audioList.length
+    : 2 + peerParticipants.length;
   const hasRemoteParticipants =
     isHost && (videoParticipants.length > 0 || audioList.length > 0);
 
@@ -113,10 +171,24 @@ export function ParticipantsSidebar({
         isHost,
         isVideoMuted,
         isAudioMuted,
+        localDisplayName,
+        localParticipantMode,
+        hostDisplayName,
+        peerParticipants,
         videoParticipants,
         audioList,
       }),
-    [audioList, isAudioMuted, isHost, isVideoMuted, videoParticipants],
+    [
+      audioList,
+      hostDisplayName,
+      isAudioMuted,
+      isHost,
+      isVideoMuted,
+      localDisplayName,
+      localParticipantMode,
+      peerParticipants,
+      videoParticipants,
+    ],
   );
 
   const renderItem = useCallback(
@@ -127,6 +199,7 @@ export function ParticipantsSidebar({
 
       const isHostItem = item.type === "host";
       const isSelfItem = item.id === "self";
+      const isRemotePeer = item.type === "peer" || item.type === "host-remote";
 
       return (
         <ParticipantItem
@@ -137,13 +210,14 @@ export function ParticipantsSidebar({
           isVideoMuted={item.isVideoMuted}
           isAudioMuted={item.isAudioMuted}
           hasVideo={item.hasVideo}
+          modeLabel={item.modeLabel}
           onMuteVideo={
-            isHost && !isHostItem && !isSelfItem
+            isHost && !isHostItem && !isSelfItem && !isRemotePeer
               ? () => onMuteParticipantVideo(item.id)
               : undefined
           }
           onMuteAudio={
-            isHost && !isHostItem && !isSelfItem
+            isHost && !isHostItem && !isSelfItem && !isRemotePeer
               ? () => onMuteParticipantAudio(item.id, item.type)
               : undefined
           }

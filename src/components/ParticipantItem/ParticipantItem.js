@@ -83,6 +83,7 @@ export function ParticipantItem({
   isVideoMuted = false,
   isAudioMuted = false,
   hasVideo = true,
+  modeLabel = null,
   onMuteVideo,
   onMuteAudio,
 }) {
@@ -100,6 +101,7 @@ export function ParticipantItem({
         </div>
         <div>
           <div className={styles.name}>{name}</div>
+          {modeLabel ? <div className={styles.modeLabel}>{modeLabel}</div> : null}
         </div>
       </div>
       <div className={styles.status}>

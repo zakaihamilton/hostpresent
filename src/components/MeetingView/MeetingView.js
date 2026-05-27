@@ -24,12 +24,25 @@ import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
+  createParticipantProfileBroadcastMessage,
+  createParticipantProfileMessage,
   createRecordingStateMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
 import {
+  loadDisplayName,
+  loadParticipantMode,
+  normalizeDisplayNameInput,
+  PARTICIPANT_MODE,
+  resolveDisplayName,
+  saveDisplayName,
+  saveParticipantMode,
+} from "@/lib/settings/displayNameSettings";
+import {
   getSignalingConfigHint,
+  getSignalingErrorHint,
   isFatalSignalingError,
+  isSignalingConfigError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
 import {
@@ -82,6 +95,16 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const [downloadState, setDownloadState] = useState(null);
   const [audioList, setAudioList] = useState([]);
   const [timersEnabled, setTimersEnabled] = useState(false);
+  const [displayNameInput, setDisplayNameInput] = useState(() => loadDisplayName());
+  const [hostDisplayName, setHostDisplayName] = useState("Host");
+  const [participantMode, setParticipantMode] = useState(() =>
+    loadParticipantMode(),
+  );
+  const [peerParticipants, setPeerParticipants] = useState([]);
+
+  const resolvedDisplayName = resolveDisplayName(displayNameInput);
+  const participantProfilesRef = useRef(new Map());
+  const roomConnectionRef = useRef(null);
 
   const { meetingSeconds, recordingSeconds, resetRecordingTimer } =
     useSessionTimers({
@@ -98,27 +121,159 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     setHostStream(stream);
   }, []);
 
-  const handleRemoteParticipant = useCallback((participant) => {
-    if (!participant?.id) return;
-    setVideoParticipants((previous) => {
-      const existing = previous.find((entry) => entry.id === participant.id);
-      if (existing) {
-        return previous.map((entry) =>
-          entry.id === participant.id ? { ...entry, ...participant } : entry,
+  const broadcastPeerProfile = useCallback(
+    ({ participantId, displayName, mode }) => {
+      if (!isHost) return;
+      roomConnectionRef.current?.send(
+        createParticipantProfileBroadcastMessage({
+          participantId,
+          displayName,
+          mode,
+          present: true,
+        }),
+      );
+    },
+    [isHost],
+  );
+
+  const broadcastPeerLeft = useCallback(
+    (participantId) => {
+      if (!isHost) return;
+      participantProfilesRef.current.delete(participantId);
+      roomConnectionRef.current?.send(
+        createParticipantProfileBroadcastMessage({
+          participantId,
+          present: false,
+        }),
+      );
+    },
+    [isHost],
+  );
+
+  const syncProfilesToParticipant = useCallback(
+    (participantId) => {
+      if (!isHost) return;
+      for (const [id, profile] of participantProfilesRef.current) {
+        if (id === participantId) continue;
+        roomConnectionRef.current?.sendToParticipant(
+          participantId,
+          createParticipantProfileBroadcastMessage({
+            participantId: id,
+            displayName: profile.displayName,
+            mode: profile.mode,
+            present: true,
+          }),
         );
       }
-      return [
-        ...previous,
-        {
-          id: participant.id,
-          name: participant.name ?? "Guest",
-          avatarColor: participantColor(participant.id),
-          isAudioMuted: false,
-          isVideoMuted: false,
-          stream: participant.stream ?? null,
-        },
-      ];
-    });
+    },
+    [isHost],
+  );
+
+  const handleRemoteParticipant = useCallback(
+    (participant) => {
+      if (!participant?.id) return;
+
+      if (participant.stream === null) {
+        setVideoParticipants((previous) =>
+          previous.filter((entry) => entry.id !== participant.id),
+        );
+        broadcastPeerLeft(participant.id);
+        return;
+      }
+
+      const isNewConnection = participant.stream === undefined;
+
+      setVideoParticipants((previous) => {
+        const existing = previous.find((entry) => entry.id === participant.id);
+        const nextName = participant.name
+          ? resolveDisplayName(participant.name)
+          : undefined;
+        if (existing) {
+          return previous.map((entry) =>
+            entry.id === participant.id
+              ? {
+                  ...entry,
+                  ...participant,
+                  ...(nextName ? { name: nextName } : {}),
+                  mode:
+                    participant.mode ??
+                    entry.mode ??
+                    PARTICIPANT_MODE.AVAILABLE,
+                }
+              : entry,
+          );
+        }
+        return [
+          ...previous,
+          {
+            id: participant.id,
+            name: nextName ?? "Guest",
+            avatarColor: participantColor(participant.id),
+            isAudioMuted: false,
+            isVideoMuted: false,
+            stream: participant.stream ?? null,
+            mode: participant.mode ?? PARTICIPANT_MODE.AVAILABLE,
+          },
+        ];
+      });
+
+      if (isNewConnection) {
+        syncProfilesToParticipant(participant.id);
+      }
+    },
+    [broadcastPeerLeft, syncProfilesToParticipant],
+  );
+
+  const handlePeerProfileBroadcast = useCallback(
+    (message) => {
+      if (!message?.participantId) return;
+
+      if (message.present === false) {
+        setPeerParticipants((previous) =>
+          previous.filter((entry) => entry.id !== message.participantId),
+        );
+        return;
+      }
+
+      setPeerParticipants((previous) => {
+        const nextName = resolveDisplayName(message.displayName);
+        const nextMode =
+          message.mode === PARTICIPANT_MODE.LISTENING
+            ? PARTICIPANT_MODE.LISTENING
+            : PARTICIPANT_MODE.AVAILABLE;
+        const existing = previous.find(
+          (entry) => entry.id === message.participantId,
+        );
+        if (existing) {
+          return previous.map((entry) =>
+            entry.id === message.participantId
+              ? { ...entry, name: nextName, mode: nextMode }
+              : entry,
+          );
+        }
+        return [
+          ...previous,
+          {
+            id: message.participantId,
+            name: nextName,
+            mode: nextMode,
+            avatarColor: participantColor(message.participantId),
+          },
+        ];
+      });
+    },
+    [],
+  );
+
+  const handleDisplayNameChange = useCallback((value) => {
+    const normalized = normalizeDisplayNameInput(value);
+    setDisplayNameInput(normalized);
+    saveDisplayName(normalized);
+  }, []);
+
+  const handleParticipantModeChange = useCallback((mode) => {
+    setParticipantMode(mode);
+    saveParticipantMode(mode);
   }, []);
 
   const roomConnection = useRoomDataChannel({
@@ -126,11 +281,19 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     token,
     roomId: roomState?.roomId ?? null,
     enabled: Boolean(token && roomState?.roomId),
+    displayName: resolvedDisplayName,
     localStream,
     screenStream,
     onRemoteParticipant: isHost ? handleRemoteParticipant : undefined,
     onRemoteHostStream: isHost ? undefined : handleRemoteHostStream,
   });
+
+  roomConnectionRef.current = roomConnection;
+
+  const handleBack = useCallback(() => {
+    roomConnection.disconnect();
+    onBack();
+  }, [onBack, roomConnection.disconnect]);
 
   const fatalConnectionError =
     roomConnection.connectionError &&
@@ -138,8 +301,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       ? roomConnection.connectionError
       : null;
   const signalingConfigError =
-    fatalConnectionError?.includes("Signaling server is not configured") ||
-    fatalConnectionError?.includes("Could not load signaling configuration")
+    fatalConnectionError && isSignalingConfigError(fatalConnectionError)
       ? fatalConnectionError
       : null;
 
@@ -150,6 +312,19 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     }
     setHostPresent(roomConnection.hostPresent);
   }, [isHost, roomConnection.hostPresent]);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+
+    return roomConnection.subscribe((message) => {
+      if (
+        message.type === SIGNALING_MESSAGE.HOST_PRESENT &&
+        message.displayName
+      ) {
+        setHostDisplayName(resolveDisplayName(message.displayName));
+      }
+    });
+  }, [isHost, roomConnection]);
 
   useEffect(() => {
     if (isHost) return undefined;
@@ -200,11 +375,63 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           });
           setIsVideoMuted(true);
           break;
+        case SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST:
+          if (message.participantId === localId) return;
+          handlePeerProfileBroadcast(message);
+          break;
         default:
           break;
       }
     });
-  }, [isHost, localStream, resetRecordingTimer, roomConnection]);
+  }, [handlePeerProfileBroadcast, isHost, localStream, resetRecordingTimer, roomConnection]);
+
+  useEffect(() => {
+    if (isHost || !roomConnection.localParticipantId) return;
+
+    roomConnection.send(
+      createParticipantProfileMessage({
+        participantId: roomConnection.localParticipantId,
+        displayName: resolvedDisplayName,
+        mode: participantMode,
+      }),
+    );
+  }, [
+    isHost,
+    participantMode,
+    resolvedDisplayName,
+    roomConnection,
+    roomConnection.localParticipantId,
+  ]);
+
+  useEffect(() => {
+    if (!isHost) return undefined;
+
+    return roomConnection.subscribe((message) => {
+      if (message.type !== SIGNALING_MESSAGE.PARTICIPANT_PROFILE) return;
+
+      participantProfilesRef.current.set(message.participantId, {
+        displayName: message.displayName,
+        mode: message.mode,
+      });
+
+      handleRemoteParticipant({
+        id: message.participantId,
+        name: message.displayName,
+        mode: message.mode,
+      });
+
+      broadcastPeerProfile({
+        participantId: message.participantId,
+        displayName: message.displayName,
+        mode: message.mode,
+      });
+    });
+  }, [
+    broadcastPeerProfile,
+    handleRemoteParticipant,
+    isHost,
+    roomConnection,
+  ]);
 
   const publishRecordingState = useCallback(
     (active, paused = false) => {
@@ -521,14 +748,12 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const viewingHostStream = !isHost && hostStream;
   const primaryStream = viewingHostStream ? hostStream : activeMainStream;
   const primaryLabel = viewingHostStream
-    ? "Host"
+    ? hostDisplayName
     : screenStream
       ? isScreenAudioShared
         ? "You are sharing your screen with audio"
         : "You are sharing your screen"
-      : isHost
-        ? "You (Host)"
-        : "You";
+      : resolvedDisplayName;
   const primaryMuted = !viewingHostStream;
 
   const handleCopyInviteLink = async () => {
@@ -565,7 +790,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       <MeetingJoinError
         title="Could not join meeting"
         message={sessionError || "Failed to load room session."}
-        onBack={onBack}
+        onBack={handleBack}
       />
     );
   }
@@ -576,7 +801,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         title="Signaling not configured"
         message={signalingConfigError}
         hint={getSignalingConfigHint()}
-        onBack={onBack}
+        onBack={handleBack}
       />
     );
   }
@@ -586,12 +811,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       <MeetingJoinError
         title="Could not connect to meeting"
         message={fatalConnectionError}
-        hint={
-          isHost
-            ? "Set SIGNALING_SERVER_URL on the server (Vercel env vars or .env.local). Redeploy after changing env vars."
-            : "Ask the host to join the meeting first. If the problem continues, the signaling server may be down or misconfigured."
-        }
-        onBack={onBack}
+        hint={getSignalingErrorHint(fatalConnectionError, { isHost })}
+        onBack={handleBack}
       />
     );
   }
@@ -611,7 +832,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
-        onBack={onBack}
+        onBack={handleBack}
         backLabel={isHost ? "Back to welcome" : "Back to join screen"}
         onShowInviteLink={
           isHost && inviteLink && !inviteBarVisible
@@ -711,6 +932,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             localStream={localStream}
             participants={videoParticipants}
             isAudioMuted={isAudioMuted}
+            localDisplayName={resolvedDisplayName}
           />
 
           <PrimaryView
@@ -727,9 +949,13 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           visible={isSidebarVisible}
           audioList={audioList}
           videoParticipants={videoParticipants}
+          peerParticipants={peerParticipants}
+          hostDisplayName={hostDisplayName}
           isVideoMuted={isVideoMuted}
           isAudioMuted={isAudioMuted}
           isHost={isHost}
+          localDisplayName={displayNameInput}
+          localParticipantMode={participantMode}
           onClose={() => setIsSidebarVisible(false)}
           onMuteParticipantVideo={muteParticipantVideo}
           onMuteParticipantAudio={muteParticipantAudio}
@@ -752,6 +978,10 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         isSidebarVisible={isSidebarVisible}
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
+        displayName={displayNameInput}
+        onDisplayNameChange={handleDisplayNameChange}
+        participantMode={!isHost ? participantMode : null}
+        onParticipantModeChange={!isHost ? handleParticipantModeChange : null}
         showRecording={isHost}
         allowScreenShare={isHost}
         onToggleAudio={toggleAudio}

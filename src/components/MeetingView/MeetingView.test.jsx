@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MeetingView } from "./MeetingView";
 
+const mockDisconnect = jest.fn();
+
 jest.mock("@/components/Header", () => ({
   Header: ({ onBack, backLabel = "Back" }) => (
     <button type="button" onClick={onBack}>
@@ -90,6 +92,7 @@ jest.mock("@/hooks", () => ({
   useRoomDataChannel: () => ({
     send: jest.fn(),
     subscribe: jest.fn(() => () => {}),
+    disconnect: mockDisconnect,
     hostPresent: true,
     localParticipantId: "participant-1",
     connectionError: null,
@@ -99,17 +102,21 @@ jest.mock("@/hooks", () => ({
 }));
 
 describe("MeetingView", () => {
+  beforeEach(() => {
+    mockDisconnect.mockClear();
+  });
+
   it("renders host meeting UI", async () => {
     render(
       <MeetingView role="host" token="host-token" onBack={() => {}} />,
     );
 
     expect(await screen.findByTestId("primary-view")).toHaveTextContent(
-      "You (Host)",
+      "Guest",
     );
   });
 
-  it("calls onBack from header", async () => {
+  it("disconnects signaling before navigating back", async () => {
     const user = userEvent.setup();
     const onBack = jest.fn();
 
@@ -120,6 +127,7 @@ describe("MeetingView", () => {
     await user.click(
       await screen.findByRole("button", { name: "Back to welcome" }),
     );
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

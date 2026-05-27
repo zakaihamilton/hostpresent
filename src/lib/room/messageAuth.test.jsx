@@ -142,6 +142,57 @@ describe("messageAuth", () => {
     ).toBe(false);
   });
 
+  it("allows participants to send profile updates for themselves", () => {
+    const message = {
+      type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE,
+      participantId: "guest-1",
+      displayName: "Alex",
+      mode: "listening",
+    };
+
+    expect(
+      canSendSignalingMessage({
+        isHost: false,
+        message,
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(true);
+    expect(
+      canSendSignalingMessage({
+        isHost: false,
+        message,
+        localParticipantId: "guest-2",
+      }),
+    ).toBe(false);
+    expect(
+      canReceiveSignalingMessage({
+        isHost: true,
+        message,
+        senderId: "guest-1",
+        localParticipantId: "",
+      }),
+    ).toBe(true);
+  });
+
+  it("lets participants receive profile broadcasts from the host", () => {
+    const message = {
+      type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST,
+      participantId: "guest-2",
+      displayName: "Alex",
+      mode: "listening",
+      present: true,
+    };
+
+    expect(
+      canReceiveSignalingMessage({
+        isHost: false,
+        message,
+        senderId: "hp-room",
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(true);
+  });
+
   it("matches server relay rules", () => {
     expect(
       canRelayMessage({
