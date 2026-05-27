@@ -7,7 +7,7 @@ import {
   normalizeJoinCode,
 } from "@/lib/room/joinCodeFormat";
 import { getParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
-import { getRoomByHostToken } from "@/lib/settings/roomSettings";
+import { getRoomByHostToken, getRoomByJoinCode } from "@/lib/settings/roomSettings";
 
 const DEFAULT_ROLE = "host";
 const STORAGE_KEY = "hostpresent.lastWelcomeTab";
@@ -48,6 +48,14 @@ function parseLegacyRoute(parts) {
   }
 
   if (third && isValidJoinCode(third)) {
+    if (role === APP_ROLE.HOST) {
+      return {
+        view,
+        role,
+        token: null,
+        joinCode: normalizeJoinCode(third),
+      };
+    }
     return {
       view,
       role,
@@ -75,6 +83,14 @@ function parseHash(hash) {
   const [first, second] = parts;
 
   if (first === "h") {
+    if (second && isLegacyToken(second)) {
+      return {
+        view: APP_VIEW.WELCOME,
+        role: APP_ROLE.HOST,
+        token: second,
+        joinCode: null,
+      };
+    }
     if (second && isValidJoinCode(second)) {
       return {
         view: APP_VIEW.WELCOME,
@@ -109,6 +125,14 @@ function parseHash(hash) {
   }
 
   if (first === "mh") {
+    if (second && isLegacyToken(second)) {
+      return {
+        view: APP_VIEW.MEETING,
+        role: APP_ROLE.HOST,
+        token: second,
+        joinCode: null,
+      };
+    }
     if (second && isValidJoinCode(second)) {
       return {
         view: APP_VIEW.MEETING,
@@ -118,7 +142,7 @@ function parseHash(hash) {
       };
     }
     return {
-      view: APP_VIEW.WELCOME,
+      view: APP_VIEW.MEETING,
       role: APP_ROLE.HOST,
       token: null,
       joinCode: null,
@@ -155,24 +179,49 @@ function parseHash(hash) {
 }
 
 function canonicalizeRoute(route) {
+  if (route.role === APP_ROLE.HOST && route.joinCode) {
+    const saved = getRoomByJoinCode(route.joinCode);
+    if (saved?.hostToken) {
+      return {
+        ...route,
+        token: saved.hostToken,
+        joinCode: null,
+      };
+    }
+
+    return {
+      ...route,
+      joinCode: null,
+    };
+  }
+
   if (route.joinCode || !route.token) {
     return route;
   }
 
-  const joinCode =
-    route.role === APP_ROLE.HOST
-      ? getRoomByHostToken(route.token)?.joinCode
-      : getParticipantRoomByToken(route.token)?.joinCode;
-
-  if (!joinCode) {
-    return route;
+  if (route.role === APP_ROLE.PARTICIPANT) {
+    const joinCode = getParticipantRoomByToken(route.token)?.joinCode;
+    if (joinCode) {
+      return {
+        ...route,
+        token: null,
+        joinCode: normalizeJoinCode(joinCode),
+      };
+    }
   }
 
-  return {
-    ...route,
-    token: null,
-    joinCode: normalizeJoinCode(joinCode),
-  };
+  if (route.role === APP_ROLE.HOST) {
+    const saved = getRoomByHostToken(route.token);
+    if (saved?.hostToken) {
+      return {
+        ...route,
+        token: saved.hostToken,
+        joinCode: null,
+      };
+    }
+  }
+
+  return route;
 }
 
 function buildJoinHash(joinCode) {
@@ -180,19 +229,21 @@ function buildJoinHash(joinCode) {
 }
 
 function buildHash({ view, role, token, joinCode }) {
-  if (joinCode) {
+  if (joinCode && role !== APP_ROLE.HOST) {
     const formatted = formatJoinCode(joinCode);
     if (view === APP_VIEW.MEETING) {
-      return role === APP_ROLE.HOST
-        ? `#/mh/${formatted}`
-        : `#/mj/${formatted}`;
+      return `#/mj/${formatted}`;
     }
     if (view === APP_VIEW.JOIN || role === APP_ROLE.PARTICIPANT) {
       return buildJoinHash(joinCode);
     }
-    if (role === APP_ROLE.HOST) {
-      return `#/h/${formatted}`;
+  }
+
+  if (view === APP_VIEW.MEETING && role === APP_ROLE.HOST) {
+    if (token) {
+      return `#/mh/${token}`;
     }
+    return "#/mh";
   }
 
   if (token) {

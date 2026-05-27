@@ -177,7 +177,7 @@ export function WelcomeParticipantPanel({
       return;
     }
 
-    setResolveError("Enter a valid room ID or invite link.");
+    setResolveError("Enter a valid participant join code or invite link.");
   };
 
   const handleSelectRoom = (room) => {
@@ -239,8 +239,8 @@ export function WelcomeParticipantPanel({
   return (
     <div className={shared.welcomePanel}>
       <p className={shared.helpText}>
-        Enter the room ID from your host, paste an invite link, or open recent
-        rooms you joined before.
+        Enter the participant join code from your host, paste an invite link, or
+        open recent rooms you joined before.
       </p>
 
       {recentRoomsTrigger}
@@ -267,7 +267,7 @@ export function WelcomeParticipantPanel({
 
       <div className={shared.fieldGroup}>
         <label className={shared.label} htmlFor="participant-room-id">
-          Room ID
+          Participant join code
         </label>
         <input
           id="participant-room-id"
@@ -312,7 +312,7 @@ export function WelcomeParticipantPanel({
           onClick={handleJoinRoomId}
           disabled={!roomIdInput.trim()}
         >
-          Join with room ID
+          Join with join code
         </button>
         <button
           type="button"

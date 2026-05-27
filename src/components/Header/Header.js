@@ -84,8 +84,8 @@ export function Header({
 
         {roomId
           ? <div className={`${styles.stat} ${styles.statRoom}`}>
-              <span className={styles.statLabel}>Room ID</span>
-              <Tooltip text="Copy room ID" placement="left">
+              <span className={styles.statLabel}>Join code</span>
+              <Tooltip text="Copy join code" placement="left">
                 <button
                   type="button"
                   className={roomIdButtonClassName}
@@ -94,7 +94,7 @@ export function Header({
                   aria-label={
                     roomIdCopyMessage
                       ? roomIdCopyMessage
-                      : `Copy room ID ${roomId}`
+                      : `Copy join code ${roomId}`
                   }
                 >
                   <span className={styles.roomIdValue}>{roomIdButtonLabel}</span>

@@ -28,6 +28,7 @@ export function AppRouter() {
     role,
     token: routeToken,
     joinCode: view === APP_VIEW.MEETING ? joinCode : null,
+    view,
   });
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export function AppRouter() {
           title="Could not join meeting"
           message={
             resolveError ??
-            "Invalid or expired room link. Check the room ID and try again."
+            "Invalid or expired room link. Check the join code and try again."
           }
           onBack={() => {
             if (role === APP_ROLE.PARTICIPANT) {
@@ -73,7 +74,6 @@ export function AppRouter() {
             navigate({
               view: APP_VIEW.WELCOME,
               role: APP_ROLE.HOST,
-              joinCode: joinCode ?? null,
             });
           }}
           backLabel={
@@ -98,7 +98,6 @@ export function AppRouter() {
           navigate({
             view: APP_VIEW.WELCOME,
             role: APP_ROLE.HOST,
-            joinCode: joinCode ?? null,
           });
         }}
       />

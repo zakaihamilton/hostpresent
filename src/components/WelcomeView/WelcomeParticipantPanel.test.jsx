@@ -50,9 +50,9 @@ describe("WelcomeParticipantPanel", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Room ID")).toBeInTheDocument();
+    expect(screen.getByLabelText("Participant join code")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Join with room ID" }),
+      screen.getByRole("button", { name: "Join with join code" }),
     ).toBeDisabled();
   });
 
@@ -75,9 +75,9 @@ describe("WelcomeParticipantPanel", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText("Room ID"), "ABCD-EFGH");
+    await user.type(screen.getByLabelText("Participant join code"), "ABCD-EFGH");
     expect(
-      screen.getByRole("button", { name: "Join with room ID" }),
+      screen.getByRole("button", { name: "Join with join code" }),
     ).toBeEnabled();
   });
 
@@ -100,7 +100,7 @@ describe("WelcomeParticipantPanel", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Room ID")).toHaveValue("ABCD-EFGH");
+    expect(screen.getByLabelText("Participant join code")).toHaveValue("ABCD-EFGH");
     expect(screen.queryByText("Joining meeting…")).not.toBeInTheDocument();
     expect(resolveJoinCode).not.toHaveBeenCalled();
   });
@@ -135,7 +135,7 @@ describe("WelcomeParticipantPanel", () => {
     });
   });
 
-  it("uppercases room id while typing", async () => {
+  it("uppercases join code while typing", async () => {
     const user = userEvent.setup();
 
     render(
@@ -148,7 +148,7 @@ describe("WelcomeParticipantPanel", () => {
       />,
     );
 
-    const input = screen.getByLabelText("Room ID");
+    const input = screen.getByLabelText("Participant join code");
     await user.type(input, "abcd-efgh");
     expect(input).toHaveValue("ABCD-EFGH");
   });

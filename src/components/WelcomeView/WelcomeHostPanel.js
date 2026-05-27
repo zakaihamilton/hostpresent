@@ -10,7 +10,6 @@ import {
   clearHostRooms,
   formatRoomLabel,
   getRoomByHostToken,
-  getRoomByJoinCode,
   listHostRooms,
 } from "@/lib/settings/roomSettings";
 import {
@@ -32,10 +31,10 @@ async function fetchHostRoomDetails(hostToken) {
   return response.json();
 }
 
-export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigate }) {
+export function WelcomeHostPanel({ legacyToken, navigate }) {
   const { getSavedRoom, persistRoom, markHostRoomUsed } = useRoomSettings();
   const [hostToken, setHostToken] = useState(null);
-  const [joinCode, setJoinCode] = useState(routeJoinCode ?? null);
+  const [joinCode, setJoinCode] = useState(null);
   const [copyMessage, setCopyMessage] = useState("");
   const [initializing, setInitializing] = useState(true);
   const [isActionPending, setIsActionPending] = useState(false);
@@ -76,14 +75,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
 
     const initialize = async () => {
       try {
-        if (routeJoinCode) {
-          const saved = getRoomByJoinCode(routeJoinCode);
-          if (saved) {
-            applyRoom(saved);
-            return;
-          }
-        }
-
         if (legacyToken) {
           const saved = getRoomByHostToken(legacyToken);
           if (saved) {
@@ -91,7 +82,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
             navigate({
               view: APP_VIEW.WELCOME,
               role: APP_ROLE.HOST,
-              joinCode: saved.joinCode,
             });
             return;
           }
@@ -111,7 +101,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
               navigate({
                 view: APP_VIEW.WELCOME,
                 role: APP_ROLE.HOST,
-                joinCode: restored.joinCode,
               });
               return;
             }
@@ -123,13 +112,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
         const saved = getSavedRoom(legacyToken);
         if (saved?.hostToken) {
           applyRoom(saved);
-          if (!routeJoinCode) {
-            navigate({
-              view: APP_VIEW.WELCOME,
-              role: APP_ROLE.HOST,
-              joinCode: saved.joinCode,
-            });
-          }
           return;
         }
 
@@ -140,7 +122,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
         navigate({
           view: APP_VIEW.WELCOME,
           role: APP_ROLE.HOST,
-          joinCode: created.joinCode,
         });
       } finally {
         setInitializing(false);
@@ -158,25 +139,17 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     persistRoom,
     refreshRecentRooms,
     legacyToken,
-    routeJoinCode,
   ]);
 
-  useEffect(() => {
-    if (!routeJoinCode || routeJoinCode === joinCode) return;
-
-    const saved = getRoomByJoinCode(routeJoinCode);
-    if (saved) {
-      applyRoom(saved);
-    }
-  }, [applyRoom, joinCode, routeJoinCode]);
-
-  const formattedRoomId = joinCode ? formatJoinCode(joinCode) : "";
+  const formattedJoinCode = joinCode ? formatJoinCode(joinCode) : "";
   const inviteLink = joinCode ? buildParticipantInviteLink(joinCode) : "";
 
-  const handleCopyRoomId = async () => {
-    if (!formattedRoomId) return;
-    const copied = await copyTextToClipboard(formattedRoomId);
-    setCopyMessage(copied ? "Room ID copied" : "Could not copy room ID");
+  const handleCopyJoinCode = async () => {
+    if (!formattedJoinCode) return;
+    const copied = await copyTextToClipboard(formattedJoinCode);
+    setCopyMessage(
+      copied ? "Join code copied" : "Could not copy participant join code",
+    );
     setTimeout(() => setCopyMessage(""), 2500);
   };
 
@@ -197,7 +170,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
       navigate({
         view: APP_VIEW.WELCOME,
         role: APP_ROLE.HOST,
-        joinCode: created.joinCode,
       });
     } finally {
       setIsActionPending(false);
@@ -211,7 +183,6 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
     navigate({
       view: APP_VIEW.WELCOME,
       role: APP_ROLE.HOST,
-      joinCode: room.joinCode,
     });
   };
 
@@ -223,18 +194,12 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
 
   const handleJoinMeeting = () => {
     if (!hostToken) return;
-    const meetingJoinCode =
-      joinCode ?? getRoomByHostToken(hostToken)?.joinCode ?? null;
-    if (!meetingJoinCode) {
-      setCopyMessage("Room ID is not ready yet. Try again in a moment.");
-      return;
-    }
     markHostRoomUsed(hostToken);
     refreshRecentRooms();
     navigate({
       view: APP_VIEW.MEETING,
       role: APP_ROLE.HOST,
-      joinCode: meetingJoinCode,
+      token: hostToken,
     });
   };
 
@@ -255,8 +220,8 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
   return (
     <div className={shared.welcomePanel}>
       <p className={shared.helpText}>
-        Share the room ID or invite link with participants, then join the
-        meeting when you are ready.
+        Share the participant join code or invite link with attendees, then join
+        the meeting when you are ready.
       </p>
 
       <RecentRoomsTrigger
@@ -282,26 +247,30 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
       />
 
       <div className={shared.fieldGroup}>
-        <label className={shared.label} htmlFor="room-id">
-          Room ID
+        <label className={shared.label} htmlFor="participant-join-code">
+          Participant join code
         </label>
         <div className={shared.linkRow}>
           <input
-            id="room-id"
+            id="participant-join-code"
             className={shared.linkInput}
             readOnly
-            value={formattedRoomId}
+            value={formattedJoinCode}
             onFocus={(event) => event.currentTarget.select()}
           />
           <button
             type="button"
             className={shared.button}
-            onClick={handleCopyRoomId}
-            disabled={!formattedRoomId}
+            onClick={handleCopyJoinCode}
+            disabled={!formattedJoinCode}
           >
             Copy
           </button>
         </div>
+        <p className={shared.helpText}>
+          Participants use this code to join. It cannot be used to host the
+          meeting.
+        </p>
       </div>
 
       <div className={shared.fieldGroup}>

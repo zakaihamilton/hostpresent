@@ -26,7 +26,7 @@ export function WelcomeView({
       view: APP_VIEW.WELCOME,
       role: nextRole,
       token: null,
-      joinCode: nextRole === APP_ROLE.HOST ? joinCode : null,
+      joinCode: null,
     });
   };
 
@@ -71,11 +71,7 @@ export function WelcomeView({
 
         <div className={styles.panel}>
           {role === APP_ROLE.HOST
-            ? <WelcomeHostPanel
-                joinCode={joinCode}
-                legacyToken={token}
-                navigate={navigate}
-              />
+            ? <WelcomeHostPanel legacyToken={token} navigate={navigate} />
             : <WelcomeParticipantPanel
                 token={token}
                 joinCode={joinCode}

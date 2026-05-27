@@ -74,7 +74,7 @@ describe("Header", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Copy room ID ABCD-EFGH" }),
+      screen.getByRole("button", { name: "Copy join code ABCD-EFGH" }),
     );
 
     expect(copyTextToClipboard).toHaveBeenCalledWith("ABCD-EFGH");

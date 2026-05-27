@@ -44,7 +44,7 @@ describe("WelcomeView", () => {
     ).toHaveAttribute("href", "https://www.linkedin.com/in/zakai-hamilton");
   });
 
-  it("switches to participant tab via navigation", async () => {
+  it("switches to participant tab without carrying join code", async () => {
     const user = userEvent.setup();
     const navigate = jest.fn();
 
