@@ -12,7 +12,6 @@ export function WelcomeView({
   role,
   token,
   joinCode,
-  openProof,
   navigate,
   navigateJoinCode,
   navigateParticipantWelcome,
@@ -78,7 +77,6 @@ export function WelcomeView({
             : <WelcomeParticipantPanel
                 token={token}
                 joinCode={joinCode}
-                openProof={openProof}
                 navigate={navigate}
                 navigateJoinCode={navigateJoinCode}
                 navigateParticipantWelcome={navigateParticipantWelcome}

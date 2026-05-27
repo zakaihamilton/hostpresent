@@ -1,8 +1,7 @@
 import { guardGetRequest, RATE_LIMITS } from "@/lib/room/apiSecurity";
 import { isValidJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { getSearchParam, jsonError, jsonOk } from "@/lib/room/routeHelpers";
-import { getRoomByJoinCode } from "@/lib/room/store";
-import { signRoomOpenProof } from "@/lib/room/tokens";
+import { getRoomByJoinCode, ROOM_STATUS } from "@/lib/room/store";
 
 export const runtime = "nodejs";
 
@@ -11,31 +10,20 @@ export async function GET(request) {
   if (blocked) return blocked;
 
   const joinCode = normalizeJoinCode(getSearchParam(request, "code") ?? "");
-  const openProof = getSearchParam(request, "open");
 
   if (!isValidJoinCode(joinCode)) {
     return jsonError("Invalid join code", 400);
   }
 
-  const room = await getRoomByJoinCode(joinCode, { openProof });
+  const room = await getRoomByJoinCode(joinCode);
   if (!room) {
     return jsonError("Room not found", 404);
-  }
-
-  let responseOpenProof = openProof;
-  if (room.status === "open" && !responseOpenProof && room.openedAt) {
-    responseOpenProof = signRoomOpenProof({
-      roomId: room.roomId,
-      joinCode: room.joinCode,
-      openedAt: room.openedAt,
-    });
   }
 
   return jsonOk({
     roomId: room.roomId,
     joinCode: room.joinCode,
     participantToken: room.participantToken,
-    status: room.status,
-    openProof: room.status === "open" ? responseOpenProof : null,
+    status: ROOM_STATUS.OPEN,
   });
 }

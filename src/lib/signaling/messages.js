@@ -1,4 +1,5 @@
 export const SIGNALING_MESSAGE = {
+  HOST_PRESENT: "host_present",
   HOST_MUTE_AUDIO: "host_mute_audio",
   HOST_MUTE_VIDEO: "host_mute_video",
   HOST_MUTE_ALL_AUDIO: "host_mute_all_audio",
@@ -8,6 +9,13 @@ export const SIGNALING_MESSAGE = {
   PARTICIPANT_AUDIO_UNMUTED: "participant_audio_unmuted",
   PARTICIPANT_VIDEO_UNMUTED: "participant_video_unmuted",
 };
+
+export function createHostPresentMessage() {
+  return {
+    type: SIGNALING_MESSAGE.HOST_PRESENT,
+    timestamp: Date.now(),
+  };
+}
 
 export function createHostMuteAudioMessage({ participantId, participantType }) {
   return {

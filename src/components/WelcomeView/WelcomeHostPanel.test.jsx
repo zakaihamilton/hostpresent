@@ -22,7 +22,6 @@ jest.mock("@/hooks/roomSession", () => ({
     roomState: { joinCode: "ABCDEFGH" },
     error: "",
     createRoom: jest.fn().mockResolvedValue(createdRoom),
-    openRoom: jest.fn().mockResolvedValue({ status: "open" }),
     refreshState: jest.fn(),
   }),
   useRoomSettings: () => ({
@@ -56,6 +55,6 @@ describe("WelcomeHostPanel", () => {
     });
 
     expect(screen.getByLabelText("Participant invite link")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open room" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
   });
 });

@@ -1,12 +1,6 @@
 import { createJoinCode, normalizeJoinCode } from "./joinCode.js";
 import { publishToRoom } from "./pubsub.js";
-import {
-  ROOM_ROLE,
-  signRoomOpenProof,
-  signRoomToken,
-  verifyRoomOpenProof,
-  verifyRoomToken,
-} from "./tokens.js";
+import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "./tokens.js";
 import { deriveRoomIdFromJoinCode } from "./roomIdentity.js";
 
 const GLOBAL_STORE_KEY = "__hostpresentRoomStore";
@@ -31,32 +25,7 @@ function getMemoryStore() {
   return store;
 }
 
-function resolveRoomStatus({ roomId, joinCode, openProof }) {
-  if (openProof) {
-    const verified = verifyRoomOpenProof(openProof, { roomId, joinCode });
-    if (verified) {
-      return {
-        status: ROOM_STATUS.OPEN,
-        openedAt: verified.openedAt,
-      };
-    }
-  }
-
-  const memory = getMemoryStore().rooms.get(roomId);
-  if (memory?.status === ROOM_STATUS.OPEN) {
-    return {
-      status: ROOM_STATUS.OPEN,
-      openedAt: memory.openedAt ?? null,
-    };
-  }
-
-  return {
-    status: ROOM_STATUS.WAITING,
-    openedAt: null,
-  };
-}
-
-function buildRoomRecord({ roomId, joinCode, status, openedAt, createdAt }) {
+function buildRoomRecord({ roomId, joinCode, createdAt = null }) {
   const normalizedJoinCode = normalizeJoinCode(joinCode);
   const hostToken = signRoomToken({
     roomId,
@@ -74,8 +43,8 @@ function buildRoomRecord({ roomId, joinCode, status, openedAt, createdAt }) {
     joinCode: normalizedJoinCode,
     hostToken,
     participantToken,
-    status,
-    openedAt,
+    status: ROOM_STATUS.OPEN,
+    openedAt: createdAt,
     createdAt,
   };
 }
@@ -99,29 +68,20 @@ export async function createRoomRecord({
     joinCode: normalizeJoinCode(joinCode),
     hostToken,
     participantToken,
-    status: ROOM_STATUS.WAITING,
+    status: ROOM_STATUS.OPEN,
     createdAt: Date.now(),
-    openedAt: null,
+    openedAt: Date.now(),
   };
   rememberRoom(room);
   return room;
 }
 
-export async function getRoomById(roomId, { openProof = null, joinCode = null } = {}) {
+export async function getRoomById(roomId, { joinCode = null } = {}) {
   const memory = getMemoryStore().rooms.get(roomId);
   const resolvedJoinCode = joinCode ?? memory?.joinCode ?? null;
-  const { status, openedAt } = resolveRoomStatus({
-    roomId,
-    joinCode: resolvedJoinCode,
-    openProof,
-  });
 
   if (memory) {
-    return {
-      ...memory,
-      status,
-      openedAt: status === ROOM_STATUS.OPEN ? openedAt ?? memory.openedAt : null,
-    };
+    return { ...memory, status: ROOM_STATUS.OPEN };
   }
 
   if (!resolvedJoinCode) {
@@ -131,8 +91,6 @@ export async function getRoomById(roomId, { openProof = null, joinCode = null } 
   return buildRoomRecord({
     roomId,
     joinCode: resolvedJoinCode,
-    status,
-    openedAt,
     createdAt: null,
   });
 }
@@ -145,13 +103,11 @@ export async function restoreRoomFromToken({ roomId, role, token }) {
     const derivedRoomId = deriveRoomIdFromJoinCode(joinCode);
     if (derivedRoomId === roomId) {
       const memory = getMemoryStore().rooms.get(roomId);
-      if (memory) return memory;
+      if (memory) return { ...memory, status: ROOM_STATUS.OPEN };
 
       return buildRoomRecord({
         roomId,
         joinCode,
-        status: ROOM_STATUS.WAITING,
-        openedAt: null,
         createdAt: Date.now(),
       });
     }
@@ -168,39 +124,27 @@ export async function restoreRoomFromToken({ roomId, role, token }) {
       role === ROOM_ROLE.PARTICIPANT
         ? token
         : signRoomToken({ roomId, role: ROOM_ROLE.PARTICIPANT, joinCode }),
-    status: ROOM_STATUS.WAITING,
+    status: ROOM_STATUS.OPEN,
     createdAt: Date.now(),
-    openedAt: null,
+    openedAt: Date.now(),
   };
   rememberRoom(room);
   return room;
 }
 
-export async function getRoomByJoinCode(joinCode, { openProof = null } = {}) {
+export async function getRoomByJoinCode(joinCode) {
   const normalized = normalizeJoinCode(joinCode);
   if (!normalized) return null;
 
   const roomId = deriveRoomIdFromJoinCode(normalized);
-  const { status, openedAt } = resolveRoomStatus({
-    roomId,
-    joinCode: normalized,
-    openProof,
-  });
-
   const memory = getMemoryStore().rooms.get(roomId);
   if (memory) {
-    return {
-      ...memory,
-      status,
-      openedAt: status === ROOM_STATUS.OPEN ? openedAt ?? memory.openedAt : null,
-    };
+    return { ...memory, status: ROOM_STATUS.OPEN };
   }
 
   return buildRoomRecord({
     roomId,
     joinCode: normalized,
-    status,
-    openedAt,
     createdAt: null,
   });
 }
@@ -235,16 +179,7 @@ export async function openRoom(roomId, { joinCode = null } = {}) {
 
   rememberRoom(nextRoom);
   publishToRoom(roomId, { type: "room_opened", roomId });
-
-  const openProof =
-    nextRoom.joinCode &&
-    signRoomOpenProof({
-      roomId,
-      joinCode: nextRoom.joinCode,
-      openedAt,
-    });
-
-  return { ...nextRoom, openProof: openProof ?? null };
+  return nextRoom;
 }
 
 export async function relayRoomMessage(roomId, message) {

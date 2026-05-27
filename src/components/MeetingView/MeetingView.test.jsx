@@ -48,6 +48,12 @@ jest.mock("@/components/ConfirmDialog", () => ({
   ConfirmDialog: () => null,
 }));
 
+jest.mock("@/hooks/roomSession", () => ({
+  useRoomSession: () => ({
+    roomState: { joinCode: "ABCDEFGH" },
+  }),
+}));
+
 jest.mock("@/hooks", () => ({
   useConfirmDialog: () => ({
     confirm: jest.fn(),
@@ -68,6 +74,7 @@ jest.mock("@/hooks", () => ({
   }),
   useSignaling: () => ({
     send: jest.fn(),
+    subscribe: jest.fn(() => () => {}),
     status: "connected",
   }),
 }));

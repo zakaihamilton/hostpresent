@@ -12,7 +12,6 @@ import {
   getRoomById,
   openRoom,
   restoreRoomFromToken,
-  ROOM_STATUS,
 } from "@/lib/room/store";
 import { ROOM_ROLE } from "@/lib/room/tokens";
 
@@ -44,19 +43,15 @@ export async function POST(request) {
       });
     }
 
-    const opened =
-      room.status === ROOM_STATUS.OPEN
-        ? room
-        : await openRoom(verified.roomId, {
-            joinCode: room.joinCode ?? verified.joinCode,
-          });
+    const opened = await openRoom(verified.roomId, {
+      joinCode: room.joinCode ?? verified.joinCode,
+    });
 
     return jsonOk({
       roomId: verified.roomId,
       status: opened.status,
       openedAt: opened.openedAt,
       joinCode: opened.joinCode ?? null,
-      openProof: opened.openProof ?? null,
     });
   } catch (error) {
     console.error("[api/rooms/open] failed", error);

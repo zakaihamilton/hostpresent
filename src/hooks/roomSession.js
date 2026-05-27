@@ -30,15 +30,12 @@ async function readErrorMessage(response, fallback) {
   return fallback;
 }
 
-async function fetchRoomState(token, openProof = null) {
-  const params = new URLSearchParams({ token });
-  if (openProof) {
-    params.set("open", openProof);
-  }
-
+async function fetchRoomState(token) {
   let response;
   try {
-    response = await fetch(`/api/rooms/state?${params.toString()}`);
+    response = await fetch(
+      `/api/rooms/state?token=${encodeURIComponent(token)}`,
+    );
   } catch {
     throw new Error("Could not reach the server. Check your connection.");
   }
@@ -58,19 +55,6 @@ async function createRoomRequest() {
   return response.json();
 }
 
-async function openRoomRequest(token) {
-  const response = await fetch("/api/rooms/open", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error ?? "Failed to open room");
-  }
-  return response.json();
-}
-
 export function useRoomSettings() {
   const getSavedRoom = useCallback((hostToken) => {
     if (hostToken) {
@@ -85,7 +69,6 @@ export function useRoomSettings() {
       hostToken: room.hostToken,
       participantToken: room.participantToken,
       joinCode: room.joinCode ?? null,
-      openProof: room.openProof ?? null,
       createdAt: room.createdAt ?? Date.now(),
     });
     setActiveHostToken(room.hostToken);
@@ -100,32 +83,17 @@ export function useRoomSettings() {
   return { getSavedRoom, persistRoom, getRecentHostRooms, markHostRoomUsed };
 }
 
-export function useRoomSession({
-  role: _role,
-  token,
-  enabled = true,
-  openProof = null,
-}) {
+export function useRoomSession({ role: _role, token, enabled = true }) {
   const [status, setStatus] = useState(ROOM_SESSION_STATUS.IDLE);
   const [roomState, setRoomState] = useState(null);
   const [error, setError] = useState("");
-  const eventSourceRef = useRef(null);
   const previousTokenRef = useRef(null);
-  const openProofRef = useRef(openProof);
 
-  useEffect(() => {
-    openProofRef.current = openProof;
-  }, [openProof]);
-
-  const refreshState = useCallback(async (roomToken, proof = openProofRef.current) => {
+  const refreshState = useCallback(async (roomToken) => {
     if (!roomToken) return null;
-    const state = await fetchRoomState(roomToken, proof);
+    const state = await fetchRoomState(roomToken);
     setRoomState(state);
-    setStatus(
-      state.status === "open"
-        ? ROOM_SESSION_STATUS.OPEN
-        : ROOM_SESSION_STATUS.WAITING,
-    );
+    setStatus(ROOM_SESSION_STATUS.OPEN);
     return state;
   }, []);
 
@@ -139,47 +107,21 @@ export function useRoomSession({
         hostToken: created.hostToken,
         participantToken: created.participantToken,
         joinCode: created.joinCode,
-        openProof: null,
         createdAt: Date.now(),
       });
       setActiveHostToken(created.hostToken);
       setRoomState({
         roomId: created.roomId,
         role: "host",
-        status: "waiting",
-        openedAt: null,
+        status: "open",
+        openedAt: Date.now(),
       });
-      setStatus(ROOM_SESSION_STATUS.WAITING);
+      setStatus(ROOM_SESSION_STATUS.OPEN);
       return created;
     } catch (createError) {
       setStatus(ROOM_SESSION_STATUS.ERROR);
       setError(createError.message);
       throw createError;
-    }
-  }, []);
-
-  const openRoom = useCallback(async (hostToken) => {
-    setStatus(ROOM_SESSION_STATUS.LOADING);
-    setError("");
-    try {
-      const opened = await openRoomRequest(hostToken);
-      if (opened.openProof) {
-        openProofRef.current = opened.openProof;
-      }
-      setRoomState((prev) => ({
-        ...(prev ?? {}),
-        roomId: opened.roomId,
-        role: "host",
-        status: opened.status,
-        openedAt: opened.openedAt,
-        openProof: opened.openProof ?? null,
-      }));
-      setStatus(ROOM_SESSION_STATUS.OPEN);
-      return opened;
-    } catch (openError) {
-      setStatus(ROOM_SESSION_STATUS.ERROR);
-      setError(openError.message);
-      throw openError;
     }
   }, []);
 
@@ -200,14 +142,10 @@ export function useRoomSession({
       }
       setError("");
       try {
-        const state = await fetchRoomState(token, openProofRef.current);
+        const state = await fetchRoomState(token);
         if (cancelled) return;
         setRoomState(state);
-        setStatus(
-          state.status === "open"
-            ? ROOM_SESSION_STATUS.OPEN
-            : ROOM_SESSION_STATUS.WAITING,
-        );
+        setStatus(ROOM_SESSION_STATUS.OPEN);
       } catch (loadError) {
         if (cancelled) return;
         setStatus(ROOM_SESSION_STATUS.ERROR);
@@ -223,48 +161,11 @@ export function useRoomSession({
     };
   }, [enabled, token]);
 
-  useEffect(() => {
-    if (!enabled || !token || status !== ROOM_SESSION_STATUS.WAITING) {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-      return undefined;
-    }
-
-    const streamUrl = `/api/rooms/stream?token=${encodeURIComponent(token)}`;
-    const eventSource = new EventSource(streamUrl);
-    eventSourceRef.current = eventSource;
-
-    eventSource.addEventListener("room_opened", () => {
-      setRoomState((prev) =>
-        prev ? { ...prev, status: "open", openedAt: Date.now() } : prev,
-      );
-      setStatus(ROOM_SESSION_STATUS.OPEN);
-    });
-
-    eventSource.onerror = () => {
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
-
-    const pollTimer = setInterval(() => {
-      void refreshState(token, openProofRef.current);
-    }, 3000);
-
-    return () => {
-      clearInterval(pollTimer);
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
-  }, [enabled, refreshState, status, token]);
-
   return {
     status,
     roomState,
     error,
     createRoom,
-    openRoom,
     refreshState,
   };
 }

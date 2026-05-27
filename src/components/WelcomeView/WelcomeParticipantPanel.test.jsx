@@ -19,6 +19,12 @@ jest.mock("@/hooks/roomSession", () => ({
 
 jest.mock("@/lib/room/inviteLink", () => ({
   extractJoinCodeFromInput: () => "",
+  formatRoomIdInput: (value) =>
+    value
+      .replace(/[\s-]+/g, "")
+      .toUpperCase()
+      .match(/.{1,4}/g)
+      ?.join("-") ?? "",
   normalizeRoomIdInput: (value) => value.trim().toUpperCase(),
   resolveJoinCode: jest.fn(),
 }));
@@ -73,5 +79,23 @@ describe("WelcomeParticipantPanel", () => {
     expect(
       screen.getByRole("button", { name: "Join with room ID" }),
     ).toBeEnabled();
+  });
+
+  it("uppercases room id while typing", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <WelcomeParticipantPanel
+        token={null}
+        joinCode={null}
+        navigate={() => {}}
+        navigateJoinCode={() => {}}
+        navigateParticipantWelcome={() => {}}
+      />,
+    );
+
+    const input = screen.getByLabelText("Room ID");
+    await user.type(input, "abcd-efgh");
+    expect(input).toHaveValue("ABCD-EFGH");
   });
 });

@@ -15,10 +15,37 @@ import {
   useSessionTimers,
   useSignaling,
 } from "@/hooks";
+import { useRoomSession } from "@/hooks/roomSession";
+import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
+import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import {
+  createHostPresentMessage,
+  SIGNALING_MESSAGE,
+} from "@/lib/signaling/messages";
 import styles from "./MeetingView.module.css";
 
-export function MeetingView({ role, token, onBack }) {
+const HOST_PRESENT_INTERVAL_MS = 5000;
+
+export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const isHost = role === "host";
+
+  const { roomState } = useRoomSession({
+    role,
+    token,
+    enabled: Boolean(token),
+  });
+
+  const formattedRoomId = formatJoinCode(
+    routeJoinCode ?? roomState?.joinCode ?? "",
+  );
+
+  const inviteLink =
+    isHost && formattedRoomId
+      ? buildParticipantInviteLink(routeJoinCode ?? roomState?.joinCode ?? "")
+      : "";
+
+  const [hostPresent, setHostPresent] = useState(isHost);
+  const [inviteCopyMessage, setInviteCopyMessage] = useState("");
 
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
@@ -45,6 +72,29 @@ export function MeetingView({ role, token, onBack }) {
 
   const { confirm, dialogProps } = useConfirmDialog();
   const signaling = useSignaling({ token, enabled: Boolean(token) });
+
+  useEffect(() => {
+    if (!isHost || !token) return undefined;
+
+    const announce = () => {
+      void signaling.send(createHostPresentMessage());
+    };
+
+    announce();
+    const interval = setInterval(announce, HOST_PRESENT_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [isHost, signaling, token]);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+
+    return signaling.subscribe((message) => {
+      if (message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
+        setHostPresent(true);
+      }
+    });
+  }, [isHost, signaling]);
+
   const {
     muteParticipantAudio,
     muteParticipantVideo,
@@ -356,6 +406,17 @@ export function MeetingView({ role, token, onBack }) {
       ? "You (Host)"
       : "You";
 
+  const handleCopyInviteLink = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopyMessage("Invite link copied");
+      setTimeout(() => setInviteCopyMessage(""), 2500);
+    } catch {
+      setInviteCopyMessage("Could not copy invite link");
+    }
+  };
+
   return (
     <div className={styles.app}>
       {isRecording && (
@@ -368,12 +429,47 @@ export function MeetingView({ role, token, onBack }) {
       <Header
         timeString={timeString}
         meetingDurationSeconds={meetingSeconds}
+        roomId={formattedRoomId || null}
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
         onBack={onBack}
         backLabel="Back to welcome"
       />
+
+      {!isHost && !hostPresent
+        ? <div className={styles.hostWaitingBanner} role="status">
+            <p className={styles.hostWaitingText}>
+              Waiting for the host to join…
+            </p>
+          </div>
+        : null}
+
+      {isHost && inviteLink
+        ? <div className={styles.shareBar}>
+            <p className={styles.shareLabel}>
+              Share this invite link for participants on other devices:
+            </p>
+            <div className={styles.shareRow}>
+              <input
+                className={styles.shareInput}
+                readOnly
+                value={inviteLink}
+                aria-label="Participant invite link"
+              />
+              <button
+                type="button"
+                className={styles.shareButton}
+                onClick={handleCopyInviteLink}
+              >
+                Copy link
+              </button>
+            </div>
+            {inviteCopyMessage
+              ? <p className={styles.shareFeedback}>{inviteCopyMessage}</p>
+              : null}
+          </div>
+        : null}
 
       <main className={styles.workspace}>
         <div className={styles.stage}>

@@ -35,9 +35,7 @@ export {
   createRoomTokens,
   isRoomSigningEncrypted,
   ROOM_ROLE,
-  signRoomOpenProof,
   signRoomToken,
-  verifyRoomOpenProof,
   verifyRoomToken,
 } from "./tokens.js";
 export { deriveRoomIdFromJoinCode } from "./roomIdentity.js";

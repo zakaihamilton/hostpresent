@@ -5,44 +5,6 @@ import { MeetingView } from "@/components/MeetingView";
 import { WelcomeView } from "@/components/WelcomeView";
 import { APP_ROLE, APP_VIEW, useHashRouter } from "@/hooks/hashRouter";
 import { useRouteToken } from "@/hooks/routeToken";
-import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
-
-function ParticipantMeetingGuard({
-  joinCode,
-  token,
-  navigateJoinCode,
-  navigateParticipantWelcome,
-  children,
-}) {
-  const { status } = useRoomSession({
-    role: APP_ROLE.PARTICIPANT,
-    token,
-    enabled: Boolean(token),
-  });
-
-  useEffect(() => {
-    if (
-      status === ROOM_SESSION_STATUS.WAITING ||
-      status === ROOM_SESSION_STATUS.ERROR
-    ) {
-      if (joinCode) {
-        navigateJoinCode(joinCode);
-        return;
-      }
-      navigateParticipantWelcome();
-    }
-  }, [joinCode, navigateJoinCode, navigateParticipantWelcome, status]);
-
-  if (
-    status === ROOM_SESSION_STATUS.IDLE ||
-    status === ROOM_SESSION_STATUS.LOADING ||
-    status === ROOM_SESSION_STATUS.WAITING
-  ) {
-    return null;
-  }
-
-  return children;
-}
 
 export function AppRouter() {
   const {
@@ -51,7 +13,6 @@ export function AppRouter() {
     role,
     token: routeToken,
     joinCode,
-    openProof,
     navigate,
     navigateJoinCode,
     navigateParticipantWelcome,
@@ -63,6 +24,36 @@ export function AppRouter() {
     joinCode: view === APP_VIEW.MEETING ? joinCode : null,
   });
 
+  useEffect(() => {
+    if (!ready || view !== APP_VIEW.MEETING) return;
+    if (resolvingToken || sessionToken) return;
+
+    if (role === APP_ROLE.PARTICIPANT) {
+      if (joinCode) {
+        navigateJoinCode(joinCode);
+      } else {
+        navigateParticipantWelcome();
+      }
+      return;
+    }
+
+    navigate({
+      view: APP_VIEW.WELCOME,
+      role: APP_ROLE.HOST,
+      joinCode: joinCode ?? null,
+    });
+  }, [
+    joinCode,
+    navigate,
+    navigateJoinCode,
+    navigateParticipantWelcome,
+    ready,
+    resolvingToken,
+    role,
+    sessionToken,
+    view,
+  ]);
+
   if (!ready) {
     return null;
   }
@@ -72,10 +63,11 @@ export function AppRouter() {
       return null;
     }
 
-    const meeting = (
+    return (
       <MeetingView
         role={role}
         token={sessionToken}
+        joinCode={joinCode}
         onBack={() => {
           navigate({
             view: APP_VIEW.WELCOME,
@@ -85,21 +77,6 @@ export function AppRouter() {
         }}
       />
     );
-
-    if (role === APP_ROLE.PARTICIPANT) {
-      return (
-        <ParticipantMeetingGuard
-          joinCode={joinCode}
-          token={sessionToken}
-          navigateJoinCode={navigateJoinCode}
-          navigateParticipantWelcome={navigateParticipantWelcome}
-        >
-          {meeting}
-        </ParticipantMeetingGuard>
-      );
-    }
-
-    return meeting;
   }
 
   const welcomeRole =
@@ -110,7 +87,6 @@ export function AppRouter() {
       role={welcomeRole}
       token={routeToken}
       joinCode={joinCode}
-      openProof={openProof}
       navigate={navigate}
       navigateJoinCode={navigateJoinCode}
       navigateParticipantWelcome={navigateParticipantWelcome}

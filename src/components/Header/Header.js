@@ -5,6 +5,7 @@ import styles from "./Header.module.css";
 export function Header({
   timeString,
   meetingDurationSeconds,
+  roomId,
   isRecording,
   isRecordingPaused,
   recordingDurationSeconds,
@@ -32,6 +33,13 @@ export function Header({
       </div>
 
       <div className={styles.meta}>
+        {roomId
+          ? <div className={styles.stat}>
+              <span className={styles.statLabel}>Room ID</span>
+              <span className={styles.statValue}>{roomId}</span>
+            </div>
+          : null}
+
         <div className={styles.stat}>
           <span className={styles.statLabel}>Meeting</span>
           <span className={styles.statValue}>
