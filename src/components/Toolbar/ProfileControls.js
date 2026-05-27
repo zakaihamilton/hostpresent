@@ -10,7 +10,7 @@ import tooltipStyles from "@/components/Tooltip/Tooltip.module.css";
 import { resolveDisplayName } from "@/lib/settings/displayNameSettings";
 import styles from "./ProfileControls.module.css";
 
-const POPUP_GAP = 8;
+const POPUP_GAP = 24;
 const VIEWPORT_PADDING = 8;
 
 function btnClass(...classes) {
@@ -23,16 +23,20 @@ function clamp(value, min, max) {
 
 function computePopupPosition(anchorRect, popupRect) {
   const width = popupRect.width;
-  let left = anchorRect.left + anchorRect.width / 2 - width / 2;
+
+  // Align to the profile button's right edge so the popup sits above/left of
+  // the mic and camera controls instead of covering them.
+  let left = anchorRect.right - width;
   left = clamp(
     left,
     VIEWPORT_PADDING,
     window.innerWidth - width - VIEWPORT_PADDING,
   );
 
+  // Prefer placing well above the toolbar; avoid opening downward over mute/video.
   let top = anchorRect.top - POPUP_GAP - popupRect.height;
   if (top < VIEWPORT_PADDING) {
-    top = anchorRect.bottom + POPUP_GAP;
+    top = VIEWPORT_PADDING;
   }
   top = clamp(
     top,
