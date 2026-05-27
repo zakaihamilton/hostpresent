@@ -64,7 +64,6 @@ jest.mock("@/hooks/roomSession", () => ({
 }));
 
 jest.mock("@/lib/webrtc/peerClient", () => ({
-  getSignalingConfigError: () => null,
   getSignalingConfigHint: () => null,
   isFatalSignalingError: () => false,
   isWaitingForHostMessage: () => false,

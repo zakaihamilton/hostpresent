@@ -3,6 +3,9 @@ const DEFAULT_SIGNALING_PORT = 443;
 
 export { DEFAULT_SIGNALING_PATH };
 
+const SIGNALING_CONFIG_HINT =
+  "Set SIGNALING_SERVER_URL to your PeerJS hostname (no https://) in Vercel env vars or .env.local, then redeploy.";
+
 function normalizeSignalingHost(value) {
   if (!value || typeof value !== "string") return null;
   return value.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
@@ -16,28 +19,15 @@ function normalizeSignalingPath(value) {
 }
 
 export function getSignalingServerHost() {
-  return (
-    normalizeSignalingHost(process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL)
-  );
+  return normalizeSignalingHost(process.env.SIGNALING_SERVER_URL);
 }
 
 export function getSignalingServerPath() {
-  return normalizeSignalingPath(
-    process.env.NEXT_PUBLIC_SIGNALING_SERVER_PATH ??
-      process.env.NEXT_PUBLIC_PEERJS_PATH,
-  );
-}
-
-export function getSignalingConfigError() {
-  if (!isSignalingServerConfigured()) {
-    return "Signaling server is not configured.";
-  }
-  return null;
+  return normalizeSignalingPath(process.env.SIGNALING_SERVER_PATH);
 }
 
 export function getSignalingConfigHint() {
-  if (isSignalingServerConfigured()) return null;
-  return "Add NEXT_PUBLIC_SIGNALING_SERVER_URL to .env.local (hostname only, no https://). Path defaults to /myapp. Restart npm run dev after changes.";
+  return SIGNALING_CONFIG_HINT;
 }
 
 export function isSignalingServerConfigured() {
@@ -55,36 +45,38 @@ export function isFatalSignalingError(message) {
   if (message.includes("Could not reach the signaling server")) return true;
   if (message.includes("Unable to connect to the signaling server")) return true;
   if (message.includes("Could not connect to the meeting")) return true;
+  if (message.includes("Could not load signaling configuration")) return true;
   return false;
 }
 
 export const MAX_SIGNALING_RETRIES = 5;
 export const SIGNALING_CONNECT_TIMEOUT_MS = 20000;
 
-export function getPeerJsConfig() {
-  const host = getSignalingServerHost();
+function readSignalingPortFromEnv() {
+  return Number(process.env.SIGNALING_SERVER_PORT ?? DEFAULT_SIGNALING_PORT);
+}
 
-  if (!host && process.env.NODE_ENV === "development") {
-    console.warn(
-      "[signaling] NEXT_PUBLIC_SIGNALING_SERVER_URL is not set. WebRTC signaling will fail until configured.",
-    );
-  }
+function readSignalingSecureFromEnv() {
+  return process.env.SIGNALING_SECURE !== "false";
+}
 
-  const port = Number(
-    process.env.NEXT_PUBLIC_SIGNALING_SERVER_PORT ??
-    process.env.NEXT_PUBLIC_PEERJS_PORT ??
-    DEFAULT_SIGNALING_PORT,
-  );
-  const path = getSignalingServerPath();
-  const secure =
-    process.env.NEXT_PUBLIC_SIGNALING_SECURE !== "false" &&
-    process.env.NEXT_PUBLIC_PEERJS_SECURE !== "false";
-
+export function buildPeerJsConfig(host = getSignalingServerHost()) {
   return {
     host: host ?? "localhost",
-    port,
-    path,
-    secure,
+    port: readSignalingPortFromEnv(),
+    path: getSignalingServerPath(),
+    secure: readSignalingSecureFromEnv(),
+  };
+}
+
+export function getPeerJsConfigFromApi(payload) {
+  const host = normalizeSignalingHost(payload?.host);
+  if (!host) return null;
+  return {
+    host,
+    port: Number(payload?.port ?? DEFAULT_SIGNALING_PORT),
+    path: normalizeSignalingPath(payload?.path),
+    secure: payload?.secure !== false,
   };
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./SecurityNotice.module.css";
 
 export function SecurityNotice() {
-  const [encrypted, setEncrypted] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -14,8 +14,23 @@ export function SecurityNotice() {
         const response = await fetch("/api/rooms/config");
         if (!response.ok) return;
         const data = await response.json();
-        if (!cancelled) {
-          setEncrypted(Boolean(data.encrypted));
+        if (cancelled) return;
+
+        if (!data.signalingServerConfigured) {
+          setNotice({
+            title: "Signaling not configured.",
+            message:
+              "WebRTC will not work until SIGNALING_SERVER_URL is set on the server (Vercel env vars or .env.local).",
+          });
+          return;
+        }
+
+        if (!data.encrypted) {
+          setNotice({
+            title: "Not encrypted.",
+            message:
+              "Room links are working, but tokens use a default secret. Set SIGNALING_SERVER_URL for production room signing.",
+          });
         }
       } catch {
         // leave banner hidden if config cannot be loaded
@@ -28,15 +43,13 @@ export function SecurityNotice() {
     };
   }, []);
 
-  if (encrypted !== false) {
+  if (!notice) {
     return null;
   }
 
   return (
     <div className={styles.notice} role="status">
-      <strong>Not encrypted.</strong> Room links are working, but tokens are
-      signed with a default secret. Set <code>NEXT_PUBLIC_SIGNALING_SERVER_URL</code>{" "}
-      for encrypted room access in production.
+      <strong>{notice.title}</strong> {notice.message}
     </div>
   );
 }

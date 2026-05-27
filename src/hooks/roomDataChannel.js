@@ -9,8 +9,6 @@ import {
 } from "@/lib/signaling/messages";
 import {
   connectionRetryDelayMs,
-  getSignalingConfigError,
-  getPeerJsConfig,
   hostPeerId,
   isRetryablePeerError,
   isWaitingForHostMessage,
@@ -19,6 +17,10 @@ import {
   peerErrorMessage,
   SIGNALING_CONNECT_TIMEOUT_MS,
 } from "@/lib/webrtc/peerClient";
+import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
+
+const SIGNALING_NOT_CONFIGURED_ERROR =
+  "Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.";
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
@@ -44,16 +46,18 @@ export function useRoomDataChannel({
   const [isConnected, setIsConnected] = useState(false);
   const [hostPresent, setHostPresent] = useState(isHost);
   const [localParticipantId, setLocalParticipantId] = useState("");
-  const [connectionError, setConnectionError] = useState(() =>
-    getSignalingConfigError(),
-  );
+  const [connectionError, setConnectionError] = useState(null);
+  const [peerConfig, setPeerConfig] = useState(null);
+  const [configReady, setConfigReady] = useState(false);
 
   const peerRef = useRef(null);
+  const peerConfigRef = useRef(null);
   const connectionsRef = useRef(new Map());
   const hostConnectionRef = useRef(null);
   const handlersRef = useRef(new Set());
   const hostPresentTimerRef = useRef(null);
   const openCountRef = useRef(0);
+  const signalingOpenRef = useRef(false);
   const retryTimerRef = useRef(null);
   const retryAttemptRef = useRef(0);
   const connectRetryTimerRef = useRef(null);
@@ -154,12 +158,12 @@ export function useRoomDataChannel({
 
   const schedulePeerRetry = useCallback(
     (restart) => {
-      if (getSignalingConfigError()) return;
+      if (!peerConfigRef.current) return;
 
       if (retryAttemptRef.current >= MAX_SIGNALING_RETRIES) {
         setConnectionError(
           isHost
-            ? "Unable to connect to the signaling server. Verify NEXT_PUBLIC_SIGNALING_SERVER_URL in .env.local and that your PeerJS server is running."
+            ? "Unable to connect to the signaling server. Verify SIGNALING_SERVER_URL is set on the server and that your PeerJS server is running."
             : "Could not connect to the meeting. Make sure the host has joined and the signaling server is reachable.",
         );
         return;
@@ -176,9 +180,37 @@ export function useRoomDataChannel({
   );
 
   useEffect(() => {
-    const configError = getSignalingConfigError();
-    if (configError) {
-      setConnectionError(configError);
+    let cancelled = false;
+    setConfigReady(false);
+    setPeerConfig(null);
+    peerConfigRef.current = null;
+
+    void fetchPeerJsConfig()
+      .then((config) => {
+        if (cancelled) return;
+        if (!config) {
+          setConnectionError(SIGNALING_NOT_CONFIGURED_ERROR);
+          setConfigReady(true);
+          return;
+        }
+        setConnectionError(null);
+        setPeerConfig(config);
+        peerConfigRef.current = config;
+        setConfigReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setConnectionError("Could not load signaling configuration.");
+        setConfigReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!configReady || !peerConfig) {
       return undefined;
     }
 
@@ -198,18 +230,20 @@ export function useRoomDataChannel({
       peerRef.current?.destroy();
       peerRef.current = null;
       openCountRef.current = 0;
+      signalingOpenRef.current = false;
     };
 
     const startHostPeer = (Peer) => {
       if (destroyed) return;
 
       teardownPeer();
-      const options = getPeerJsConfig();
+      const options = peerConfigRef.current ?? peerConfig;
       const peer = new Peer(hostPeerId(roomId), options);
       peerRef.current = peer;
 
       peer.on("open", () => {
         if (destroyed) return;
+        signalingOpenRef.current = true;
         setConnectionError(null);
         retryAttemptRef.current = 0;
       });
@@ -246,7 +280,7 @@ export function useRoomDataChannel({
       if (destroyed) return;
 
       teardownPeer();
-      const options = getPeerJsConfig();
+      const options = peerConfigRef.current ?? peerConfig;
       const peer = new Peer(undefined, options);
       peerRef.current = peer;
 
@@ -279,6 +313,7 @@ export function useRoomDataChannel({
 
       peer.on("open", (id) => {
         if (destroyed) return;
+        signalingOpenRef.current = true;
         setLocalParticipantId(id);
         setConnectionError(null);
         retryAttemptRef.current = 0;
@@ -331,18 +366,31 @@ export function useRoomDataChannel({
     bindConnection,
     clearConnectRetryTimer,
     clearRetryTimer,
+    configReady,
     enabled,
     isHost,
+    peerConfig,
     roomId,
     schedulePeerRetry,
     token,
   ]);
 
   useEffect(() => {
-    const configError = getSignalingConfigError();
-    if (configError || !enabled || !token || !roomId) return undefined;
+    if (!configReady || !peerConfig || !enabled || !token || !roomId) {
+      return undefined;
+    }
 
     const timer = window.setTimeout(() => {
+      if (signalingOpenRef.current) {
+        if (isHost) return;
+        setConnectionError((previous) => {
+          if (isWaitingForHostMessage(previous)) return previous;
+          if (openCountRef.current > 0) return null;
+          return previous ?? "Waiting for the host to join…";
+        });
+        return;
+      }
+
       if (openCountRef.current > 0) return;
       setConnectionError((previous) => {
         if (isWaitingForHostMessage(previous)) return previous;
@@ -353,7 +401,7 @@ export function useRoomDataChannel({
     }, SIGNALING_CONNECT_TIMEOUT_MS);
 
     return () => window.clearTimeout(timer);
-  }, [enabled, isHost, roomId, token]);
+  }, [configReady, enabled, isHost, peerConfig, roomId, token]);
 
   useEffect(() => {
     if (!enabled || !isHost || !token) return undefined;
@@ -385,7 +433,7 @@ export function useRoomDataChannel({
     hostPresent,
     localParticipantId,
     connectionError,
-    signalingConfigured: !getSignalingConfigError(),
+    signalingConfigured: Boolean(peerConfig),
     status,
   };
 }

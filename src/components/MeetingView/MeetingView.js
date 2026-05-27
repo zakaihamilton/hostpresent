@@ -22,7 +22,6 @@ import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 import {
-  getSignalingConfigError,
   getSignalingConfigHint,
   isFatalSignalingError,
   isWaitingForHostMessage,
@@ -114,11 +113,15 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     onRemoteParticipant: isHost ? handleRemoteParticipant : undefined,
   });
 
-  const signalingConfigError = getSignalingConfigError();
   const fatalConnectionError =
     roomConnection.connectionError &&
     isFatalSignalingError(roomConnection.connectionError)
       ? roomConnection.connectionError
+      : null;
+  const signalingConfigError =
+    fatalConnectionError?.includes("Signaling server is not configured") ||
+    fatalConnectionError?.includes("Could not load signaling configuration")
+      ? fatalConnectionError
       : null;
 
   useEffect(() => {
@@ -522,7 +525,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         message={fatalConnectionError}
         hint={
           isHost
-            ? "For local dev: set NEXT_PUBLIC_SIGNALING_SERVER_URL in .env.local to your Railway hostname, run a PeerJS server, then restart npm run dev."
+            ? "Set SIGNALING_SERVER_URL on the server (Vercel env vars or .env.local). Redeploy after changing env vars."
             : "Ask the host to join the meeting first. If the problem continues, the signaling server may be down or misconfigured."
         }
         onBack={onBack}
