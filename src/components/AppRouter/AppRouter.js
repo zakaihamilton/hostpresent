@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { MeetingJoinError } from "@/components/MeetingJoinError";
+import { MeetingLoading } from "@/components/MeetingLoading";
 import { MeetingView } from "@/components/MeetingView";
 import { WelcomeView } from "@/components/WelcomeView";
 import { APP_ROLE, APP_VIEW, useHashRouter } from "@/hooks/hashRouter";
@@ -18,7 +20,11 @@ export function AppRouter() {
     navigateParticipantWelcome,
   } = useHashRouter();
 
-  const { token: sessionToken, loading: resolvingToken } = useRouteToken({
+  const {
+    token: sessionToken,
+    loading: resolvingToken,
+    error: resolveError,
+  } = useRouteToken({
     role,
     token: routeToken,
     joinCode: view === APP_VIEW.MEETING ? joinCode : null,
@@ -26,28 +32,16 @@ export function AppRouter() {
 
   useEffect(() => {
     if (!ready || view !== APP_VIEW.MEETING) return;
-    if (resolvingToken || sessionToken) return;
+    if (resolvingToken || sessionToken || resolveError) return;
 
-    if (role === APP_ROLE.PARTICIPANT) {
-      if (joinCode) {
-        navigateJoinCode(joinCode);
-      } else {
-        navigateParticipantWelcome();
-      }
-      return;
+    if (role === APP_ROLE.PARTICIPANT && !joinCode) {
+      navigateParticipantWelcome();
     }
-
-    navigate({
-      view: APP_VIEW.WELCOME,
-      role: APP_ROLE.HOST,
-      joinCode: joinCode ?? null,
-    });
   }, [
     joinCode,
-    navigate,
-    navigateJoinCode,
     navigateParticipantWelcome,
     ready,
+    resolveError,
     resolvingToken,
     role,
     sessionToken,
@@ -59,8 +53,36 @@ export function AppRouter() {
   }
 
   if (view === APP_VIEW.MEETING) {
-    if (resolvingToken || !sessionToken) {
-      return null;
+    if (resolvingToken) {
+      return <MeetingLoading message="Looking up room…" />;
+    }
+
+    if (!sessionToken) {
+      return (
+        <MeetingJoinError
+          title="Could not join meeting"
+          message={
+            resolveError ??
+            "Invalid or expired room link. Check the room ID and try again."
+          }
+          onBack={() => {
+            if (role === APP_ROLE.PARTICIPANT) {
+              navigateParticipantWelcome();
+              return;
+            }
+            navigate({
+              view: APP_VIEW.WELCOME,
+              role: APP_ROLE.HOST,
+              joinCode: joinCode ?? null,
+            });
+          }}
+          backLabel={
+            role === APP_ROLE.PARTICIPANT
+              ? "Back to join screen"
+              : "Back to welcome"
+          }
+        />
+      );
     }
 
     return (
@@ -69,10 +91,14 @@ export function AppRouter() {
         token={sessionToken}
         joinCode={joinCode}
         onBack={() => {
+          if (role === APP_ROLE.PARTICIPANT) {
+            navigateParticipantWelcome();
+            return;
+          }
           navigate({
             view: APP_VIEW.WELCOME,
-            role,
-            joinCode,
+            role: APP_ROLE.HOST,
+            joinCode: joinCode ?? null,
           });
         }}
       />

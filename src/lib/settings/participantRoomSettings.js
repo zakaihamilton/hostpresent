@@ -127,6 +127,22 @@ export function getParticipantRoomByJoinCode(joinCode) {
   );
 }
 
+export function removeParticipantRoomByToken(participantToken) {
+  if (!participantToken) return;
+  const current = readRaw();
+  const nextRooms = current.rooms.filter(
+    (room) => room.participantToken !== participantToken,
+  );
+  if (nextRooms.length === current.rooms.length) return;
+  writeRaw({
+    activeParticipantToken:
+      current.activeParticipantToken === participantToken
+        ? null
+        : current.activeParticipantToken,
+    rooms: nextRooms,
+  });
+}
+
 export function clearParticipantRooms() {
   writeRaw({ activeParticipantToken: null, rooms: [] });
 }

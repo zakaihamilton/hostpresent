@@ -5,7 +5,6 @@ export {
   normalizeJoinCode,
 } from "./joinCodeFormat.js";
 export { canRelayMessage } from "./messageAuth.js";
-export { publishToRoom, subscribeToRoom } from "./pubsub.js";
 export {
   getSearchParam,
   jsonError,

@@ -49,9 +49,25 @@ jest.mock("@/components/ConfirmDialog", () => ({
 }));
 
 jest.mock("@/hooks/roomSession", () => ({
+  ROOM_SESSION_STATUS: {
+    IDLE: "idle",
+    LOADING: "loading",
+    WAITING: "waiting",
+    OPEN: "open",
+    ERROR: "error",
+  },
   useRoomSession: () => ({
-    roomState: { joinCode: "ABCDEFGH" },
+    status: "open",
+    roomState: { roomId: "room-1", joinCode: "ABCDEFGH" },
+    error: "",
   }),
+}));
+
+jest.mock("@/lib/webrtc/peerClient", () => ({
+  getSignalingConfigError: () => null,
+  getSignalingConfigHint: () => null,
+  isFatalSignalingError: () => false,
+  isWaitingForHostMessage: () => false,
 }));
 
 jest.mock("@/hooks", () => ({
@@ -72,10 +88,14 @@ jest.mock("@/hooks", () => ({
     recordingSeconds: 0,
     resetRecordingTimer: jest.fn(),
   }),
-  useSignaling: () => ({
+  useRoomDataChannel: () => ({
     send: jest.fn(),
     subscribe: jest.fn(() => () => {}),
+    hostPresent: true,
+    localParticipantId: "participant-1",
+    connectionError: null,
     status: "connected",
+    isConnected: true,
   }),
 }));
 

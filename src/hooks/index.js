@@ -6,6 +6,7 @@ export {
   useRoomSession,
   useRoomSettings,
 } from "./roomSession.js";
+export { useRoomDataChannel } from "./roomDataChannel.js";
 export { useRouteToken } from "./routeToken.js";
 export { useSessionTimers } from "./sessionTimers.js";
 export { useSignaling } from "./signaling.js";

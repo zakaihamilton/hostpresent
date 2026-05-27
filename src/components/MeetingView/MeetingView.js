@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Header } from "@/components/Header";
+import { MeetingJoinError } from "@/components/MeetingJoinError";
+import { MeetingLoading } from "@/components/MeetingLoading";
 import { ParticipantsSidebar } from "@/components/ParticipantsSidebar";
 import { PrimaryView } from "@/components/PrimaryView";
 import { RecordingDownloadBanner } from "@/components/RecordingDownloadBanner";
@@ -12,24 +14,33 @@ import { VideoGallery } from "@/components/VideoGallery";
 import {
   useConfirmDialog,
   useHostControls,
+  useRoomDataChannel,
   useSessionTimers,
-  useSignaling,
 } from "@/hooks";
-import { useRoomSession } from "@/hooks/roomSession";
+import { useRoomSession, ROOM_SESSION_STATUS } from "@/hooks/roomSession";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 import {
-  createHostPresentMessage,
-  SIGNALING_MESSAGE,
-} from "@/lib/signaling/messages";
+  getSignalingConfigError,
+  getSignalingConfigHint,
+  isFatalSignalingError,
+  isWaitingForHostMessage,
+} from "@/lib/webrtc/peerClient";
 import styles from "./MeetingView.module.css";
 
-const HOST_PRESENT_INTERVAL_MS = 5000;
+function participantColor(id) {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) {
+    hash = id.charCodeAt(index) + ((hash << 5) - hash);
+  }
+  return `hsl(${Math.abs(hash) % 360} 55% 45%)`;
+}
 
 export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const isHost = role === "host";
 
-  const { roomState } = useRoomSession({
+  const { status: sessionStatus, roomState, error: sessionError } = useRoomSession({
     role,
     token,
     enabled: Boolean(token),
@@ -71,29 +82,91 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     });
 
   const { confirm, dialogProps } = useConfirmDialog();
-  const signaling = useSignaling({ token, enabled: Boolean(token) });
+
+  const handleRemoteParticipant = useCallback((participant) => {
+    if (!participant?.id) return;
+    setVideoParticipants((previous) => {
+      const existing = previous.find((entry) => entry.id === participant.id);
+      if (existing) {
+        return previous.map((entry) =>
+          entry.id === participant.id ? { ...entry, ...participant } : entry,
+        );
+      }
+      return [
+        ...previous,
+        {
+          id: participant.id,
+          name: participant.name ?? "Guest",
+          avatarColor: participantColor(participant.id),
+          isAudioMuted: false,
+          isVideoMuted: false,
+          stream: participant.stream ?? null,
+        },
+      ];
+    });
+  }, []);
+
+  const roomConnection = useRoomDataChannel({
+    role,
+    token,
+    roomId: roomState?.roomId ?? null,
+    enabled: Boolean(token && roomState?.roomId),
+    onRemoteParticipant: isHost ? handleRemoteParticipant : undefined,
+  });
+
+  const signalingConfigError = getSignalingConfigError();
+  const fatalConnectionError =
+    roomConnection.connectionError &&
+    isFatalSignalingError(roomConnection.connectionError)
+      ? roomConnection.connectionError
+      : null;
 
   useEffect(() => {
-    if (!isHost || !token) return undefined;
-
-    const announce = () => {
-      void signaling.send(createHostPresentMessage());
-    };
-
-    announce();
-    const interval = setInterval(announce, HOST_PRESENT_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [isHost, signaling, token]);
+    if (isHost) {
+      setHostPresent(true);
+      return;
+    }
+    setHostPresent(roomConnection.hostPresent);
+  }, [isHost, roomConnection.hostPresent]);
 
   useEffect(() => {
     if (isHost) return undefined;
 
-    return signaling.subscribe((message) => {
-      if (message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
-        setHostPresent(true);
+    return roomConnection.subscribe((message) => {
+      const localId = roomConnection.localParticipantId;
+
+      switch (message.type) {
+        case SIGNALING_MESSAGE.HOST_MUTE_AUDIO:
+          if (message.participantId && message.participantId !== localId) return;
+          localStream?.getAudioTracks().forEach((track) => {
+            track.enabled = false;
+          });
+          setIsAudioMuted(true);
+          break;
+        case SIGNALING_MESSAGE.HOST_MUTE_VIDEO:
+          if (message.participantId && message.participantId !== localId) return;
+          localStream?.getVideoTracks().forEach((track) => {
+            track.enabled = false;
+          });
+          setIsVideoMuted(true);
+          break;
+        case SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO:
+          localStream?.getAudioTracks().forEach((track) => {
+            track.enabled = false;
+          });
+          setIsAudioMuted(true);
+          break;
+        case SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO:
+          localStream?.getVideoTracks().forEach((track) => {
+            track.enabled = false;
+          });
+          setIsVideoMuted(true);
+          break;
+        default:
+          break;
       }
     });
-  }, [isHost, signaling]);
+  }, [isHost, localStream, roomConnection]);
 
   const {
     muteParticipantAudio,
@@ -107,7 +180,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     audioList,
     setVideoParticipants,
     setAudioList,
-    signaling,
+    signaling: roomConnection,
     confirm,
     enabled: isHost,
   });
@@ -417,6 +490,46 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     }
   };
 
+  if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
+    return <MeetingLoading message="Loading room…" />;
+  }
+
+  if (sessionStatus === ROOM_SESSION_STATUS.ERROR) {
+    return (
+      <MeetingJoinError
+        title="Could not join meeting"
+        message={sessionError || "Failed to load room session."}
+        onBack={onBack}
+      />
+    );
+  }
+
+  if (signalingConfigError) {
+    return (
+      <MeetingJoinError
+        title="Signaling not configured"
+        message={signalingConfigError}
+        hint={getSignalingConfigHint()}
+        onBack={onBack}
+      />
+    );
+  }
+
+  if (fatalConnectionError) {
+    return (
+      <MeetingJoinError
+        title="Could not connect to meeting"
+        message={fatalConnectionError}
+        hint={
+          isHost
+            ? "For local dev: set NEXT_PUBLIC_SIGNALING_SERVER_URL in .env.local to your Railway hostname, run a PeerJS server, then restart npm run dev."
+            : "Ask the host to join the meeting first. If the problem continues, the signaling server may be down or misconfigured."
+        }
+        onBack={onBack}
+      />
+    );
+  }
+
   return (
     <div className={styles.app}>
       {isRecording && (
@@ -434,13 +547,40 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
         onBack={onBack}
-        backLabel="Back to welcome"
+        backLabel={isHost ? "Back to welcome" : "Back to join screen"}
       />
 
-      {!isHost && !hostPresent
+      {!isHost && !hostPresent && roomConnection.connectionError
         ? <div className={styles.hostWaitingBanner} role="status">
             <p className={styles.hostWaitingText}>
-              Waiting for the host to join…
+              {roomConnection.connectionError}
+            </p>
+          </div>
+        : null}
+
+      {!isHost && !hostPresent && !roomConnection.connectionError
+        ? <div className={styles.hostWaitingBanner} role="status">
+            <p className={styles.hostWaitingText}>Waiting for the host to join…</p>
+          </div>
+        : null}
+
+      {roomConnection.connectionError &&
+      !isHost &&
+      !isWaitingForHostMessage(roomConnection.connectionError) &&
+      !fatalConnectionError
+        ? <div className={styles.signalingErrorBanner} role="alert">
+            <p className={styles.signalingErrorText}>
+              {roomConnection.connectionError}
+            </p>
+          </div>
+        : null}
+
+      {isHost &&
+      roomConnection.connectionError &&
+      !fatalConnectionError
+        ? <div className={styles.signalingErrorBanner} role="alert">
+            <p className={styles.signalingErrorText}>
+              {roomConnection.connectionError}
             </p>
           </div>
         : null}

@@ -35,8 +35,8 @@ export function SecurityNotice() {
   return (
     <div className={styles.notice} role="status">
       <strong>Not encrypted.</strong> Room links are working, but tokens are
-      signed with a default secret. Set <code>ROOM_SIGNING_SECRET</code> on the
-      server for encrypted room access in production.
+      signed with a default secret. Set <code>NEXT_PUBLIC_SIGNALING_SERVER_URL</code>{" "}
+      for encrypted room access in production.
     </div>
   );
 }

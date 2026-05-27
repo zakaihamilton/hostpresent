@@ -57,4 +57,28 @@ describe("WelcomeHostPanel", () => {
     expect(screen.getByLabelText("Participant invite link")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
   });
+
+  it("navigates to the meeting when join meeting is clicked", async () => {
+    const navigate = jest.fn();
+
+    render(
+      <WelcomeHostPanel
+        joinCode="ABCDEFGH"
+        legacyToken={null}
+        navigate={navigate}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
+    });
+
+    screen.getByRole("button", { name: "Join meeting" }).click();
+
+    expect(navigate).toHaveBeenCalledWith({
+      view: APP_VIEW.MEETING,
+      role: APP_ROLE.HOST,
+      joinCode: "ABCDEFGH",
+    });
+  });
 });

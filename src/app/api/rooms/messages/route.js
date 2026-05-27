@@ -1,5 +1,6 @@
 import {
   enforceRateLimit,
+  guardPostRequest,
   RATE_LIMITS,
   validateJsonPost,
 } from "@/lib/room/apiSecurity";
@@ -10,7 +11,6 @@ import {
   readJsonBody,
   verifyRequestToken,
 } from "@/lib/room/routeHelpers";
-import { getRoomById, relayRoomMessage } from "@/lib/room/store";
 import { isSignalingMessage } from "@/lib/signaling/messages";
 
 export const runtime = "nodejs";
@@ -50,17 +50,10 @@ export async function POST(request) {
       return jsonError("Forbidden", 403);
     }
 
-    const room = await getRoomById(verified.roomId);
-    if (!room) {
-      return jsonError("Room not found", 404);
-    }
-
-    await relayRoomMessage(verified.roomId, {
-      ...message,
-      roomId: verified.roomId,
-    });
-
-    return jsonOk({ ok: true });
+    return jsonError(
+      "Room messages are relayed over WebRTC data channels",
+      410,
+    );
   } catch (error) {
     console.error("[api/rooms/messages] relay failed", error);
     return jsonError("Failed to relay message", 500);

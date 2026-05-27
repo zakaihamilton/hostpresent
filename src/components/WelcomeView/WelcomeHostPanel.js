@@ -217,12 +217,18 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
 
   const handleJoinMeeting = () => {
     if (!hostToken) return;
+    const meetingJoinCode =
+      joinCode ?? getRoomByHostToken(hostToken)?.joinCode ?? null;
+    if (!meetingJoinCode) {
+      setCopyMessage("Room ID is not ready yet. Try again in a moment.");
+      return;
+    }
     markHostRoomUsed(hostToken);
     refreshRecentRooms();
     navigate({
       view: APP_VIEW.MEETING,
       role: APP_ROLE.HOST,
-      joinCode,
+      joinCode: meetingJoinCode,
     });
   };
 

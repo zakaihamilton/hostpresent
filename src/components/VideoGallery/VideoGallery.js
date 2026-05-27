@@ -27,6 +27,7 @@ export function VideoGallery({
           {participants.map((participant) => (
             <VideoTile
               key={participant.id}
+              stream={participant.stream}
               name={participant.name}
               initial={participant.name.charAt(0)}
               avatarColor={participant.avatarColor}

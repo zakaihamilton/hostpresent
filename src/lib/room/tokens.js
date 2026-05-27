@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { getSignalingServerHost } from "../webrtc/peerClient.js";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -11,11 +12,11 @@ export const ROOM_ROLE = {
 const DEV_FALLBACK_SECRET = "hostpresent-dev-signing-secret";
 
 export function getSigningSecret() {
-  return process.env.ROOM_SIGNING_SECRET || DEV_FALLBACK_SECRET;
+  return getSignalingServerHost() || DEV_FALLBACK_SECRET;
 }
 
 export function isRoomSigningEncrypted() {
-  return Boolean(process.env.ROOM_SIGNING_SECRET);
+  return Boolean(getSignalingServerHost());
 }
 
 function toBase64Url(value) {

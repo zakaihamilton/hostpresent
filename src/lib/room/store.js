@@ -1,5 +1,4 @@
 import { createJoinCode, normalizeJoinCode } from "./joinCode.js";
-import { publishToRoom } from "./pubsub.js";
 import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "./tokens.js";
 import { deriveRoomIdFromJoinCode } from "./roomIdentity.js";
 
@@ -178,10 +177,9 @@ export async function openRoom(roomId, { joinCode = null } = {}) {
   };
 
   rememberRoom(nextRoom);
-  publishToRoom(roomId, { type: "room_opened", roomId });
   return nextRoom;
 }
 
-export async function relayRoomMessage(roomId, message) {
-  publishToRoom(roomId, { type: "signaling", message });
+export async function relayRoomMessage(_roomId, _message) {
+  // Application signaling is relayed over WebRTC data channels.
 }

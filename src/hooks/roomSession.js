@@ -5,10 +5,12 @@ import {
   getActiveRoom,
   getRoomByHostToken,
   listHostRooms,
+  removeHostRoomByToken,
   saveRoom,
   setActiveHostToken,
   touchHostRoom,
 } from "@/lib/settings/roomSettings";
+import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 
 export const ROOM_SESSION_STATUS = {
   IDLE: "idle",
@@ -25,7 +27,9 @@ async function readErrorMessage(response, fallback) {
   } catch {
     // ignore non-JSON error bodies (e.g. HTML 500 pages)
   }
-  if (response.status === 401) return "Session expired. Join or create a room again.";
+  if (response.status === 401) {
+    return "This room link is no longer valid. Create a new room from the host welcome screen.";
+  }
   if (response.status === 404) return "Room not found. It may have expired.";
   return fallback;
 }
@@ -40,6 +44,10 @@ async function fetchRoomState(token) {
     throw new Error("Could not reach the server. Check your connection.");
   }
   if (!response.ok) {
+    if (response.status === 401) {
+      removeHostRoomByToken(token);
+      removeParticipantRoomByToken(token);
+    }
     throw new Error(
       await readErrorMessage(response, "Failed to fetch room state"),
     );

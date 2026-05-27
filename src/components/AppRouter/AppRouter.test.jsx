@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { AppRouter } from "./AppRouter";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 
@@ -7,8 +8,13 @@ jest.mock("@/components/WelcomeView", () => ({
 }));
 
 jest.mock("@/components/MeetingView", () => ({
-  MeetingView: ({ role }) => (
-    <div data-testid="meeting-view">Meeting {role}</div>
+  MeetingView: ({ role, onBack }) => (
+    <div data-testid="meeting-view">
+      Meeting {role}
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+    </div>
   ),
 }));
 
@@ -19,7 +25,7 @@ jest.mock("@/hooks/hashRouter", () => ({
 }));
 
 jest.mock("@/hooks/routeToken", () => ({
-  useRouteToken: jest.fn(() => ({ token: null, loading: false })),
+  useRouteToken: jest.fn(() => ({ token: null, loading: false, error: "" })),
 }));
 
 jest.mock("@/hooks/roomSession", () => ({
@@ -68,9 +74,38 @@ describe("AppRouter", () => {
     useRouteToken.mockReturnValue({
       token: "host-token",
       loading: false,
+      error: "",
     });
 
     render(<AppRouter />);
     expect(screen.getByTestId("meeting-view")).toHaveTextContent("Meeting host");
+  });
+
+  it("returns participants to the join screen from meeting", async () => {
+    const user = userEvent.setup();
+    const { useHashRouter } = await import("@/hooks/hashRouter");
+    const { useRouteToken } = await import("@/hooks/routeToken");
+    const navigateParticipantWelcome = jest.fn();
+
+    useHashRouter.mockReturnValue({
+      ready: true,
+      view: APP_VIEW.MEETING,
+      role: APP_ROLE.PARTICIPANT,
+      token: null,
+      joinCode: "ABCDEFGH",
+      navigate: jest.fn(),
+      navigateJoinCode: jest.fn(),
+      navigateParticipantWelcome,
+    });
+    useRouteToken.mockReturnValue({
+      token: "participant-token",
+      loading: false,
+      error: "",
+    });
+
+    render(<AppRouter />);
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(navigateParticipantWelcome).toHaveBeenCalledTimes(1);
   });
 });

@@ -135,3 +135,15 @@
   font-size: 0.875rem;
   color: var(--text-main);
 }
+
+.signalingErrorBanner {
+  padding: 0.65rem 1.5rem;
+  background: color-mix(in srgb, var(--danger, #dc2626) 10%, var(--bg-panel));
+  border-bottom: 1px solid var(--border);
+}
+
+.signalingErrorText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-main);
+}

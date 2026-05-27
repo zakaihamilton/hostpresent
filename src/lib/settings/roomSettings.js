@@ -128,6 +128,18 @@ export function getRoomByJoinCode(joinCode) {
   );
 }
 
+export function removeHostRoomByToken(hostToken) {
+  if (!hostToken) return;
+  const current = readRaw();
+  const nextRooms = current.rooms.filter((room) => room.hostToken !== hostToken);
+  if (nextRooms.length === current.rooms.length) return;
+  writeRaw({
+    activeHostToken:
+      current.activeHostToken === hostToken ? null : current.activeHostToken,
+    rooms: nextRooms,
+  });
+}
+
 export function clearActiveRoom() {
   const current = readRaw();
   writeRaw({ ...current, activeHostToken: null });
