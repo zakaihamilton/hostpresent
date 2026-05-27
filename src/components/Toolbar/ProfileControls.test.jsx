@@ -1,0 +1,63 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import { ProfileControls } from "./ProfileControls";
+
+function getProfileButton() {
+  return screen.getByRole("button", { name: /Display name:/i });
+}
+
+describe("ProfileControls", () => {
+  it("shows a custom tooltip with the resolved display name", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+      />,
+    );
+
+    await user.hover(getProfileButton());
+
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent("Alex");
+    expect(tooltip).toHaveTextContent("Click to edit name");
+  });
+
+  it("opens a popup to edit the display name", async () => {
+    const user = userEvent.setup();
+    const onDisplayNameChange = jest.fn();
+
+    render(
+      <ProfileControls
+        displayName=""
+        onDisplayNameChange={onDisplayNameChange}
+      />,
+    );
+
+    await user.click(getProfileButton());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Display name"), "Sam");
+    expect(onDisplayNameChange).toHaveBeenCalled();
+  });
+
+  it("includes participation mode controls for participants", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        participantMode={PARTICIPANT_MODE.AVAILABLE}
+        onParticipantModeChange={jest.fn()}
+      />,
+    );
+
+    await user.click(getProfileButton());
+
+    expect(screen.getByRole("group", { name: "Participation mode" }))
+      .toBeInTheDocument();
+  });
+});

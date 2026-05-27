@@ -15,11 +15,12 @@
 .toolbarInner {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   gap: 0.75rem;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: visible;
+  padding: 2px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -222,19 +223,4 @@
 .screenShareGroup {
   min-height: 44px;
   overflow: visible;
-}
-
-.profileGroup {
-  align-items: flex-end;
-  gap: 0.65rem;
-  padding-right: 0.85rem;
-  flex-shrink: 0;
-}
-
-@media (max-width: 900px) {
-  .profileGroup {
-    align-items: stretch;
-    flex-direction: column;
-    min-width: 9.5rem;
-  }
 }

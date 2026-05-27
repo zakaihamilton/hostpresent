@@ -10,10 +10,9 @@ import {
   Video,
   VideoOff,
 } from "@/components/Icons";
-import { DisplayNameField } from "@/components/DisplayNameField";
-import { ParticipantModeToggle } from "@/components/ParticipantModeToggle";
-import { Tooltip } from "@/components/Tooltip";
+import { ProfileControls } from "./ProfileControls";
 import { ScreenShareControls } from "./ScreenShareControls";
+import { Tooltip } from "@/components/Tooltip";
 import styles from "./Toolbar.module.css";
 
 function btnClass(...classes) {
@@ -51,21 +50,13 @@ export function Toolbar({
     <footer className={styles.toolbar}>
       <div className={styles.toolbarInner}>
       {onDisplayNameChange
-        ? <div className={`${styles.controlGroup} ${styles.profileGroup}`}>
-            <DisplayNameField
-              id="meeting-display-name"
-              label="Name"
-              value={displayName}
-              onChange={onDisplayNameChange}
-              compact
+        ? <div className={styles.controlGroup}>
+            <ProfileControls
+              displayName={displayName}
+              onDisplayNameChange={onDisplayNameChange}
+              participantMode={participantMode}
+              onParticipantModeChange={onParticipantModeChange}
             />
-            {onParticipantModeChange && participantMode
-              ? <ParticipantModeToggle
-                  value={participantMode}
-                  onChange={onParticipantModeChange}
-                  compact
-                />
-              : null}
           </div>
         : null}
 

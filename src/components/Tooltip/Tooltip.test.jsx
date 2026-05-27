@@ -48,4 +48,26 @@ describe("Tooltip", () => {
     await user.hover(screen.getByRole("button", { name: "Action" }));
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
+
+  it("renders rich tooltip content when provided", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Tooltip
+        content={
+          <>
+            <span>Alex</span>
+            <span>Click to edit name</span>
+          </>
+        }
+      >
+        <button type="button">Profile</button>
+      </Tooltip>,
+    );
+
+    await user.hover(screen.getByRole("button", { name: "Profile" }));
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Alex");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Click to edit name");
+  });
 });

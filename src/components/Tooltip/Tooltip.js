@@ -46,7 +46,13 @@ function computePosition(anchorRect, tooltipRect, placement) {
   return { top, left };
 }
 
-export function Tooltip({ children, text, placement = "top", forceHidden = false }) {
+export function Tooltip({
+  children,
+  text,
+  content = null,
+  placement = "top",
+  forceHidden = false,
+}) {
   const anchorRef = useRef(null);
   const tooltipRef = useRef(null);
   const suppressUntilLeaveRef = useRef(false);
@@ -135,14 +141,14 @@ export function Tooltip({ children, text, placement = "top", forceHidden = false
               ref={tooltipRef}
               id={tooltipId}
               role="tooltip"
-              className={styles.floating}
+              className={content ? styles.floatingRich : styles.floating}
               style={{
                 top: coords.top,
                 left: coords.left,
                 visibility: positioned ? "visible" : "hidden",
               }}
             >
-              {text}
+              {content ?? text}
             </span>,
             document.body,
           )

@@ -15,6 +15,7 @@ export {
   ShareAudioOff,
   Stop,
   Sun,
+  UserCircle,
   Users,
   Video,
   VideoOff,
