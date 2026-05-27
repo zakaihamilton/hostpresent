@@ -23,6 +23,11 @@
   gap: 0.875rem;
 }
 
+.topRow {
+  display: flex;
+  align-items: center;
+}
+
 .title {
   margin: 0;
   font-size: 1.25rem;
@@ -46,21 +51,4 @@
 .hint code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
-}
-
-.button {
-  align-self: flex-start;
-  margin-top: 0.25rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--primary);
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.55rem 0.9rem;
-  cursor: pointer;
-}
-
-.button:hover {
-  filter: brightness(1.05);
 }

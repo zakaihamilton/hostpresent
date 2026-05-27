@@ -1,4 +1,5 @@
-import { ArrowLeft, Link, Logo } from "@/components/Icons";
+import { Link, Logo } from "@/components/Icons";
+import { BackButton } from "@/components/BackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Tooltip } from "@/components/Tooltip";
 import { formatDuration } from "@/lib/formatDuration";
@@ -19,18 +20,7 @@ export function Header({
       className={`${styles.header} ${isRecording ? styles.headerRecording : ""}`}
     >
       <div className={styles.leading}>
-        {onBack
-          ? <Tooltip text={backLabel} placement="left">
-              <button
-                type="button"
-                className={styles.backButton}
-                onClick={onBack}
-                aria-label={backLabel}
-              >
-                <ArrowLeft size={20} />
-              </button>
-            </Tooltip>
-          : null}
+        {onBack ? <BackButton label={backLabel} onClick={onBack} /> : null}
         <div className={styles.logo}>
           <Logo />
           <span className={styles.logoText}>Host Present</span>

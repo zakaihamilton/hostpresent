@@ -1,0 +1,43 @@
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.button:hover {
+  background: var(--btn-hover);
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .button {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .button {
+    width: 38px;
+    height: 38px;
+  }
+}
