@@ -1,0 +1,28 @@
+.banner {
+  background: var(--danger);
+  color: white;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.message {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dismiss {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.dismiss:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

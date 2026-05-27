@@ -1,0 +1,91 @@
+.toolbar {
+  height: 72px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0 2rem;
+  z-index: 10;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-right: 1px solid var(--border);
+  padding-right: 1rem;
+  height: 40px;
+}
+
+.controlGroup:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: var(--bg-hover);
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  transform: scale(1.05);
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btnActive {
+  background: var(--primary);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+}
+
+.btnActive:hover {
+  background: var(--primary-hover);
+}
+
+.btnDanger {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border-color: transparent;
+}
+
+.btnDanger:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.btnDangerSolid {
+  background: var(--danger);
+  color: white;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+}
+
+.btnDangerSolid:hover {
+  background: var(--danger-hover);
+}
+
+.btnWarning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border-color: transparent;
+}
+
+.btnWarning:hover {
+  background: var(--warning);
+  color: white;
+}
