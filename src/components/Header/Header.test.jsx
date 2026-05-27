@@ -1,8 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { Header } from "./Header";
 
+jest.mock("@/lib/clipboard", () => ({
+  copyTextToClipboard: jest.fn(),
+}));
+
 describe("Header", () => {
+  beforeEach(() => {
+    copyTextToClipboard.mockReset();
+    copyTextToClipboard.mockResolvedValue(true);
+  });
+
   it("renders logo and meeting duration", () => {
     render(
       <Header
@@ -50,19 +60,8 @@ describe("Header", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it("selects room id text when clicked", async () => {
+  it("copies room id to clipboard when clicked", async () => {
     const user = userEvent.setup();
-    const addRange = jest.fn();
-    const removeAllRanges = jest.fn();
-    const selectNodeContents = jest.fn();
-
-    jest.spyOn(window, "getSelection").mockReturnValue({
-      removeAllRanges,
-      addRange,
-    });
-    jest.spyOn(document, "createRange").mockReturnValue({
-      selectNodeContents,
-    });
 
     render(
       <Header
@@ -75,13 +74,11 @@ describe("Header", () => {
     );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Room ID ABCD-EFGH. Click to select for copy.",
-      }),
+      screen.getByRole("button", { name: "Copy room ID ABCD-EFGH" }),
     );
 
-    expect(selectNodeContents).toHaveBeenCalled();
-    expect(addRange).toHaveBeenCalled();
+    expect(copyTextToClipboard).toHaveBeenCalledWith("ABCD-EFGH");
+    expect(screen.getByRole("button", { name: "Copied!" })).toBeInTheDocument();
   });
 
   it("shows invite link button when onShowInviteLink is provided", async () => {

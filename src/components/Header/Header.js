@@ -1,19 +1,13 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Logo } from "@/components/Icons";
 import { BackButton } from "@/components/BackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Tooltip } from "@/components/Tooltip";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./Header.module.css";
-
-function selectElementText(element) {
-  if (!element || typeof window === "undefined") return;
-  const selection = window.getSelection();
-  if (!selection) return;
-  const range = document.createRange();
-  range.selectNodeContents(element);
-  selection.removeAllRanges();
-  selection.addRange(range);
-}
 
 export function Header({
   meetingDurationSeconds,
@@ -25,6 +19,43 @@ export function Header({
   backLabel = "Back",
   onShowInviteLink = null,
 }) {
+  const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");
+  const roomIdCopyTimerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (roomIdCopyTimerRef.current) {
+        clearTimeout(roomIdCopyTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleCopyRoomId = useCallback(async () => {
+    if (!roomId) return;
+
+    if (roomIdCopyTimerRef.current) {
+      clearTimeout(roomIdCopyTimerRef.current);
+    }
+
+    const copied = await copyTextToClipboard(roomId);
+    setRoomIdCopyMessage(copied ? "Copied!" : "Copy failed");
+
+    roomIdCopyTimerRef.current = setTimeout(() => {
+      setRoomIdCopyMessage("");
+      roomIdCopyTimerRef.current = null;
+    }, 2500);
+  }, [roomId]);
+
+  const roomIdButtonLabel = roomIdCopyMessage || roomId;
+  const roomIdButtonClassName = [
+    styles.roomIdCopyButton,
+    roomIdCopyMessage === "Copied!" && styles.roomIdCopyButtonSuccess,
+    roomIdCopyMessage === "Copy failed" && styles.roomIdCopyButtonError,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <header
       className={`${styles.header} ${isRecording ? styles.headerRecording : ""}`}
@@ -54,15 +85,21 @@ export function Header({
         {roomId
           ? <div className={`${styles.stat} ${styles.statRoom}`}>
               <span className={styles.statLabel}>Room ID</span>
-              <button
-                type="button"
-                className={styles.statValueButton}
-                title="Click to select Room ID"
-                aria-label={`Room ID ${roomId}. Click to select for copy.`}
-                onClick={(event) => selectElementText(event.currentTarget)}
-              >
-                {roomId}
-              </button>
+              <Tooltip text="Copy room ID" placement="left">
+                <button
+                  type="button"
+                  className={roomIdButtonClassName}
+                  onClick={handleCopyRoomId}
+                  aria-live="polite"
+                  aria-label={
+                    roomIdCopyMessage
+                      ? roomIdCopyMessage
+                      : `Copy room ID ${roomId}`
+                  }
+                >
+                  <span className={styles.roomIdValue}>{roomIdButtonLabel}</span>
+                </button>
+              </Tooltip>
             </div>
           : null}
 
