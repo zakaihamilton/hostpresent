@@ -50,6 +50,40 @@ describe("Header", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  it("selects room id text when clicked", async () => {
+    const user = userEvent.setup();
+    const addRange = jest.fn();
+    const removeAllRanges = jest.fn();
+    const selectNodeContents = jest.fn();
+
+    jest.spyOn(window, "getSelection").mockReturnValue({
+      removeAllRanges,
+      addRange,
+    });
+    jest.spyOn(document, "createRange").mockReturnValue({
+      selectNodeContents,
+    });
+
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        roomId="ABCD-EFGH"
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Room ID ABCD-EFGH. Click to select for copy.",
+      }),
+    );
+
+    expect(selectNodeContents).toHaveBeenCalled();
+    expect(addRange).toHaveBeenCalled();
+  });
+
   it("shows invite link button when onShowInviteLink is provided", async () => {
     const user = userEvent.setup();
     const onShowInviteLink = jest.fn();

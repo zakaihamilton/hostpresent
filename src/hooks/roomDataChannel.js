@@ -74,6 +74,7 @@ export function useRoomDataChannel({
   const openCountRef = useRef(0);
   const signalingOpenRef = useRef(false);
   const retryTimerRef = useRef(null);
+  const connectRetryTimerRef = useRef(null);
   const retryAttemptRef = useRef(0);
   const localParticipantIdRef = useRef("");
 

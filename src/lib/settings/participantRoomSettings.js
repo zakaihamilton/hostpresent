@@ -1,4 +1,5 @@
 import { formatJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
+import { dedupeRoomsByJoinCode } from "@/lib/settings/recentRoomDedup";
 
 const STORAGE_KEY = "hostpresent.participantRooms";
 const MAX_RECENT_ROOMS = 10;
@@ -38,8 +39,20 @@ function sortByRecent(a, b) {
   return bTime - aTime;
 }
 
+function getRecentTime(room) {
+  return room.lastJoinedAt ?? room.createdAt ?? 0;
+}
+
+function trimRecentRooms(rooms) {
+  let nextRooms = dedupeRoomsByJoinCode(rooms, getRecentTime).sort(sortByRecent);
+  if (nextRooms.length > MAX_RECENT_ROOMS) {
+    nextRooms = nextRooms.slice(0, MAX_RECENT_ROOMS);
+  }
+  return nextRooms;
+}
+
 export function listParticipantRooms() {
-  return [...readRaw().rooms].sort(sortByRecent);
+  return trimRecentRooms(readRaw().rooms);
 }
 
 export function saveParticipantRoom({ roomId, participantToken, joinCode }) {
@@ -47,32 +60,41 @@ export function saveParticipantRoom({ roomId, participantToken, joinCode }) {
 
   const current = readRaw();
   const now = Date.now();
-  const existingIndex = current.rooms.findIndex(
+  const normalizedJoinCode = normalizeJoinCode(joinCode ?? "");
+
+  const existingByToken = current.rooms.find(
     (room) => room.participantToken === participantToken,
   );
+  const existingByJoinCode =
+    normalizedJoinCode
+      ? current.rooms.find(
+          (room) =>
+            normalizeJoinCode(room.joinCode ?? "") === normalizedJoinCode,
+        )
+      : null;
+  const existing = existingByToken ?? existingByJoinCode;
 
   const nextEntry = {
     roomId: roomId ?? null,
     participantToken,
     joinCode: joinCode ?? null,
-    createdAt:
-      existingIndex >= 0 ? current.rooms[existingIndex].createdAt : now,
+    createdAt: existing?.createdAt ?? now,
     lastJoinedAt: now,
   };
 
-  let nextRooms;
-  if (existingIndex >= 0) {
-    nextRooms = current.rooms.map((room, index) =>
-      index === existingIndex ? { ...room, ...nextEntry } : room,
-    );
-  } else {
-    nextRooms = [...current.rooms, nextEntry];
-  }
-
-  nextRooms.sort(sortByRecent);
-  if (nextRooms.length > MAX_RECENT_ROOMS) {
-    nextRooms = nextRooms.slice(0, MAX_RECENT_ROOMS);
-  }
+  const nextRooms = trimRecentRooms([
+    ...current.rooms.filter((room) => {
+      if (room.participantToken === participantToken) return false;
+      if (
+        normalizedJoinCode &&
+        normalizeJoinCode(room.joinCode ?? "") === normalizedJoinCode
+      ) {
+        return false;
+      }
+      return true;
+    }),
+    nextEntry,
+  ]);
 
   writeRaw({
     activeParticipantToken: participantToken,
@@ -83,13 +105,13 @@ export function saveParticipantRoom({ roomId, participantToken, joinCode }) {
 export function touchParticipantRoom(participantToken) {
   const current = readRaw();
   const now = Date.now();
-  const nextRooms = current.rooms
-    .map((room) =>
+  const nextRooms = trimRecentRooms(
+    current.rooms.map((room) =>
       room.participantToken === participantToken
         ? { ...room, lastJoinedAt: now }
         : room,
-    )
-    .sort(sortByRecent);
+    ),
+  );
 
   writeRaw({
     ...current,
@@ -119,12 +141,12 @@ export function getParticipantRoomByToken(participantToken) {
 export function getParticipantRoomByJoinCode(joinCode) {
   const normalized = normalizeJoinCode(joinCode);
   if (!normalized) return null;
-  const current = readRaw();
-  return (
-    current.rooms.find(
-      (room) => normalizeJoinCode(room.joinCode ?? "") === normalized,
-    ) ?? null
+  const matches = readRaw().rooms.filter(
+    (room) => normalizeJoinCode(room.joinCode ?? "") === normalized,
   );
+  if (matches.length === 0) return null;
+  if (matches.length === 1) return matches[0];
+  return [...matches].sort(sortByRecent)[0];
 }
 
 export function removeParticipantRoomByToken(participantToken) {

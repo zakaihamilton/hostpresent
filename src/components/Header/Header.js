@@ -5,6 +5,16 @@ import { Tooltip } from "@/components/Tooltip";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./Header.module.css";
 
+function selectElementText(element) {
+  if (!element || typeof window === "undefined") return;
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 export function Header({
   meetingDurationSeconds,
   roomId,
@@ -44,9 +54,15 @@ export function Header({
         {roomId
           ? <div className={`${styles.stat} ${styles.statRoom}`}>
               <span className={styles.statLabel}>Room ID</span>
-              <span className={styles.statValue} title={roomId}>
+              <button
+                type="button"
+                className={styles.statValueButton}
+                title="Click to select Room ID"
+                aria-label={`Room ID ${roomId}. Click to select for copy.`}
+                onClick={(event) => selectElementText(event.currentTarget)}
+              >
                 {roomId}
-              </span>
+              </button>
             </div>
           : null}
 
