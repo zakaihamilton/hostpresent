@@ -35,6 +35,32 @@ describe("ParticipantsSidebar", () => {
     expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 
+  it("calls close handler", async () => {
+    const user = userEvent.setup();
+    const onClose = jest.fn();
+
+    render(
+      <ParticipantsSidebar
+        visible
+        audioList={[]}
+        videoParticipants={[]}
+        isVideoMuted={false}
+        isAudioMuted={false}
+        isHost
+        onClose={onClose}
+        onMuteParticipantVideo={() => {}}
+        onMuteParticipantAudio={() => {}}
+        onMuteAllVideo={() => {}}
+        onMuteAllAudio={() => {}}
+        canMuteAllVideo={false}
+        canMuteAllAudio={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close participants" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("calls bulk mute handlers", async () => {
     const user = userEvent.setup();
     const onMuteAllVideo = jest.fn();

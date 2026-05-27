@@ -7,6 +7,7 @@ const HOST_COMMAND_TYPES = new Set([
   SIGNALING_MESSAGE.HOST_MUTE_VIDEO,
   SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO,
   SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO,
+  SIGNALING_MESSAGE.RECORDING_STATE,
 ]);
 
 const PARTICIPANT_STATUS_TYPES = new Set([
@@ -73,6 +74,13 @@ export function canReceiveSignalingMessage({
   }
 
   if (!isHostCommandMessage(message)) return false;
+
+  if (
+    message.type === SIGNALING_MESSAGE.HOST_PRESENT ||
+    message.type === SIGNALING_MESSAGE.RECORDING_STATE
+  ) {
+    return true;
+  }
 
   if (HOST_MUTE_ALL_TYPES.has(message.type)) {
     return true;

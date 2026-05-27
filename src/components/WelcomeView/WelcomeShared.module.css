@@ -25,6 +25,32 @@
 .linkRow {
   display: flex;
   gap: 0.5rem;
+  align-items: stretch;
+}
+
+@media (max-width: 480px) {
+  .linkRow {
+    flex-direction: column;
+  }
+
+  .linkRow .button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .linkInput {
+    min-height: 44px;
+    font-size: 0.75rem;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions .button {
+    width: 100%;
+    min-height: 44px;
+  }
 }
 
 .linkInput {
@@ -36,6 +62,9 @@
   color: var(--text-main);
   font-size: 0.8125rem;
   padding: 0.625rem 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actions {

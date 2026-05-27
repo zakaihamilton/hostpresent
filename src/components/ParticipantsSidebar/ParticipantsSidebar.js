@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { MicOff, VideoOff } from "@/components/Icons";
+import { MicOff, VideoOff, X } from "@/components/Icons";
 import { ParticipantItem } from "@/components/ParticipantItem";
 import { Tooltip } from "@/components/Tooltip";
 import { VirtualList } from "@/components/Widgets";
@@ -95,6 +95,7 @@ export function ParticipantsSidebar({
   isVideoMuted,
   isAudioMuted,
   isHost = true,
+  onClose,
   onMuteParticipantVideo,
   onMuteParticipantAudio,
   onMuteAllVideo,
@@ -160,7 +161,21 @@ export function ParticipantsSidebar({
       <aside className={styles.sidebar}>
         <div className={styles.header}>
           <span>Participants</span>
-          <span className={styles.count}>{totalCount}</span>
+          <div className={styles.headerActions}>
+            <span className={styles.count}>{totalCount}</span>
+            {onClose
+              ? <Tooltip text="Close participants" placement="left">
+                  <button
+                    type="button"
+                    className={styles.closeButton}
+                    onClick={onClose}
+                    aria-label="Close participants"
+                  >
+                    <X size={18} />
+                  </button>
+                </Tooltip>
+              : null}
+          </div>
         </div>
 
         {hasRemoteParticipants && (

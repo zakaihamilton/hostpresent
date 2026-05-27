@@ -205,7 +205,10 @@
   .header {
     padding: 0 max(0.75rem, env(safe-area-inset-right, 0)) 0
       max(0.75rem, env(safe-area-inset-left, 0));
-    height: 52px;
+    min-height: 52px;
+    height: auto;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
   }
 
   .leading {
@@ -225,10 +228,15 @@
     padding: 0.35rem 0.55rem;
   }
 
+  .statRoom {
+    flex-shrink: 0;
+    max-width: min(14ch, 42vw);
+  }
+
   .statRoom .statValue {
-    max-width: 4.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
     white-space: nowrap;
   }
 
@@ -254,8 +262,14 @@
 }
 
 @media (max-width: 480px) {
+  .statRoom {
+    max-width: min(14ch, 48vw);
+    padding: 0.35rem 0.5rem;
+  }
+
   .statRoom .statValue {
-    max-width: 3.25rem;
+    font-size: 0.8125rem;
+    letter-spacing: 0.01em;
   }
 
   .recordingLabel {

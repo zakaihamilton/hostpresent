@@ -87,3 +87,27 @@
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+@media (max-width: 480px) {
+  .backdrop {
+    padding: max(1rem, env(safe-area-inset-top, 0))
+      max(1rem, env(safe-area-inset-right, 0))
+      max(1rem, env(safe-area-inset-bottom, 0))
+      max(1rem, env(safe-area-inset-left, 0));
+  }
+
+  .dialog {
+    padding: 1.25rem;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cancelBtn,
+  .confirmBtn {
+    width: 100%;
+    min-height: 44px;
+  }
+}

@@ -26,3 +26,21 @@
 .dismiss:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+@media (max-width: 480px) {
+  .banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .message {
+    line-height: 1.45;
+  }
+
+  .dismiss {
+    align-self: stretch;
+    min-height: 44px;
+    text-align: center;
+  }
+}

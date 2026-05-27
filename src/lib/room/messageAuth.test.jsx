@@ -52,6 +52,23 @@ describe("messageAuth", () => {
     ).toBe(false);
   });
 
+  it("lets participants receive recording state broadcasts", () => {
+    const message = {
+      type: SIGNALING_MESSAGE.RECORDING_STATE,
+      active: true,
+      paused: false,
+    };
+
+    expect(
+      canReceiveSignalingMessage({
+        isHost: false,
+        message,
+        senderId: "hp-room",
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(true);
+  });
+
   it("lets participants receive host commands targeted at them", () => {
     const message = {
       type: SIGNALING_MESSAGE.HOST_MUTE_VIDEO,

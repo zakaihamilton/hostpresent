@@ -4,6 +4,7 @@ export const SIGNALING_MESSAGE = {
   HOST_MUTE_VIDEO: "host_mute_video",
   HOST_MUTE_ALL_AUDIO: "host_mute_all_audio",
   HOST_MUTE_ALL_VIDEO: "host_mute_all_video",
+  RECORDING_STATE: "recording_state",
   PARTICIPANT_AUDIO_MUTED: "participant_audio_muted",
   PARTICIPANT_VIDEO_MUTED: "participant_video_muted",
   PARTICIPANT_AUDIO_UNMUTED: "participant_audio_unmuted",
@@ -44,6 +45,15 @@ export function createHostMuteAllAudioMessage() {
 export function createHostMuteAllVideoMessage() {
   return {
     type: SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO,
+    timestamp: Date.now(),
+  };
+}
+
+export function createRecordingStateMessage({ active, paused = false }) {
+  return {
+    type: SIGNALING_MESSAGE.RECORDING_STATE,
+    active: Boolean(active),
+    paused: Boolean(paused),
     timestamp: Date.now(),
   };
 }

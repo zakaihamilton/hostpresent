@@ -183,3 +183,16 @@
   line-height: 1.4;
   color: var(--text-muted);
 }
+
+@media (max-width: 480px) {
+  .shareLabel {
+    display: none;
+  }
+
+  .shareBtn {
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+}

@@ -21,8 +21,12 @@ import {
 } from "@/hooks";
 import { useRoomSession, ROOM_SESSION_STATUS } from "@/hooks/roomSession";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
-import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
+import {
+  createRecordingStateMessage,
+  SIGNALING_MESSAGE,
+} from "@/lib/signaling/messages";
 import {
   getSignalingConfigHint,
   isFatalSignalingError,
@@ -154,6 +158,22 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       const localId = roomConnection.localParticipantId;
 
       switch (message.type) {
+        case SIGNALING_MESSAGE.RECORDING_STATE: {
+          const active = Boolean(message.active);
+          const paused = Boolean(message.paused);
+          setIsRecording((previous) => {
+            if (!active) {
+              resetRecordingTimer();
+              return false;
+            }
+            if (!previous && !paused) {
+              resetRecordingTimer();
+            }
+            return true;
+          });
+          setIsRecordingPaused(active && paused);
+          break;
+        }
         case SIGNALING_MESSAGE.HOST_MUTE_AUDIO:
           if (message.participantId && message.participantId !== localId) return;
           localStream?.getAudioTracks().forEach((track) => {
@@ -184,7 +204,26 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           break;
       }
     });
-  }, [isHost, localStream, roomConnection]);
+  }, [isHost, localStream, resetRecordingTimer, roomConnection]);
+
+  const publishRecordingState = useCallback(
+    (active, paused = false) => {
+      if (!isHost) return;
+      roomConnection.send(createRecordingStateMessage({ active, paused }));
+    },
+    [isHost, roomConnection],
+  );
+
+  useEffect(() => {
+    if (!isHost || !isRecording) return;
+    publishRecordingState(true, isRecordingPaused);
+  }, [
+    isHost,
+    isRecording,
+    isRecordingPaused,
+    publishRecordingState,
+    videoParticipants.length,
+  ]);
 
   const {
     muteParticipantAudio,
@@ -432,10 +471,12 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     resetRecordingTimer();
     setIsRecording(true);
     setIsRecordingPaused(false);
+    publishRecordingState(true, false);
   }, [
     finalizeRecordingDownload,
     isHost,
     localStream,
+    publishRecordingState,
     resetRecordingTimer,
     screenStream,
   ]);
@@ -447,6 +488,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     ) {
       mediaRecorderRef.current.pause();
       setIsRecordingPaused(true);
+      publishRecordingState(true, true);
     }
   };
 
@@ -457,6 +499,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     ) {
       mediaRecorderRef.current.resume();
       setIsRecordingPaused(false);
+      publishRecordingState(true, false);
     }
   };
 
@@ -470,6 +513,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       setIsRecording(false);
       setIsRecordingPaused(false);
       resetRecordingTimer();
+      publishRecordingState(false, false);
     }
   };
 
@@ -494,12 +538,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       clearTimeout(inviteCopyTimerRef.current);
     }
 
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setInviteCopyMessage("Invite link copied");
-    } catch {
-      setInviteCopyMessage("Could not copy invite link");
-    }
+    const copied = await copyTextToClipboard(inviteLink);
+    setInviteCopyMessage(copied ? "Copied!" : "Copy failed");
 
     inviteCopyTimerRef.current = setTimeout(() => {
       setInviteCopyMessage("");
@@ -510,8 +550,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const inviteCopyButtonLabel = inviteCopyMessage || "Copy link";
   const shareButtonClassName = [
     styles.shareButton,
-    inviteCopyMessage === "Invite link copied" && styles.shareButtonSuccess,
-    inviteCopyMessage === "Could not copy invite link" && styles.shareButtonError,
+    inviteCopyMessage === "Copied!" && styles.shareButtonSuccess,
+    inviteCopyMessage === "Copy failed" && styles.shareButtonError,
   ]
     .filter(Boolean)
     .join(" ");
@@ -617,13 +657,14 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
 
       {isHost && inviteLink && inviteBarVisible
         ? <div className={styles.shareBar}>
-            <div className={styles.shareRow}>
-              <input
-                className={styles.shareInput}
-                readOnly
-                value={inviteLink}
-                aria-label="Participant invite link"
-              />
+            <input
+              className={styles.shareInput}
+              readOnly
+              value={inviteLink}
+              aria-label="Participant invite link"
+              onFocus={(event) => event.currentTarget.select()}
+            />
+            <div className={styles.shareActions}>
               <button
                 type="button"
                 className={shareButtonClassName}
@@ -689,6 +730,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           isVideoMuted={isVideoMuted}
           isAudioMuted={isAudioMuted}
           isHost={isHost}
+          onClose={() => setIsSidebarVisible(false)}
           onMuteParticipantVideo={muteParticipantVideo}
           onMuteParticipantAudio={muteParticipantAudio}
           onMuteAllVideo={muteAllVideo}

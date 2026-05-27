@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   clearHostRooms,
@@ -167,24 +168,16 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
 
   const handleCopyRoomId = async () => {
     if (!formattedRoomId) return;
-    try {
-      await navigator.clipboard.writeText(formattedRoomId);
-      setCopyMessage("Room ID copied to clipboard");
-      setTimeout(() => setCopyMessage(""), 2500);
-    } catch {
-      setCopyMessage("Could not copy room ID");
-    }
+    const copied = await copyTextToClipboard(formattedRoomId);
+    setCopyMessage(copied ? "Room ID copied" : "Could not copy room ID");
+    setTimeout(() => setCopyMessage(""), 2500);
   };
 
   const handleCopyLink = async () => {
     if (!inviteLink) return;
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopyMessage("Link copied to clipboard");
-      setTimeout(() => setCopyMessage(""), 2500);
-    } catch {
-      setCopyMessage("Could not copy link");
-    }
+    const copied = await copyTextToClipboard(inviteLink);
+    setCopyMessage(copied ? "Link copied" : "Could not copy link");
+    setTimeout(() => setCopyMessage(""), 2500);
   };
 
   const handleGenerateRoom = async () => {
@@ -277,6 +270,7 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
             className={shared.linkInput}
             readOnly
             value={formattedRoomId}
+            onFocus={(event) => event.currentTarget.select()}
           />
           <button
             type="button"
@@ -299,6 +293,7 @@ export function WelcomeHostPanel({ joinCode: routeJoinCode, legacyToken, navigat
             className={shared.linkInput}
             readOnly
             value={inviteLink}
+            onFocus={(event) => event.currentTarget.select()}
           />
           <button
             type="button"
