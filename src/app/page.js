@@ -1,5 +1,5 @@
-import PresentApp from "@/components/PresentApp";
+import { AppRouter } from "@/components/AppRouter";
 
 export default function Page() {
-  return <PresentApp />;
+  return <AppRouter />;
 }

@@ -8,14 +8,27 @@ export function Header({
   isRecording,
   isRecordingPaused,
   recordingDurationSeconds,
+  onBack,
+  backLabel = "Back",
 }) {
   return (
     <header
       className={`${styles.header} ${isRecording ? styles.headerRecording : ""}`}
     >
-      <div className={styles.logo}>
-        <Logo />
-        <span className={styles.logoText}>Host Present</span>
+      <div className={styles.leading}>
+        {onBack
+          ? <button
+              type="button"
+              className={styles.backButton}
+              onClick={onBack}
+            >
+              {backLabel}
+            </button>
+          : null}
+        <div className={styles.logo}>
+          <Logo />
+          <span className={styles.logoText}>Host Present</span>
+        </div>
       </div>
 
       <div className={styles.meta}>

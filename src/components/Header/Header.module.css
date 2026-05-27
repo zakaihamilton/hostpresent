@@ -20,6 +20,29 @@
     inset 0 -2px 0 rgba(239, 68, 68, 0.5);
 }
 
+.leading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.backButton {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.backButton:hover {
+  background: var(--btn-hover);
+}
+
 .logo {
   display: flex;
   align-items: center;

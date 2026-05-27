@@ -104,15 +104,9 @@ export function ParticipantItem({
       </div>
       <div className={styles.status}>
         {hasVideo && (
-          <VideoControl
-            isVideoMuted={isVideoMuted}
-            onMuteVideo={onMuteVideo}
-          />
+          <VideoControl isVideoMuted={isVideoMuted} onMuteVideo={onMuteVideo} />
         )}
-        <AudioControl
-          isAudioMuted={isAudioMuted}
-          onMuteAudio={onMuteAudio}
-        />
+        <AudioControl isAudioMuted={isAudioMuted} onMuteAudio={onMuteAudio} />
       </div>
     </div>
   );

@@ -38,6 +38,7 @@ export function Toolbar({
   onPauseRecording,
   onResumeRecording,
   onStopRecording,
+  showRecording = true,
 }) {
   return (
     <footer className={styles.toolbar}>
@@ -99,51 +100,53 @@ export function Toolbar({
         </Tooltip>
       </div>
 
-      <div
-        className={`${styles.controlGroup} ${styles.recordingGroup} ${isRecording ? styles.recordingGroupActive : ""} ${isRecordingPaused ? styles.recordingGroupPaused : ""}`}
-      >
-        {!isRecording
-          ? <Tooltip text="Start Local Recording">
-              <button
-                type="button"
-                className={btnClass(styles.btnDanger)}
-                onClick={onStartRecording}
-              >
-                <Record />
-              </button>
-            </Tooltip>
-          : <>
-              {isRecordingPaused
-                ? <Tooltip text="Resume Recording">
+      {showRecording
+        ? <div
+            className={`${styles.controlGroup} ${styles.recordingGroup} ${isRecording ? styles.recordingGroupActive : ""} ${isRecordingPaused ? styles.recordingGroupPaused : ""}`}
+          >
+            {!isRecording
+              ? <Tooltip text="Start Local Recording">
+                  <button
+                    type="button"
+                    className={btnClass(styles.btnDanger)}
+                    onClick={onStartRecording}
+                  >
+                    <Record />
+                  </button>
+                </Tooltip>
+              : <>
+                  {isRecordingPaused
+                    ? <Tooltip text="Resume Recording">
+                        <button
+                          type="button"
+                          className={btnClass(styles.btnWarning)}
+                          onClick={onResumeRecording}
+                        >
+                          <Play />
+                        </button>
+                      </Tooltip>
+                    : <Tooltip text="Pause Recording">
+                        <button
+                          type="button"
+                          className={btnClass()}
+                          onClick={onPauseRecording}
+                        >
+                          <Pause />
+                        </button>
+                      </Tooltip>}
+
+                  <Tooltip text="Stop & Save Recording">
                     <button
                       type="button"
-                      className={btnClass(styles.btnWarning)}
-                      onClick={onResumeRecording}
+                      className={btnClass(styles.btnDangerSolid)}
+                      onClick={onStopRecording}
                     >
-                      <Play />
+                      <Stop />
                     </button>
                   </Tooltip>
-                : <Tooltip text="Pause Recording">
-                    <button
-                      type="button"
-                      className={btnClass()}
-                      onClick={onPauseRecording}
-                    >
-                      <Pause />
-                    </button>
-                  </Tooltip>}
-
-              <Tooltip text="Stop & Save Recording">
-                <button
-                  type="button"
-                  className={btnClass(styles.btnDangerSolid)}
-                  onClick={onStopRecording}
-                >
-                  <Stop />
-                </button>
-              </Tooltip>
-            </>}
-      </div>
+                </>}
+          </div>
+        : null}
     </footer>
   );
 }

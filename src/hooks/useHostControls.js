@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo } from "react";
 import {
-  SIGNALING_MESSAGE,
   createHostMuteAllAudioMessage,
   createHostMuteAllVideoMessage,
   createHostMuteAudioMessage,
   createHostMuteVideoMessage,
+  SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
 
 function getParticipantName({
@@ -15,9 +15,8 @@ function getParticipantName({
 }) {
   if (participantType === "video") {
     return (
-      videoParticipants.find(
-        (participant) => participant.id === participantId,
-      )?.name ?? "this participant"
+      videoParticipants.find((participant) => participant.id === participantId)
+        ?.name ?? "this participant"
     );
   }
 
@@ -34,6 +33,7 @@ export function useHostControls({
   setAudioList,
   signaling,
   confirm,
+  enabled = true,
 }) {
   const applyParticipantAudioMuted = useCallback(
     (participantId, participantType) => {
@@ -126,6 +126,7 @@ export function useHostControls({
 
   const muteParticipantAudio = useCallback(
     async (participantId, participantType) => {
+      if (!enabled) return;
       const participantName = getParticipantName({
         participantId,
         participantType,
@@ -162,6 +163,7 @@ export function useHostControls({
       applyParticipantAudioMuted,
       audioList,
       confirm,
+      enabled,
       videoParticipants,
       signaling,
     ],
@@ -169,6 +171,7 @@ export function useHostControls({
 
   const muteParticipantVideo = useCallback(
     async (participantId) => {
+      if (!enabled) return;
       const participantName = getParticipantName({
         participantId,
         participantType: "video",
@@ -199,12 +202,14 @@ export function useHostControls({
       applyParticipantVideoMuted,
       audioList,
       confirm,
+      enabled,
       videoParticipants,
       signaling,
     ],
   );
 
   const muteAllAudio = useCallback(async () => {
+    if (!enabled) return;
     const unmutedCount =
       videoParticipants.filter((participant) => !participant.isAudioMuted)
         .length +
@@ -228,11 +233,13 @@ export function useHostControls({
     applyMuteAllAudio,
     audioList,
     confirm,
+    enabled,
     videoParticipants,
     signaling,
   ]);
 
   const muteAllVideo = useCallback(async () => {
+    if (!enabled) return;
     const unmutedCount = videoParticipants.filter(
       (participant) => !participant.isVideoMuted,
     ).length;
@@ -251,9 +258,11 @@ export function useHostControls({
 
     applyMuteAllVideo();
     signaling.send(createHostMuteAllVideoMessage());
-  }, [applyMuteAllVideo, confirm, videoParticipants, signaling]);
+  }, [applyMuteAllVideo, confirm, enabled, videoParticipants, signaling]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
+
     return signaling.subscribe((message) => {
       switch (message.type) {
         case SIGNALING_MESSAGE.HOST_MUTE_AUDIO:
@@ -293,20 +302,23 @@ export function useHostControls({
     applyParticipantAudioUnmuted,
     applyParticipantVideoMuted,
     applyParticipantVideoUnmuted,
+    enabled,
     signaling,
   ]);
 
   const canMuteAllAudio = useMemo(
     () =>
-      videoParticipants.some((participant) => !participant.isAudioMuted) ||
-      audioList.some((participant) => !participant.isMuted),
-    [audioList, videoParticipants],
+      enabled &&
+      (videoParticipants.some((participant) => !participant.isAudioMuted) ||
+        audioList.some((participant) => !participant.isMuted)),
+    [audioList, enabled, videoParticipants],
   );
 
   const canMuteAllVideo = useMemo(
     () =>
+      enabled &&
       videoParticipants.some((participant) => !participant.isVideoMuted),
-    [videoParticipants],
+    [enabled, videoParticipants],
   );
 
   return {

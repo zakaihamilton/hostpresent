@@ -16,17 +16,15 @@ export function VideoTile({
 
   return (
     <div className={`${styles.tile} ${isSpeaking ? styles.speaking : ""}`}>
-      {showVideo ? (
-        <VideoPlayer stream={stream} isMuted={isMuted} />
-      ) : (
-        <div
-          className={styles.placeholder}
-          style={{ background: avatarColor }}
-          aria-hidden
-        >
-          {initial ?? name.charAt(0)}
-        </div>
-      )}
+      {showVideo
+        ? <VideoPlayer stream={stream} isMuted={isMuted} />
+        : <div
+            className={styles.placeholder}
+            style={{ background: avatarColor }}
+            aria-hidden
+          >
+            {initial ?? name.charAt(0)}
+          </div>}
       {isVideoOff && videoOffIcon && (
         <div className={styles.videoOffOverlay} aria-hidden>
           {videoOffIcon}

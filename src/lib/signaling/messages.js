@@ -95,3 +95,11 @@ export function isSignalingMessage(message) {
     Object.values(SIGNALING_MESSAGE).includes(message.type)
   );
 }
+
+export function withRoomEnvelope(message, { roomId, token }) {
+  return {
+    ...message,
+    roomId,
+    token,
+  };
+}

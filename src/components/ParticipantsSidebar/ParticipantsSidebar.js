@@ -9,23 +9,37 @@ const PARTICIPANT_ITEM_HEIGHT = 52;
 const SECTION_LABEL_HEIGHT = 44;
 
 function buildParticipantItems({
+  isHost,
   isVideoMuted,
   isAudioMuted,
   videoParticipants,
   audioList,
 }) {
-  const items = [
-    {
-      type: "host",
-      id: "host",
-      name: "You (Host)",
-      initial: "Y",
-      avatarColor: "#3b82f6",
-      isVideoMuted,
-      isAudioMuted,
-      hasVideo: true,
-    },
-  ];
+  const items = isHost
+    ? [
+        {
+          type: "host",
+          id: "host",
+          name: "You (Host)",
+          initial: "Y",
+          avatarColor: "#3b82f6",
+          isVideoMuted,
+          isAudioMuted,
+          hasVideo: true,
+        },
+      ]
+    : [
+        {
+          type: "video",
+          id: "self",
+          name: "You",
+          initial: "Y",
+          avatarColor: "#3b82f6",
+          isVideoMuted,
+          isAudioMuted,
+          hasVideo: true,
+        },
+      ];
 
   for (const participant of videoParticipants) {
     items.push({
@@ -80,6 +94,7 @@ export function ParticipantsSidebar({
   videoParticipants,
   isVideoMuted,
   isAudioMuted,
+  isHost = true,
   onMuteParticipantVideo,
   onMuteParticipantAudio,
   onMuteAllVideo,
@@ -89,17 +104,18 @@ export function ParticipantsSidebar({
 }) {
   const totalCount = 1 + videoParticipants.length + audioList.length;
   const hasRemoteParticipants =
-    videoParticipants.length > 0 || audioList.length > 0;
+    isHost && (videoParticipants.length > 0 || audioList.length > 0);
 
   const items = useMemo(
     () =>
       buildParticipantItems({
+        isHost,
         isVideoMuted,
         isAudioMuted,
         videoParticipants,
         audioList,
       }),
-    [audioList, isAudioMuted, isVideoMuted, videoParticipants],
+    [audioList, isAudioMuted, isHost, isVideoMuted, videoParticipants],
   );
 
   const renderItem = useCallback(
@@ -108,7 +124,8 @@ export function ParticipantsSidebar({
         return <div className={styles.sectionLabel}>{item.label}</div>;
       }
 
-      const isHost = item.type === "host";
+      const isHostItem = item.type === "host";
+      const isSelfItem = item.id === "self";
 
       return (
         <ParticipantItem
@@ -120,17 +137,19 @@ export function ParticipantsSidebar({
           isAudioMuted={item.isAudioMuted}
           hasVideo={item.hasVideo}
           onMuteVideo={
-            isHost ? undefined : () => onMuteParticipantVideo(item.id)
+            isHost && !isHostItem && !isSelfItem
+              ? () => onMuteParticipantVideo(item.id)
+              : undefined
           }
           onMuteAudio={
-            isHost
-              ? undefined
-              : () => onMuteParticipantAudio(item.id, item.type)
+            isHost && !isHostItem && !isSelfItem
+              ? () => onMuteParticipantAudio(item.id, item.type)
+              : undefined
           }
         />
       );
     },
-    [onMuteParticipantAudio, onMuteParticipantVideo],
+    [isHost, onMuteParticipantAudio, onMuteParticipantVideo],
   );
 
   return (
