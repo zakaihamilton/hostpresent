@@ -3,10 +3,7 @@ import {
   guardGetRequest,
   RATE_LIMITS,
 } from "@/lib/room/apiSecurity";
-import {
-  getSearchParam,
-  verifyRequestToken,
-} from "@/lib/room/routeHelpers";
+import { getSearchParam, verifyRequestToken } from "@/lib/room/routeHelpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

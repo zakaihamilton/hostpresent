@@ -75,6 +75,49 @@
   flex-direction: column;
 }
 
+.combinedSlot {
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 320px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.combinedSlotClosed {
+  width: 0;
+  pointer-events: none;
+}
+
+.combinedSidebar {
+  width: 320px;
+  height: 100%;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.06);
+  transform: translateX(0);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.combinedSlotClosed .combinedSidebar {
+  transform: translateX(100%);
+  border-left-color: transparent;
+  box-shadow: none;
+}
+
+.combinedSection {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.combinedDivider {
+  flex-shrink: 0;
+  height: 1px;
+  background: var(--border);
+}
+
 @media (max-width: 900px) {
   .workspace {
     background: #000;
@@ -141,5 +184,3 @@
     animation: none;
   }
 }
-
-

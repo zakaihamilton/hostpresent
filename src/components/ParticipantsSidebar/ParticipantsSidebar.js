@@ -4,8 +4,8 @@ import { ParticipantItem } from "@/components/ParticipantItem";
 import { Tooltip } from "@/components/Tooltip";
 import { VirtualList } from "@/components/Widgets";
 import {
-  PARTICIPANT_MODE,
   displayNameInitial,
+  PARTICIPANT_MODE,
   participantModeLabel,
   resolveDisplayName,
 } from "@/lib/settings/displayNameSettings";
@@ -28,6 +28,7 @@ function buildParticipantItems({
   isAudioMuted,
   hostIsAudioMuted,
   hostIsVideoMuted,
+  hostMode,
   localDisplayName,
   localParticipantMode,
   hostDisplayName,
@@ -37,7 +38,7 @@ function buildParticipantItems({
 }) {
   const selfName = resolveDisplayName(localDisplayName);
   const selfInitial = displayNameInitial(localDisplayName);
-  const selfModeLabel = !isHost ? getModeLabel(localParticipantMode) : null;
+  const selfModeLabel = getModeLabel(localParticipantMode);
 
   if (!isHost) {
     const items = [
@@ -50,6 +51,7 @@ function buildParticipantItems({
         isVideoMuted: hostIsVideoMuted,
         isAudioMuted: hostIsAudioMuted,
         hasVideo: true,
+        modeLabel: getModeLabel(hostMode),
       },
       {
         type: "self",
@@ -91,6 +93,7 @@ function buildParticipantItems({
       isVideoMuted,
       isAudioMuted,
       hasVideo: true,
+      modeLabel: selfModeLabel,
     },
   ];
 
@@ -150,6 +153,7 @@ export function ParticipantsSidebar({
   hostDisplayName = "Host",
   hostIsAudioMuted = false,
   hostIsVideoMuted = false,
+  hostMode = "available",
   isVideoMuted,
   isAudioMuted,
   isHost = true,
@@ -162,6 +166,7 @@ export function ParticipantsSidebar({
   onMuteAllAudio,
   canMuteAllVideo,
   canMuteAllAudio,
+  flex,
 }) {
   const totalCount = isHost
     ? 1 + videoParticipants.length + audioList.length
@@ -177,6 +182,7 @@ export function ParticipantsSidebar({
         isAudioMuted,
         hostIsAudioMuted,
         hostIsVideoMuted,
+        hostMode,
         localDisplayName,
         localParticipantMode,
         hostDisplayName,
@@ -189,6 +195,7 @@ export function ParticipantsSidebar({
       hostDisplayName,
       hostIsAudioMuted,
       hostIsVideoMuted,
+      hostMode,
       isAudioMuted,
       isHost,
       isVideoMuted,
@@ -237,7 +244,7 @@ export function ParticipantsSidebar({
 
   return (
     <div
-      className={`${styles.slot} ${visible ? "" : styles.slotClosed}`}
+      className={`${styles.slot} ${visible ? "" : styles.slotClosed} ${flex ? styles.slotFlex : ""}`}
       aria-hidden={!visible}
     >
       <aside className={styles.sidebar}>
@@ -247,32 +254,32 @@ export function ParticipantsSidebar({
             <span className={styles.count}>{totalCount}</span>
           </div>
           <div className={styles.headerActions}>
-            {hasRemoteParticipants ? (
-              <div className={styles.bulkActions}>
-                <Tooltip text="Turn off all cameras" placement="left">
-                  <button
-                    type="button"
-                    className={styles.bulkBtn}
-                    onClick={onMuteAllVideo}
-                    disabled={!canMuteAllVideo}
-                    aria-label="Turn off all cameras"
-                  >
-                    <VideoOff />
-                  </button>
-                </Tooltip>
-                <Tooltip text="Mute all participants" placement="left">
-                  <button
-                    type="button"
-                    className={styles.bulkBtn}
-                    onClick={onMuteAllAudio}
-                    disabled={!canMuteAllAudio}
-                    aria-label="Mute all participants"
-                  >
-                    <MicOff />
-                  </button>
-                </Tooltip>
-              </div>
-            ) : null}
+            {hasRemoteParticipants
+              ? <div className={styles.bulkActions}>
+                  <Tooltip text="Turn off all cameras" placement="left">
+                    <button
+                      type="button"
+                      className={styles.bulkBtn}
+                      onClick={onMuteAllVideo}
+                      disabled={!canMuteAllVideo}
+                      aria-label="Turn off all cameras"
+                    >
+                      <VideoOff />
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Mute all participants" placement="left">
+                    <button
+                      type="button"
+                      className={styles.bulkBtn}
+                      onClick={onMuteAllAudio}
+                      disabled={!canMuteAllAudio}
+                      aria-label="Mute all participants"
+                    >
+                      <MicOff />
+                    </button>
+                  </Tooltip>
+                </div>
+              : null}
             {onClose
               ? <Tooltip text="Close participants" placement="left">
                   <button

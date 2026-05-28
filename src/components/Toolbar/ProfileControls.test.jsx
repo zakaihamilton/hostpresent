@@ -12,10 +12,7 @@ describe("ProfileControls", () => {
     const user = userEvent.setup();
 
     render(
-      <ProfileControls
-        displayName="Alex"
-        onDisplayNameChange={() => {}}
-      />,
+      <ProfileControls displayName="Alex" onDisplayNameChange={() => {}} />,
     );
 
     await user.hover(getProfileButton());
@@ -28,12 +25,7 @@ describe("ProfileControls", () => {
   it("opens a popup to edit the display name", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ProfileControls
-        displayName=""
-        onDisplayNameChange={() => {}}
-      />,
-    );
+    render(<ProfileControls displayName="" onDisplayNameChange={() => {}} />);
 
     await user.click(getProfileButton());
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -89,7 +81,8 @@ describe("ProfileControls", () => {
 
     await user.click(getProfileButton());
 
-    expect(screen.getByRole("group", { name: "Participation mode" }))
-      .toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Participation mode" }),
+    ).toBeInTheDocument();
   });
 });

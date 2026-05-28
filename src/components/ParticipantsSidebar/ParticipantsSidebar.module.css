@@ -5,6 +5,18 @@
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.slotFlex {
+  width: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.slotFlex .sidebar {
+  width: auto;
+  border-left: none;
+  box-shadow: none;
+}
+
 .slotClosed {
   width: 0;
   pointer-events: none;

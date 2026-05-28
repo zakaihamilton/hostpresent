@@ -1,9 +1,9 @@
 import { Pause, Play, Record, Stop } from "@/components/Icons";
+import { Tooltip } from "@/components/Tooltip";
 import { LayoutControls } from "./LayoutControls";
 import { MediaControls } from "./MediaControls";
 import { ProfileControls } from "./ProfileControls";
 import { ScreenShareControls } from "./ScreenShareControls";
-import { Tooltip } from "@/components/Tooltip";
 import styles from "./Toolbar.module.css";
 
 function btnClass(...classes) {
@@ -19,6 +19,7 @@ export function Toolbar({
   isGalleryVisible,
   isSidebarVisible,
   isPipVisible,
+  isChatVisible,
   isRecording,
   isRecordingPaused,
   displayName = "",
@@ -35,6 +36,7 @@ export function Toolbar({
   onToggleGallery,
   onToggleSidebar,
   onTogglePip,
+  onToggleChat,
   onStartRecording,
   onPauseRecording,
   onResumeRecording,
@@ -45,99 +47,103 @@ export function Toolbar({
   return (
     <footer className={styles.toolbar}>
       <div className={styles.toolbarInner}>
-      {onDisplayNameChange
-        ? <div className={styles.controlGroup}>
-            <ProfileControls
-              displayName={displayName}
-              onDisplayNameChange={onDisplayNameChange}
-              participantMode={participantMode}
-              onParticipantModeChange={onParticipantModeChange}
-            />
-          </div>
-        : null}
+        {onDisplayNameChange
+          ? <div className={styles.controlGroup}>
+              <ProfileControls
+                displayName={displayName}
+                onDisplayNameChange={onDisplayNameChange}
+                participantMode={participantMode}
+                onParticipantModeChange={onParticipantModeChange}
+              />
+            </div>
+          : null}
 
-      <div className={`${styles.controlGroup} ${styles.mediaGroup}`}>
-        <MediaControls
-          isAudioMuted={isAudioMuted}
-          isVideoMuted={isVideoMuted}
-          onToggleAudio={onToggleAudio}
-          onToggleVideo={onToggleVideo}
-          availableCameras={availableCameras}
-          selectedCamera={selectedCamera}
-          onCameraChange={onCameraChange}
-        />
-      </div>
+        <div className={`${styles.controlGroup} ${styles.mediaGroup}`}>
+          <MediaControls
+            isAudioMuted={isAudioMuted}
+            isVideoMuted={isVideoMuted}
+            onToggleAudio={onToggleAudio}
+            onToggleVideo={onToggleVideo}
+            availableCameras={availableCameras}
+            selectedCamera={selectedCamera}
+            onCameraChange={onCameraChange}
+          />
+        </div>
 
-      {allowScreenShare
-        ? <div className={`${styles.controlGroup} ${styles.screenShareGroup}`}>
-            <ScreenShareControls
-              screenStream={screenStream}
-              shareScreenAudio={shareScreenAudio}
-              isScreenAudioShared={isScreenAudioShared}
-              onToggleScreenShare={onToggleScreenShare}
-              onShareScreenAudioChange={onShareScreenAudioChange}
-            />
-          </div>
-        : null}
+        {allowScreenShare
+          ? <div
+              className={`${styles.controlGroup} ${styles.screenShareGroup}`}
+            >
+              <ScreenShareControls
+                screenStream={screenStream}
+                shareScreenAudio={shareScreenAudio}
+                isScreenAudioShared={isScreenAudioShared}
+                onToggleScreenShare={onToggleScreenShare}
+                onShareScreenAudioChange={onShareScreenAudioChange}
+              />
+            </div>
+          : null}
 
-      <div className={`${styles.controlGroup} ${styles.layoutGroup}`}>
-        <LayoutControls
-          isGalleryVisible={isGalleryVisible}
-          isSidebarVisible={isSidebarVisible}
-          isPipVisible={isPipVisible}
-          onToggleGallery={onToggleGallery}
-          onToggleSidebar={onToggleSidebar}
-          onTogglePip={onTogglePip}
-        />
-      </div>
+        <div className={`${styles.controlGroup} ${styles.layoutGroup}`}>
+          <LayoutControls
+            isGalleryVisible={isGalleryVisible}
+            isSidebarVisible={isSidebarVisible}
+            isPipVisible={isPipVisible}
+            isChatVisible={isChatVisible}
+            onToggleGallery={onToggleGallery}
+            onToggleSidebar={onToggleSidebar}
+            onTogglePip={onTogglePip}
+            onToggleChat={onToggleChat}
+          />
+        </div>
 
-      {showRecording
-        ? <div
-            className={`${styles.controlGroup} ${styles.recordingGroup} ${isRecording ? styles.recordingGroupActive : ""} ${isRecordingPaused ? styles.recordingGroupPaused : ""}`}
-          >
-            {!isRecording
-              ? <Tooltip text="Start Local Recording">
-                  <button
-                    type="button"
-                    className={btnClass(styles.btnDanger)}
-                    onClick={onStartRecording}
-                  >
-                    <Record />
-                  </button>
-                </Tooltip>
-              : <>
-                  {isRecordingPaused
-                    ? <Tooltip text="Resume Recording">
-                        <button
-                          type="button"
-                          className={btnClass(styles.btnWarning)}
-                          onClick={onResumeRecording}
-                        >
-                          <Play />
-                        </button>
-                      </Tooltip>
-                    : <Tooltip text="Pause Recording">
-                        <button
-                          type="button"
-                          className={btnClass()}
-                          onClick={onPauseRecording}
-                        >
-                          <Pause />
-                        </button>
-                      </Tooltip>}
-
-                  <Tooltip text="Stop & Save Recording">
+        {showRecording
+          ? <div
+              className={`${styles.controlGroup} ${styles.recordingGroup} ${isRecording ? styles.recordingGroupActive : ""} ${isRecordingPaused ? styles.recordingGroupPaused : ""}`}
+            >
+              {!isRecording
+                ? <Tooltip text="Start Local Recording">
                     <button
                       type="button"
-                      className={btnClass(styles.btnDangerSolid)}
-                      onClick={onStopRecording}
+                      className={btnClass(styles.btnDanger)}
+                      onClick={onStartRecording}
                     >
-                      <Stop />
+                      <Record />
                     </button>
                   </Tooltip>
-                </>}
-          </div>
-        : null}
+                : <>
+                    {isRecordingPaused
+                      ? <Tooltip text="Resume Recording">
+                          <button
+                            type="button"
+                            className={btnClass(styles.btnWarning)}
+                            onClick={onResumeRecording}
+                          >
+                            <Play />
+                          </button>
+                        </Tooltip>
+                      : <Tooltip text="Pause Recording">
+                          <button
+                            type="button"
+                            className={btnClass()}
+                            onClick={onPauseRecording}
+                          >
+                            <Pause />
+                          </button>
+                        </Tooltip>}
+
+                    <Tooltip text="Stop & Save Recording">
+                      <button
+                        type="button"
+                        className={btnClass(styles.btnDangerSolid)}
+                        onClick={onStopRecording}
+                      >
+                        <Stop />
+                      </button>
+                    </Tooltip>
+                  </>}
+            </div>
+          : null}
       </div>
     </footer>
   );

@@ -70,7 +70,7 @@ describe("Toolbar", () => {
 
     const footer = screen.getByRole("contentinfo");
     const buttons = within(footer).getAllByRole("button");
-    await user.click(buttons[7]);
+    await user.click(buttons[9]);
 
     expect(handlers.onStartRecording).toHaveBeenCalledTimes(1);
   });

@@ -7,7 +7,10 @@ import {
   normalizeJoinCode,
 } from "@/lib/room/joinCodeFormat";
 import { getParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
-import { getRoomByHostToken, getRoomByJoinCode } from "@/lib/settings/roomSettings";
+import {
+  getRoomByHostToken,
+  getRoomByJoinCode,
+} from "@/lib/settings/roomSettings";
 
 const DEFAULT_ROLE = "host";
 const STORAGE_KEY = "hostpresent.lastWelcomeTab";

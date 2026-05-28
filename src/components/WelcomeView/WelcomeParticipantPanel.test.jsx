@@ -75,7 +75,10 @@ describe("WelcomeParticipantPanel", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText("Participant join code"), "ABCD-EFGH");
+    await user.type(
+      screen.getByLabelText("Participant join code"),
+      "ABCD-EFGH",
+    );
     expect(
       screen.getByRole("button", { name: "Join with join code" }),
     ).toBeEnabled();
@@ -100,7 +103,9 @@ describe("WelcomeParticipantPanel", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Participant join code")).toHaveValue("ABCD-EFGH");
+    expect(screen.getByLabelText("Participant join code")).toHaveValue(
+      "ABCD-EFGH",
+    );
     expect(screen.queryByText("Joining meeting…")).not.toBeInTheDocument();
     expect(resolveJoinCode).not.toHaveBeenCalled();
   });

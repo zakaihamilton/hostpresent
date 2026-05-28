@@ -28,7 +28,10 @@ export const PARTICIPANT_REACHABILITY_HINT =
 
 function normalizeSignalingHost(value) {
   if (!value || typeof value !== "string") return null;
-  return value.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  return value
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/+$/, "");
 }
 
 function normalizeSignalingPath(value) {
@@ -55,7 +58,9 @@ export function isSignalingServerConfigured() {
 }
 
 export function isWaitingForHostMessage(message) {
-  return typeof message === "string" && message.includes("Waiting for the host");
+  return (
+    typeof message === "string" && message.includes("Waiting for the host")
+  );
 }
 
 export function isSignalingRetryMessage(message) {
@@ -101,7 +106,9 @@ export function getSignalingErrorHint(message, { isHost = false } = {}) {
   if (isSignalingConfigError(message)) {
     return SIGNALING_CONFIG_HINT;
   }
-  return isHost ? HOST_SIGNING_REACHABILITY_HINT : PARTICIPANT_REACHABILITY_HINT;
+  return isHost
+    ? HOST_SIGNING_REACHABILITY_HINT
+    : PARTICIPANT_REACHABILITY_HINT;
 }
 
 export function hostSignalingTimeoutError() {

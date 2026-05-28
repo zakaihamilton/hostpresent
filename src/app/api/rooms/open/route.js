@@ -1,18 +1,11 @@
-import {
-  guardPostRequest,
-  RATE_LIMITS,
-} from "@/lib/room/apiSecurity";
+import { guardPostRequest, RATE_LIMITS } from "@/lib/room/apiSecurity";
 import {
   jsonError,
   jsonOk,
   readJsonBody,
   verifyRequestToken,
 } from "@/lib/room/routeHelpers";
-import {
-  getRoomById,
-  openRoom,
-  restoreRoomFromToken,
-} from "@/lib/room/store";
+import { getRoomById, openRoom, restoreRoomFromToken } from "@/lib/room/store";
 import { ROOM_ROLE } from "@/lib/room/tokens";
 
 export const runtime = "nodejs";

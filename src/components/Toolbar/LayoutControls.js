@@ -1,4 +1,4 @@
-import { Gallery, Pip, Users } from "@/components/Icons";
+import { Chat, Gallery, Pip, Users } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
 import styles from "./LayoutControls.module.css";
 
@@ -10,9 +10,11 @@ export function LayoutControls({
   isGalleryVisible,
   isSidebarVisible,
   isPipVisible,
+  isChatVisible,
   onToggleGallery,
   onToggleSidebar,
   onTogglePip,
+  onToggleChat,
 }) {
   return (
     <div className={styles.cluster}>
@@ -52,15 +54,21 @@ export function LayoutControls({
         </button>
       </Tooltip>
 
-      <Tooltip
-        text={isPipVisible ? "Hide Self-View" : "Show Self-View"}
-      >
+      <Tooltip text={isChatVisible ? "Hide Chat" : "Show Chat"}>
         <button
           type="button"
-          className={btnClass(
-            styles.pipBtn,
-            isPipVisible && styles.btnActive,
-          )}
+          className={btnClass(isChatVisible && styles.btnActive)}
+          onClick={onToggleChat}
+          aria-label={isChatVisible ? "Hide chat" : "Show chat"}
+        >
+          <Chat />
+        </button>
+      </Tooltip>
+
+      <Tooltip text={isPipVisible ? "Hide Self-View" : "Show Self-View"}>
+        <button
+          type="button"
+          className={btnClass(styles.pipBtn, isPipVisible && styles.btnActive)}
           onClick={onTogglePip}
           aria-label={isPipVisible ? "Hide self-view" : "Show self-view"}
         >

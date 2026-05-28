@@ -11,7 +11,9 @@ export function SecurityNotice() {
 
     const load = async () => {
       try {
-        const response = await fetch("/api/rooms/config", { cache: "no-store" });
+        const response = await fetch("/api/rooms/config", {
+          cache: "no-store",
+        });
         if (!response.ok) return;
         const data = await response.json();
         if (cancelled) return;

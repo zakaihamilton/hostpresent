@@ -16,7 +16,9 @@ function mockStream({ video = false, audio = false, audioId = "audio" } = {}) {
 
 describe("needsOutboundAudioMix", () => {
   it("returns false when only the microphone is available", () => {
-    expect(needsOutboundAudioMix(mockStream({ audio: true }), null)).toBe(false);
+    expect(needsOutboundAudioMix(mockStream({ audio: true }), null)).toBe(
+      false,
+    );
   });
 
   it("returns false when only screen audio is available", () => {

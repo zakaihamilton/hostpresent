@@ -12,9 +12,7 @@ describe("MeetingJoinError", () => {
   });
 
   it("renders a custom title", () => {
-    render(
-      <MeetingJoinError title="Connection failed" message="Try again" />,
-    );
+    render(<MeetingJoinError title="Connection failed" message="Try again" />);
 
     expect(
       screen.getByRole("heading", { name: "Connection failed" }),
@@ -41,17 +39,13 @@ describe("MeetingJoinError", () => {
   });
 
   it("does not render a hint when not provided", () => {
-    const { container } = render(
-      <MeetingJoinError message="Error" />,
-    );
+    const { container } = render(<MeetingJoinError message="Error" />);
 
     expect(container.querySelector("p")).not.toBeNull();
   });
 
   it("shows the back button when onBack is provided", () => {
-    render(
-      <MeetingJoinError message="Error" onBack={() => {}} />,
-    );
+    render(<MeetingJoinError message="Error" onBack={() => {}} />);
 
     expect(
       screen.getByRole("button", { name: "Back to welcome" }),
@@ -72,9 +66,7 @@ describe("MeetingJoinError", () => {
 
     render(<MeetingJoinError message="Error" onBack={onBack} />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Back to welcome" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Back to welcome" }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 

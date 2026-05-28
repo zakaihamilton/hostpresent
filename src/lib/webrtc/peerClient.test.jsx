@@ -6,8 +6,8 @@ import {
   isSignalingRetryMessage,
   isSignalingServerReachabilityError,
   isWaitingForHostMessage,
-  SIGNALING_ERROR,
   SIGNALING_CONNECT_TIMEOUT_MS,
+  SIGNALING_ERROR,
 } from "./peerClient";
 
 describe("peerClient signaling errors", () => {
@@ -24,25 +24,24 @@ describe("peerClient signaling errors", () => {
   });
 
   it("marks reachability failures as fatal but retry messages as non-fatal", () => {
-    expect(isSignalingServerReachabilityError(SIGNALING_ERROR.HOST_TIMEOUT)).toBe(
-      true,
-    );
+    expect(
+      isSignalingServerReachabilityError(SIGNALING_ERROR.HOST_TIMEOUT),
+    ).toBe(true);
     expect(isSignalingRetryMessage(SIGNALING_ERROR.HOST_ID_RECONNECTING)).toBe(
       true,
     );
-    expect(
-      isFatalSignalingError(SIGNALING_ERROR.HOST_ID_RECONNECTING),
-    ).toBe(false);
-    expect(isFatalSignalingError(SIGNALING_ERROR.HOST_TIMEOUT)).toBe(true);
-    expect(isWaitingForHostMessage("Waiting for the host to join…")).toBe(
-      true,
+    expect(isFatalSignalingError(SIGNALING_ERROR.HOST_ID_RECONNECTING)).toBe(
+      false,
     );
+    expect(isFatalSignalingError(SIGNALING_ERROR.HOST_TIMEOUT)).toBe(true);
+    expect(isWaitingForHostMessage("Waiting for the host to join…")).toBe(true);
     expect(isFatalSignalingError("Waiting for the host to join…")).toBe(false);
   });
 
   it("returns config hint for config errors and reachability hint otherwise", () => {
-    expect(getSignalingErrorHint(SIGNALING_ERROR.NOT_CONFIGURED, { isHost: true }))
-      .toContain("SIGNALING_SERVER_URL");
+    expect(
+      getSignalingErrorHint(SIGNALING_ERROR.NOT_CONFIGURED, { isHost: true }),
+    ).toContain("SIGNALING_SERVER_URL");
     expect(
       getSignalingErrorHint(SIGNALING_ERROR.HOST_TIMEOUT, { isHost: true }),
     ).toBe(HOST_SIGNING_REACHABILITY_HINT);

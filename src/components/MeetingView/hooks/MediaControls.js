@@ -10,7 +10,11 @@ import {
   createParticipantVideoUnmutedMessage,
 } from "@/lib/signaling/messages";
 
-export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRef }) {
+export function MediaControls({
+  isHost,
+  roomConnection,
+  streamListenerCleanupsRef,
+}) {
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -47,7 +51,10 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
   useEffect(() => {
     navigator.mediaDevices.addEventListener("devicechange", enumerateCameras);
     return () => {
-      navigator.mediaDevices.removeEventListener("devicechange", enumerateCameras);
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        enumerateCameras,
+      );
     };
   }, [enumerateCameras]);
 
@@ -86,33 +93,38 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
     };
   }, []);
 
-  const switchCamera = useCallback(async (deviceId) => {
-    if (!localStream || !deviceId || !navigator.mediaDevices) return;
+  const switchCamera = useCallback(
+    async (deviceId) => {
+      if (!localStream || !deviceId || !navigator.mediaDevices) return;
 
-    const videoTrack = localStream.getVideoTracks()[0];
-    if (videoTrack?.getSettings().deviceId === deviceId) return;
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack?.getSettings().deviceId === deviceId) return;
 
-    const wasMuted = isVideoMuted;
+      const wasMuted = isVideoMuted;
 
-    try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId } },
-        audio: false,
-      });
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } },
+          audio: false,
+        });
 
-      const newTrack = newStream.getVideoTracks()[0];
-      if (videoTrack) {
-        localStream.removeTrack(videoTrack);
-        videoTrack.stop();
+        const newTrack = newStream.getVideoTracks()[0];
+        if (videoTrack) {
+          localStream.removeTrack(videoTrack);
+          videoTrack.stop();
+        }
+        localStream.addTrack(newTrack);
+        newTrack.enabled = !wasMuted;
+        setSelectedCamera(deviceId);
+      } catch (err) {
+        console.error("Failed to switch camera:", err);
+        setErrorMsg(
+          "Could not switch camera. Check permissions and try again.",
+        );
       }
-      localStream.addTrack(newTrack);
-      newTrack.enabled = !wasMuted;
-      setSelectedCamera(deviceId);
-    } catch (err) {
-      console.error("Failed to switch camera:", err);
-      setErrorMsg("Could not switch camera. Check permissions and try again.");
-    }
-  }, [localStream, isVideoMuted, setErrorMsg]);
+    },
+    [localStream, isVideoMuted, setErrorMsg],
+  );
 
   const publishParticipantMediaStatus = useCallback(
     ({ audioMuted, videoMuted }) => {

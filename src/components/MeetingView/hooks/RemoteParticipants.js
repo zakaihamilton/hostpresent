@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  PARTICIPANT_MODE,
+  resolveDisplayName,
+} from "@/lib/settings/displayNameSettings";
+import {
   createParticipantProfileBroadcastMessage,
   createParticipantProfileMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import {
-  PARTICIPANT_MODE,
-  resolveDisplayName,
-} from "@/lib/settings/displayNameSettings";
 import { attachRemoteStreamMediaListeners } from "@/lib/webrtc/remoteParticipantMedia";
 
 function participantColor(id) {
@@ -41,6 +41,7 @@ export function RemoteParticipants({
   const [hostDisplayName, setHostDisplayName] = useState("Host");
   const [hostAudioMuted, setHostAudioMuted] = useState(false);
   const [hostVideoMuted, setHostVideoMuted] = useState(false);
+  const [hostMode, setHostMode] = useState("available");
   const [hostPresent, setHostPresent] = useState(isHost);
   const [audioList, setAudioList] = useState([]);
 
@@ -160,9 +161,7 @@ export function RemoteParticipants({
             : undefined;
 
       setVideoParticipants((previous) => {
-        const existing = previous.find(
-          (entry) => entry.id === participant.id,
-        );
+        const existing = previous.find((entry) => entry.id === participant.id);
         const nextName = participant.name
           ? resolveDisplayName(participant.name)
           : undefined;
@@ -202,7 +201,11 @@ export function RemoteParticipants({
         syncProfilesToParticipant(participant.id);
       }
     },
-    [bindRemoteStreamMediaListeners, broadcastPeerLeft, syncProfilesToParticipant],
+    [
+      bindRemoteStreamMediaListeners,
+      broadcastPeerLeft,
+      syncProfilesToParticipant,
+    ],
   );
 
   const handlePeerProfileBroadcast = useCallback((message) => {
@@ -265,6 +268,9 @@ export function RemoteParticipants({
       }
       if (typeof message.videoMuted === "boolean") {
         setHostVideoMuted(message.videoMuted);
+      }
+      if (message.mode === "listening" || message.mode === "available") {
+        setHostMode(message.mode);
       }
     });
   }, [isHost, roomConnectionRef]);
@@ -369,7 +375,8 @@ export function RemoteParticipants({
   ]);
 
   useEffect(() => {
-    if (isHost || !roomConnectionRef.current?.localParticipantId) return undefined;
+    if (isHost || !roomConnectionRef.current?.localParticipantId)
+      return undefined;
 
     publishParticipantMediaStatus({
       audioMuted: isAudioMuted,
@@ -426,7 +433,12 @@ export function RemoteParticipants({
         mode: message.mode,
       });
     });
-  }, [broadcastPeerProfile, handleRemoteParticipant, isHost, roomConnectionRef]);
+  }, [
+    broadcastPeerProfile,
+    handleRemoteParticipant,
+    isHost,
+    roomConnectionRef,
+  ]);
 
   return {
     hostStream,
@@ -436,6 +448,7 @@ export function RemoteParticipants({
     hostDisplayName,
     hostAudioMuted,
     hostVideoMuted,
+    hostMode,
     hostPresent,
     audioList,
     setAudioList,

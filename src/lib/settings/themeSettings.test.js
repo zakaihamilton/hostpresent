@@ -1,8 +1,8 @@
 import {
   applyTheme,
   loadTheme,
-  saveTheme,
   STORAGE_KEY,
+  saveTheme,
   THEME,
 } from "./themeSettings";
 

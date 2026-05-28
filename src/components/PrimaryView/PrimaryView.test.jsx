@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { PrimaryView } from "./PrimaryView";
 import { createMediaStream } from "@/test/helpers";
+import { PrimaryView } from "./PrimaryView";
 
 jest.mock("@/components/VideoPlayer", () => ({
   VideoPlayer: () => <div data-testid="video-player" />,

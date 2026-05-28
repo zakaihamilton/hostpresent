@@ -1,9 +1,7 @@
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 
 export function dedupeRoomsByJoinCode(rooms, getRecentTime) {
-  const sorted = [...rooms].sort(
-    (a, b) => getRecentTime(b) - getRecentTime(a),
-  );
+  const sorted = [...rooms].sort((a, b) => getRecentTime(b) - getRecentTime(a));
   const seenJoinCodes = new Set();
   const deduped = [];
 

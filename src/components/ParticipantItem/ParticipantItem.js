@@ -101,7 +101,9 @@ export function ParticipantItem({
         </div>
         <div>
           <div className={styles.name}>{name}</div>
-          {modeLabel ? <div className={styles.modeLabel}>{modeLabel}</div> : null}
+          {modeLabel
+            ? <div className={styles.modeLabel}>{modeLabel}</div>
+            : null}
         </div>
       </div>
       <div className={styles.status}>

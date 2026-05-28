@@ -11,7 +11,9 @@ beforeAll(() => {
       removeEventListener: jest.fn(),
       enumerateDevices: jest.fn().mockResolvedValue([]),
       getUserMedia: jest.fn().mockResolvedValue({
-        getVideoTracks: () => [{ getSettings: () => ({ deviceId: "" }), stop: jest.fn() }],
+        getVideoTracks: () => [
+          { getSettings: () => ({ deviceId: "" }), stop: jest.fn() },
+        ],
         getAudioTracks: () => [],
         getTracks: () => [],
         addTrack: jest.fn(),
@@ -96,6 +98,12 @@ jest.mock("@/lib/webrtc/peerClient", () => ({
   getSignalingConfigHint: () => null,
   isFatalSignalingError: () => false,
   isWaitingForHostMessage: () => false,
+  hostPeerId: (roomId) => `hp-${roomId}`,
+}));
+
+jest.mock("@/components/ChatPanel", () => ({
+  ChatPanel: ({ visible }) =>
+    visible ? <div data-testid="chat-panel">Chat</div> : null,
 }));
 
 jest.mock("@/hooks", () => ({
@@ -134,9 +142,7 @@ describe("MeetingView", () => {
   });
 
   it("renders host meeting UI", async () => {
-    render(
-      <MeetingView role="host" token="host-token" onBack={() => {}} />,
-    );
+    render(<MeetingView role="host" token="host-token" onBack={() => {}} />);
 
     expect(await screen.findByTestId("primary-view")).toHaveTextContent(
       "Guest",
@@ -147,9 +153,7 @@ describe("MeetingView", () => {
     const user = userEvent.setup();
     const onBack = jest.fn();
 
-    render(
-      <MeetingView role="host" token="host-token" onBack={onBack} />,
-    );
+    render(<MeetingView role="host" token="host-token" onBack={onBack} />);
 
     await user.click(
       await screen.findByRole("button", { name: "Back to welcome" }),

@@ -13,8 +13,9 @@ export function pickOutboundVideoTrack(localStream, screenStream) {
   if (screenVideo) return screenVideo;
 
   return (
-    localStream?.getVideoTracks().find((track) => track.readyState === "live") ??
-    null
+    localStream
+      ?.getVideoTracks()
+      .find((track) => track.readyState === "live") ?? null
   );
 }
 
@@ -22,8 +23,9 @@ export async function resolveOutboundAudioTrack(localStream, screenStream) {
   const mixer = getOutboundAudioMixer();
   if (!mixer) {
     return (
-      localStream?.getAudioTracks().find((track) => track.readyState === "live") ??
-      null
+      localStream
+        ?.getAudioTracks()
+        .find((track) => track.readyState === "live") ?? null
     );
   }
 

@@ -47,7 +47,10 @@ export function jsonRateLimited(retryAfterMs) {
   );
 }
 
-export async function enforceRateLimit(request, { name, limit, windowMs, keySuffix }) {
+export async function enforceRateLimit(
+  request,
+  { name, limit, windowMs, keySuffix },
+) {
   const ip = getClientIp(request);
   const key = keySuffix ? `${name}:${ip}:${keySuffix}` : `${name}:${ip}`;
   const result = await checkRateLimit({ key, limit, windowMs });
@@ -71,7 +74,10 @@ export function validateTokenParam(token) {
   return { ok: true };
 }
 
-export function validateJsonPost(request, { maxBodyBytes = DEFAULT_MAX_BODY_BYTES } = {}) {
+export function validateJsonPost(
+  request,
+  { maxBodyBytes = DEFAULT_MAX_BODY_BYTES } = {},
+) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength === 0) {
     return { ok: true };
@@ -79,7 +85,11 @@ export function validateJsonPost(request, { maxBodyBytes = DEFAULT_MAX_BODY_BYTE
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
-    return { ok: false, status: 415, error: "Content-Type must be application/json" };
+    return {
+      ok: false,
+      status: 415,
+      error: "Content-Type must be application/json",
+    };
   }
 
   if (contentLength > maxBodyBytes) {
@@ -99,10 +109,7 @@ export async function guardPostRequest(request, rateLimit) {
   const validation = validateJsonPost(request);
   if (!validation.ok) {
     return applySecurityHeaders(
-      Response.json(
-        { error: validation.error },
-        { status: validation.status },
-      ),
+      Response.json({ error: validation.error }, { status: validation.status }),
     );
   }
 

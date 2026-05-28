@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DisplayNameField } from "@/components/DisplayNameField";
+import { ParticipantModeToggle } from "@/components/ParticipantModeToggle";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import {
   extractJoinCodeFromInput,
@@ -10,6 +12,13 @@ import {
 } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
+  loadDisplayName,
+  loadParticipantMode,
+  normalizeDisplayNameInput,
+  saveDisplayName,
+  saveParticipantMode,
+} from "@/lib/settings/displayNameSettings";
+import {
   clearParticipantRooms,
   formatParticipantRoomLabel,
   getParticipantRoomByToken,
@@ -17,15 +26,6 @@ import {
   saveParticipantRoom,
   touchParticipantRoom,
 } from "@/lib/settings/participantRoomSettings";
-import {
-  loadDisplayName,
-  loadParticipantMode,
-  normalizeDisplayNameInput,
-  saveDisplayName,
-  saveParticipantMode,
-} from "@/lib/settings/displayNameSettings";
-import { DisplayNameField } from "@/components/DisplayNameField";
-import { ParticipantModeToggle } from "@/components/ParticipantModeToggle";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import shared from "./WelcomeShared.module.css";
 
@@ -130,7 +130,11 @@ export function WelcomeParticipantPanel({
   }, [joinCode]);
 
   useEffect(() => {
-    if (!autoJoinFromRoute || !joinCode || resolvedJoinCodeRef.current === joinCode) {
+    if (
+      !autoJoinFromRoute ||
+      !joinCode ||
+      resolvedJoinCodeRef.current === joinCode
+    ) {
       return;
     }
     resolvedJoinCodeRef.current = joinCode;
@@ -302,7 +306,9 @@ export function WelcomeParticipantPanel({
       </div>
 
       <div className={shared.statusArea}>
-        {resolveError ? <p className={shared.statusError}>{resolveError}</p> : null}
+        {resolveError
+          ? <p className={shared.statusError}>{resolveError}</p>
+          : null}
       </div>
 
       <div className={shared.actions}>

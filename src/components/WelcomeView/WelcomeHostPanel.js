@@ -1,23 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DisplayNameField } from "@/components/DisplayNameField";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
-import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import {
+  loadDisplayName,
+  normalizeDisplayNameInput,
+  saveDisplayName,
+} from "@/lib/settings/displayNameSettings";
 import {
   clearHostRooms,
   formatRoomLabel,
   getRoomByHostToken,
   listHostRooms,
 } from "@/lib/settings/roomSettings";
-import {
-  loadDisplayName,
-  normalizeDisplayNameInput,
-  saveDisplayName,
-} from "@/lib/settings/displayNameSettings";
-import { DisplayNameField } from "@/components/DisplayNameField";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import shared from "./WelcomeShared.module.css";
 

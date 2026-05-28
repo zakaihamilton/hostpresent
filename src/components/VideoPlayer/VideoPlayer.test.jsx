@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
-import { VideoPlayer } from "./VideoPlayer";
 import { createMediaStream } from "@/test/helpers";
+import { VideoPlayer } from "./VideoPlayer";
 
 describe("VideoPlayer", () => {
   it("renders a muted autoplay video element", () => {

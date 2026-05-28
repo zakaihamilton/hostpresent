@@ -124,7 +124,10 @@ export function MediaControls({
       <Tooltip text={isAudioMuted ? "Unmute Microphone" : "Mute Microphone"}>
         <button
           type="button"
-          className={btnClass(styles.audioBtn, isAudioMuted && styles.btnDanger)}
+          className={btnClass(
+            styles.audioBtn,
+            isAudioMuted && styles.btnDanger,
+          )}
           onClick={onToggleAudio}
           aria-label={isAudioMuted ? "Unmute microphone" : "Mute microphone"}
         >
@@ -136,7 +139,10 @@ export function MediaControls({
         <Tooltip text={isVideoMuted ? "Turn Camera On" : "Turn Camera Off"}>
           <button
             type="button"
-            className={btnClass(styles.videoBtn, isVideoMuted && styles.btnDanger)}
+            className={btnClass(
+              styles.videoBtn,
+              isVideoMuted && styles.btnDanger,
+            )}
             onClick={onToggleVideo}
             aria-label={isVideoMuted ? "Turn camera on" : "Turn camera off"}
           >
@@ -181,33 +187,31 @@ export function MediaControls({
                 Camera
               </p>
 
-              {availableCameras.length === 0 ? (
-                <p className={styles.menuEmpty}>No cameras detected</p>
-              ) : (
-                <fieldset className={styles.menuFieldset}>
-                  <legend className={styles.menuLegend}>Camera</legend>
-                  {availableCameras.map((camera) => (
-                    <label
-                      key={camera.deviceId}
-                      className={`${styles.menuOption} ${selectedCamera === camera.deviceId ? styles.menuOptionSelected : ""}`}
-                    >
-                      <input
-                        type="radio"
-                        name="camera"
-                        checked={selectedCamera === camera.deviceId}
-                        onChange={() => onCameraChange?.(camera.deviceId)}
-                        className={styles.menuOptionInput}
-                      />
-                      <span className={styles.menuOptionContent}>
-                        <span className={styles.menuOptionTitle}>
-                          {camera.label ||
-                            `Camera ${availableCameras.indexOf(camera) + 1}`}
+              {availableCameras.length === 0
+                ? <p className={styles.menuEmpty}>No cameras detected</p>
+                : <fieldset className={styles.menuFieldset}>
+                    <legend className={styles.menuLegend}>Camera</legend>
+                    {availableCameras.map((camera) => (
+                      <label
+                        key={camera.deviceId}
+                        className={`${styles.menuOption} ${selectedCamera === camera.deviceId ? styles.menuOptionSelected : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          name="camera"
+                          checked={selectedCamera === camera.deviceId}
+                          onChange={() => onCameraChange?.(camera.deviceId)}
+                          className={styles.menuOptionInput}
+                        />
+                        <span className={styles.menuOptionContent}>
+                          <span className={styles.menuOptionTitle}>
+                            {camera.label ||
+                              `Camera ${availableCameras.indexOf(camera) + 1}`}
+                          </span>
                         </span>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-              )}
+                      </label>
+                    ))}
+                  </fieldset>}
             </div>,
             document.body,
           )

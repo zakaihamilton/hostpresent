@@ -8,7 +8,10 @@ export function normalizeJoinCode(code) {
 export function formatJoinCode(code) {
   const normalized = normalizeJoinCode(code);
   if (!normalized) return "";
-  return normalized.match(new RegExp(`.{1,${GROUP_SIZE}}`, "g"))?.join("-") ?? normalized;
+  return (
+    normalized.match(new RegExp(`.{1,${GROUP_SIZE}}`, "g"))?.join("-") ??
+    normalized
+  );
 }
 
 export function isValidJoinCode(code) {

@@ -1,12 +1,12 @@
 import { guardGetRequest, RATE_LIMITS } from "@/lib/room/apiSecurity";
+import { jsonOk } from "@/lib/room/routeHelpers";
+import { isRoomSigningEncrypted } from "@/lib/room/tokens";
 import {
   buildPeerJsConfig,
   getSignalingServerHost,
   getSignalingServerPath,
   isSignalingServerConfigured,
 } from "@/lib/webrtc/peerClient";
-import { isRoomSigningEncrypted } from "@/lib/room/tokens";
-import { jsonOk } from "@/lib/room/routeHelpers";
 
 export const runtime = "nodejs";
 

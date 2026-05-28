@@ -62,7 +62,9 @@ export class OutboundAudioMixer {
 
     this.#clearGraph();
 
-    const micSource = context.createMediaStreamSource(new MediaStream([micTrack]));
+    const micSource = context.createMediaStreamSource(
+      new MediaStream([micTrack]),
+    );
     const screenSource = context.createMediaStreamSource(
       new MediaStream([screenTrack]),
     );

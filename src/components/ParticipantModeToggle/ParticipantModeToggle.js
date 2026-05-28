@@ -1,4 +1,7 @@
-import { PARTICIPANT_MODE, participantModeLabel } from "@/lib/settings/displayNameSettings";
+import {
+  PARTICIPANT_MODE,
+  participantModeLabel,
+} from "@/lib/settings/displayNameSettings";
 import styles from "./ParticipantModeToggle.module.css";
 
 export function ParticipantModeToggle({ value, onChange, compact = false }) {

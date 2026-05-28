@@ -6,10 +6,7 @@ import { resolveJoinCode } from "@/lib/room/inviteLink";
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
 import { getParticipantRoomByJoinCode } from "@/lib/settings/participantRoomSettings";
-import {
-  getActiveRoom,
-  getRoomByJoinCode,
-} from "@/lib/settings/roomSettings";
+import { getActiveRoom, getRoomByJoinCode } from "@/lib/settings/roomSettings";
 
 const HOST_ROOM_MISSING_ERROR =
   "This browser does not have the host room saved. Go to the host welcome screen and open your room from there.";

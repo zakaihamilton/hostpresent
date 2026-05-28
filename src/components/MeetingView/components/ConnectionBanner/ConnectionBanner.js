@@ -11,9 +11,7 @@ export function ConnectionBanner({
     <>
       {!isHost && !hostPresent && connectionError
         ? <div className={styles.hostWaitingBanner} role="status">
-            <p className={styles.hostWaitingText}>
-              {connectionError}
-            </p>
+            <p className={styles.hostWaitingText}>{connectionError}</p>
           </div>
         : null}
 
@@ -25,19 +23,18 @@ export function ConnectionBanner({
           </div>
         : null}
 
-      {connectionError && !isHost && !isWaitingForHost && !isFatalConnectionError
+      {connectionError &&
+      !isHost &&
+      !isWaitingForHost &&
+      !isFatalConnectionError
         ? <div className={styles.signalingErrorBanner} role="alert">
-            <p className={styles.signalingErrorText}>
-              {connectionError}
-            </p>
+            <p className={styles.signalingErrorText}>{connectionError}</p>
           </div>
         : null}
 
       {isHost && connectionError && !isFatalConnectionError
         ? <div className={styles.signalingErrorBanner} role="alert">
-            <p className={styles.signalingErrorText}>
-              {connectionError}
-            </p>
+            <p className={styles.signalingErrorText}>{connectionError}</p>
           </div>
         : null}
     </>

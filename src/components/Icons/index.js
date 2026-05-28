@@ -1,5 +1,6 @@
 export {
   ArrowLeft,
+  Chat,
   ChevronDown,
   Gallery,
   GitHub,
@@ -14,6 +15,7 @@ export {
   Play,
   Record,
   ScreenShare,
+  Send,
   ShareAudio,
   ShareAudioOff,
   Stop,

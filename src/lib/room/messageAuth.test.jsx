@@ -15,7 +15,11 @@ describe("messageAuth", () => {
     };
 
     expect(
-      canSendSignalingMessage({ isHost: true, message, localParticipantId: "" }),
+      canSendSignalingMessage({
+        isHost: true,
+        message,
+        localParticipantId: "",
+      }),
     ).toBe(true);
     expect(
       canSendSignalingMessage({
@@ -48,7 +52,11 @@ describe("messageAuth", () => {
       }),
     ).toBe(false);
     expect(
-      canSendSignalingMessage({ isHost: true, message, localParticipantId: "" }),
+      canSendSignalingMessage({
+        isHost: true,
+        message,
+        localParticipantId: "",
+      }),
     ).toBe(false);
   });
 

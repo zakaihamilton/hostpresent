@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { UserCircle } from "@/components/Icons";
 import { DisplayNameField } from "@/components/DisplayNameField";
+import { UserCircle } from "@/components/Icons";
 import { ParticipantModeToggle } from "@/components/ParticipantModeToggle";
 import { Tooltip } from "@/components/Tooltip";
 import tooltipStyles from "@/components/Tooltip/Tooltip.module.css";
@@ -144,7 +144,9 @@ export function ProfileControls({
           forceHidden={popupOpen}
           content={
             <>
-              <span className={tooltipStyles.tooltipPrimary}>{resolvedName}</span>
+              <span className={tooltipStyles.tooltipPrimary}>
+                {resolvedName}
+              </span>
               <span className={tooltipStyles.tooltipSecondary}>
                 Click to edit name
               </span>

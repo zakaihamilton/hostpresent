@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AppRouter } from "./AppRouter";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
+import { AppRouter } from "./AppRouter";
 
 jest.mock("@/components/WelcomeView", () => ({
   WelcomeView: () => <div data-testid="welcome-view">Welcome</div>,
@@ -78,7 +78,9 @@ describe("AppRouter", () => {
     });
 
     render(<AppRouter />);
-    expect(screen.getByTestId("meeting-view")).toHaveTextContent("Meeting host");
+    expect(screen.getByTestId("meeting-view")).toHaveTextContent(
+      "Meeting host",
+    );
   });
 
   it("returns participants to the join screen from meeting", async () => {

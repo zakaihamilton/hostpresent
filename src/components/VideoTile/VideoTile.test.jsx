@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { VideoTile } from "./VideoTile";
 import { createMediaStream } from "@/test/helpers";
+import { VideoTile } from "./VideoTile";
 
 jest.mock("@/components/VideoPlayer", () => ({
   VideoPlayer: () => <div data-testid="video-player" />,
@@ -9,7 +9,12 @@ jest.mock("@/components/VideoPlayer", () => ({
 describe("VideoTile", () => {
   it("renders video when stream is available", () => {
     render(
-      <VideoTile stream={createMediaStream()} name="Alex" initial="A" isMuted />,
+      <VideoTile
+        stream={createMediaStream()}
+        name="Alex"
+        initial="A"
+        isMuted
+      />,
     );
 
     expect(screen.getByTestId("video-player")).toBeInTheDocument();

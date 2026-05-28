@@ -4,7 +4,12 @@ import { X } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
 import styles from "./InviteBar.module.css";
 
-export function InviteBar({ inviteLink, inviteCopyMessage, onCopyInviteLink, onDismiss }) {
+export function InviteBar({
+  inviteLink,
+  inviteCopyMessage,
+  onCopyInviteLink,
+  onDismiss,
+}) {
   const inviteCopyButtonLabel = inviteCopyMessage || "Copy link";
   const shareButtonClassName = [
     styles.shareButton,

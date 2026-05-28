@@ -1,6 +1,6 @@
 import { createJoinCode, normalizeJoinCode } from "./joinCode.js";
-import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "./tokens.js";
 import { deriveRoomIdFromJoinCode } from "./roomIdentity.js";
+import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "./tokens.js";
 
 const GLOBAL_STORE_KEY = "__hostpresentRoomStore";
 

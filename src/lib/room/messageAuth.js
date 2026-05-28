@@ -43,7 +43,10 @@ export function isParticipantStatusMessage(message) {
   return PARTICIPANT_STATUS_TYPES.has(message?.type);
 }
 
-export function resolveParticipantStatusMessage(message, { senderId = "" } = {}) {
+export function resolveParticipantStatusMessage(
+  message,
+  { senderId = "" } = {},
+) {
   if (!isParticipantStatusMessage(message)) return message;
 
   const participantId = message.participantId || senderId;

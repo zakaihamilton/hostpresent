@@ -4,7 +4,9 @@ import { ErrorBanner } from "./ErrorBanner";
 
 describe("ErrorBanner", () => {
   it("renders nothing without a message", () => {
-    const { container } = render(<ErrorBanner message="" onDismiss={() => {}} />);
+    const { container } = render(
+      <ErrorBanner message="" onDismiss={() => {}} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 

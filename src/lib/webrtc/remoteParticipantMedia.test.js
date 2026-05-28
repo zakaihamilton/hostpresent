@@ -4,7 +4,12 @@ import {
   readRemoteStreamMediaState,
 } from "./remoteParticipantMedia.js";
 
-function createTrack({ kind, muted = false, enabled = true, readyState = "live" }) {
+function createTrack({
+  kind,
+  muted = false,
+  enabled = true,
+  readyState = "live",
+}) {
   const listeners = new Map();
   return {
     kind,
@@ -33,12 +38,12 @@ function createTrack({ kind, muted = false, enabled = true, readyState = "live" 
 
 describe("remoteParticipantMedia", () => {
   it("detects muted remote tracks", () => {
-    expect(isRemoteTrackMuted(createTrack({ kind: "audio", enabled: false }))).toBe(
-      true,
-    );
-    expect(isRemoteTrackMuted(createTrack({ kind: "audio", muted: true }))).toBe(
-      true,
-    );
+    expect(
+      isRemoteTrackMuted(createTrack({ kind: "audio", enabled: false })),
+    ).toBe(true);
+    expect(
+      isRemoteTrackMuted(createTrack({ kind: "audio", muted: true })),
+    ).toBe(true);
   });
 
   it("reads stream media state and reacts to track changes", () => {

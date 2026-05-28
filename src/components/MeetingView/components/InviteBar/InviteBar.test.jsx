@@ -93,9 +93,7 @@ describe("InviteBar", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Hide invite link" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Hide invite link" }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

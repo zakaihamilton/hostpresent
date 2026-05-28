@@ -15,18 +15,22 @@ export const SIGNALING_MESSAGE = {
   PARTICIPANT_VIDEO_UNMUTED: "participant_video_unmuted",
   PARTICIPANT_PROFILE: "participant_profile",
   PARTICIPANT_PROFILE_BROADCAST: "participant_profile_broadcast",
+  CHAT_MESSAGE: "chat_message",
+  CHAT_PRIVATE_MESSAGE: "chat_private_message",
 };
 
 export function createHostPresentMessage({
   displayName = "",
   audioMuted = false,
   videoMuted = false,
+  mode = "available",
 } = {}) {
   return {
     type: SIGNALING_MESSAGE.HOST_PRESENT,
     displayName: typeof displayName === "string" ? displayName.trim() : "",
     audioMuted: Boolean(audioMuted),
     videoMuted: Boolean(videoMuted),
+    mode: mode === "listening" ? "listening" : "available",
     timestamp: Date.now(),
   };
 }
@@ -184,6 +188,43 @@ export function isSignalingMessage(message) {
     typeof message === "object" &&
     typeof message.type === "string" &&
     Object.values(SIGNALING_MESSAGE).includes(message.type)
+  );
+}
+
+export function createChatMessage({ senderId, senderName, text }) {
+  return {
+    type: SIGNALING_MESSAGE.CHAT_MESSAGE,
+    senderId,
+    senderName:
+      typeof senderName === "string" ? senderName.trim().slice(0, 32) : "",
+    text: typeof text === "string" ? text.trim().slice(0, 500) : "",
+    timestamp: Date.now(),
+  };
+}
+
+export function createChatPrivateMessage({
+  senderId,
+  senderName,
+  recipientId,
+  text,
+}) {
+  return {
+    type: SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE,
+    senderId,
+    senderName:
+      typeof senderName === "string" ? senderName.trim().slice(0, 32) : "",
+    recipientId,
+    text: typeof text === "string" ? text.trim().slice(0, 500) : "",
+    timestamp: Date.now(),
+  };
+}
+
+export function isChatMessage(message) {
+  return (
+    message &&
+    typeof message === "object" &&
+    (message.type === SIGNALING_MESSAGE.CHAT_MESSAGE ||
+      message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE)
   );
 }
 

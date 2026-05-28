@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { VideoGallery } from "./VideoGallery";
 import { createMediaStream } from "@/test/helpers";
+import { VideoGallery } from "./VideoGallery";
 
 jest.mock("@/components/VideoTile", () => ({
   VideoTile: ({ name }) => <div data-testid="video-tile">{name}</div>,

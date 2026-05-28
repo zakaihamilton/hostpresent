@@ -57,7 +57,9 @@ describe("ParticipantsSidebar", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Close participants" }));
+    await user.click(
+      screen.getByRole("button", { name: "Close participants" }),
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ThemeToggle } from "./ThemeToggle";
 import { applyTheme, STORAGE_KEY, THEME } from "@/lib/settings/themeSettings";
+import { ThemeToggle } from "./ThemeToggle";
 
 describe("ThemeToggle", () => {
   beforeEach(() => {

@@ -30,7 +30,9 @@ describe("WelcomeView", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Host Present" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Host Present" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Switch to (light|dark) mode/ }),
     ).toBeInTheDocument();

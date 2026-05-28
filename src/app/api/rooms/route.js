@@ -3,7 +3,7 @@ import { createJoinCode } from "@/lib/room/joinCode";
 import { deriveRoomIdFromJoinCode } from "@/lib/room/roomIdentity";
 import { jsonError, jsonOk } from "@/lib/room/routeHelpers";
 import { createRoomRecord } from "@/lib/room/store";
-import { signRoomToken, ROOM_ROLE } from "@/lib/room/tokens";
+import { ROOM_ROLE, signRoomToken } from "@/lib/room/tokens";
 
 export const runtime = "nodejs";
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, Logo } from "@/components/Icons";
 import { BackButton } from "@/components/BackButton";
+import { Link, Logo } from "@/components/Icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Tooltip } from "@/components/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -97,7 +97,9 @@ export function Header({
                       : `Copy join code ${roomId}`
                   }
                 >
-                  <span className={styles.roomIdValue}>{roomIdButtonLabel}</span>
+                  <span className={styles.roomIdValue}>
+                    {roomIdButtonLabel}
+                  </span>
                 </button>
               </Tooltip>
             </div>

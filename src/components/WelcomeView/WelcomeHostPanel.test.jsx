@@ -41,9 +41,7 @@ jest.mock("@/lib/settings/roomSettings", () => ({
 
 describe("WelcomeHostPanel", () => {
   it("shows participant join code and invite link for saved room", async () => {
-    render(
-      <WelcomeHostPanel legacyToken={null} navigate={() => {}} />,
-    );
+    render(<WelcomeHostPanel legacyToken={null} navigate={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Participant join code")).toHaveValue(
@@ -51,19 +49,21 @@ describe("WelcomeHostPanel", () => {
       );
     });
 
-    expect(screen.getByLabelText("Participant invite link")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Participant invite link"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
   });
 
   it("navigates to the meeting with host token when join meeting is clicked", async () => {
     const navigate = jest.fn();
 
-    render(
-      <WelcomeHostPanel legacyToken={null} navigate={navigate} />,
-    );
+    render(<WelcomeHostPanel legacyToken={null} navigate={navigate} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Join meeting" }),
+      ).toBeEnabled();
     });
 
     screen.getByRole("button", { name: "Join meeting" }).click();

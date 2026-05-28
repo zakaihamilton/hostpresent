@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import {
   getActiveRoom,
   getRoomByHostToken,
@@ -10,7 +11,6 @@ import {
   setActiveHostToken,
   touchHostRoom,
 } from "@/lib/settings/roomSettings";
-import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 
 export const ROOM_SESSION_STATUS = {
   IDLE: "idle",
