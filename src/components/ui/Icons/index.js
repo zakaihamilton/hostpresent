@@ -2,6 +2,7 @@ export {
   ArrowLeft,
   Chat,
   ChevronDown,
+  Edit,
   Gallery,
   GitHub,
   Link,

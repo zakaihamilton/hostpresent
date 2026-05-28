@@ -17,8 +17,12 @@ import {
   formatRoomLabel,
   getRoomByHostToken,
   listHostRooms,
+  removeHostRoomByToken,
+  updateRoomTitle,
 } from "@/lib/settings/roomSettings";
+import { JoinCodeBoxes } from "./JoinCodeBoxes";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
+import hs from "./WelcomeHostPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
 async function fetchHostRoomDetails(hostToken) {
@@ -40,6 +44,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const [isActionPending, setIsActionPending] = useState(false);
   const [recentRooms, setRecentRooms] = useState([]);
   const [displayName, setDisplayName] = useState(() => loadDisplayName());
+  const [sessionTitle, setSessionTitle] = useState("");
   const initRef = useRef(false);
 
   const refreshRecentRooms = useCallback(() => {
@@ -50,6 +55,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     (room) => {
       setHostToken(room.hostToken);
       setJoinCode(room.joinCode ?? null);
+      setSessionTitle(room.title ?? "");
       markHostRoomUsed(room.hostToken);
       refreshRecentRooms();
     },
@@ -186,6 +192,11 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     });
   };
 
+  const handleSessionTitleChange = (value) => {
+    setSessionTitle(value);
+    if (hostToken) updateRoomTitle(hostToken, value);
+  };
+
   const handleDisplayNameChange = (value) => {
     const normalized = normalizeDisplayNameInput(value);
     setDisplayName(normalized);
@@ -195,12 +206,18 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const handleJoinMeeting = () => {
     if (!hostToken) return;
     markHostRoomUsed(hostToken);
+    if (sessionTitle) updateRoomTitle(hostToken, sessionTitle);
     refreshRecentRooms();
     navigate({
       view: APP_VIEW.MEETING,
       role: APP_ROLE.HOST,
       token: hostToken,
     });
+  };
+
+  const handleRemoveRoom = (room) => {
+    if (room.hostToken) removeHostRoomByToken(room.hostToken);
+    refreshRecentRooms();
   };
 
   const handleClearRecentRooms = () => {
@@ -219,24 +236,37 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
 
   return (
     <div className={shared.welcomePanel}>
-      <p className={shared.helpText}>
-        Share the participant join code or invite link with attendees, then join
-        the meeting when you are ready.
-      </p>
+      <div className={hs.codeSection}>
+        <span className={hs.codeLabel}>Share this code</span>
+        <JoinCodeBoxes value={formattedJoinCode} readOnly />
+        <div className={hs.copyRow}>
+          <button
+            type="button"
+            className={shared.button}
+            onClick={handleCopyJoinCode}
+            disabled={!formattedJoinCode}
+          >
+            {copyMessage || "Copy code"}
+          </button>
+        </div>
+      </div>
 
-      <RecentRoomsTrigger
-        rooms={recentRooms}
-        activeToken={hostToken}
-        tokenKey="hostToken"
-        formatLabel={(room) =>
-          room.joinCode
-            ? `${formatRoomLabel(room)} · ${formatJoinCode(room.joinCode)}`
-            : formatRoomLabel(room)
-        }
-        onSelect={handleSelectRoom}
-        onClear={handleClearRecentRooms}
-        emptyMessage="Rooms you create will appear here for quick reuse."
-      />
+      <div className={hs.titleField}>
+        <label className={shared.label} htmlFor="session-title">
+          Session title
+        </label>
+        <input
+          id="session-title"
+          className={hs.titleInput}
+          value={sessionTitle}
+          onChange={(e) => handleSessionTitleChange(e.target.value)}
+          placeholder="e.g. Weekly Standup"
+          maxLength={100}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <p className={shared.helpText}>Used as the recording file name.</p>
+      </div>
 
       <DisplayNameField
         id="host-display-name"
@@ -245,61 +275,6 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
         onChange={handleDisplayNameChange}
         placeholder="How should participants see you?"
       />
-
-      <div className={shared.fieldGroup}>
-        <label className={shared.label} htmlFor="participant-join-code">
-          Participant join code
-        </label>
-        <div className={shared.linkRow}>
-          <input
-            id="participant-join-code"
-            className={shared.linkInput}
-            readOnly
-            value={formattedJoinCode}
-            onFocus={(event) => event.currentTarget.select()}
-          />
-          <button
-            type="button"
-            className={shared.button}
-            onClick={handleCopyJoinCode}
-            disabled={!formattedJoinCode}
-          >
-            Copy
-          </button>
-        </div>
-        <p className={shared.helpText}>
-          Participants use this code to join. It cannot be used to host the
-          meeting.
-        </p>
-      </div>
-
-      <div className={shared.fieldGroup}>
-        <label className={shared.label} htmlFor="invite-link">
-          Participant invite link
-        </label>
-        <div className={shared.linkRow}>
-          <input
-            id="invite-link"
-            className={shared.linkInput}
-            readOnly
-            value={inviteLink}
-            onFocus={(event) => event.currentTarget.select()}
-          />
-          <button
-            type="button"
-            className={shared.button}
-            onClick={handleCopyLink}
-            disabled={!inviteLink}
-          >
-            Copy
-          </button>
-        </div>
-        <div className={shared.feedbackSlot} aria-live="polite">
-          {copyMessage
-            ? <span className={shared.copySuccess}>{copyMessage}</span>
-            : null}
-        </div>
-      </div>
 
       <div className={shared.actions}>
         <button
@@ -318,7 +293,46 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
         >
           Generate new room
         </button>
+        <RecentRoomsTrigger
+          rooms={recentRooms}
+          activeToken={hostToken}
+          tokenKey="hostToken"
+          formatLabel={(room) =>
+            room.joinCode
+              ? `${formatRoomLabel(room)} · ${formatJoinCode(room.joinCode)}`
+              : formatRoomLabel(room)
+          }
+          onSelect={handleSelectRoom}
+          onClear={handleClearRecentRooms}
+          onRemove={handleRemoveRoom}
+          emptyMessage="Rooms you create will appear here for quick reuse."
+        />
       </div>
+
+      <details className={hs.details}>
+        <summary className={hs.summary}>Invite link</summary>
+        <div className={hs.detailsContent}>
+          <div className={shared.fieldGroup}>
+            <div className={shared.linkRow}>
+              <input
+                id="invite-link"
+                className={shared.linkInput}
+                readOnly
+                value={inviteLink}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <button
+                type="button"
+                className={shared.button}
+                onClick={handleCopyLink}
+                disabled={!inviteLink}
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      </details>
 
       <div className={shared.statusArea} aria-live="polite">
         {error ? <p className={shared.statusError}>{error}</p> : null}

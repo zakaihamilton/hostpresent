@@ -32,6 +32,8 @@ export function WelcomeView({
 
   return (
     <div className={styles.page}>
+      <div className={styles.glow1} aria-hidden="true" />
+      <div className={styles.glow2} aria-hidden="true" />
       <div className={styles.card}>
         <div className={styles.header}>
           <div className={styles.headerTop}>
@@ -69,7 +71,7 @@ export function WelcomeView({
           </button>
         </div>
 
-        <div className={styles.panel}>
+        <div className={styles.panel} key={role}>
           {role === APP_ROLE.HOST
             ? <WelcomeHostPanel legacyToken={token} navigate={navigate} />
             : <WelcomeParticipantPanel

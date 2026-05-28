@@ -11,6 +11,7 @@ export function RecentRoomsTrigger({
   formatLabel,
   onSelect,
   onClear,
+  onRemove,
   emptyMessage,
   title = "Recent rooms",
 }) {
@@ -36,6 +37,7 @@ export function RecentRoomsTrigger({
         formatLabel={formatLabel}
         onSelect={onSelect}
         onClear={onClear}
+        onRemove={onRemove}
         open={open}
         onOpenChange={setOpen}
         emptyMessage={emptyMessage}

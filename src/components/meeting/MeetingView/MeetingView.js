@@ -2,17 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatPanel } from "@/components/meeting/ChatPanel";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { ConnectionBanner } from "@/components/meeting/ConnectionBanner/ConnectionBanner";
 import { Header } from "@/components/meeting/Header";
-import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
-import { MeetingLoading } from "@/components/ui/MeetingLoading";
+import { InviteBar } from "@/components/meeting/InviteBar/InviteBar";
 import { ParticipantsSidebar } from "@/components/meeting/ParticipantsSidebar";
 import { PipView } from "@/components/meeting/PipView";
 import { PrimaryView } from "@/components/meeting/PrimaryView";
-import { RecordingDownloadBanner } from "@/components/ui/RecordingDownloadBanner";
 import { Toolbar } from "@/components/meeting/Toolbar";
 import { VideoGallery } from "@/components/meeting/VideoGallery";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
+import { MeetingLoading } from "@/components/ui/MeetingLoading";
+import { RecordingDownloadBanner } from "@/components/ui/RecordingDownloadBanner";
 import {
   useConfirmDialog,
   useHostControls,
@@ -31,6 +33,7 @@ import {
   saveDisplayName,
   saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
+import { getRoomTitleByHostToken, updateRoomTitle } from "@/lib/settings/roomSettings";
 import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 import {
   getSignalingConfigHint,
@@ -40,8 +43,6 @@ import {
   isSignalingConfigError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
-import { ConnectionBanner } from "@/components/meeting/ConnectionBanner/ConnectionBanner";
-import { InviteBar } from "@/components/meeting/InviteBar/InviteBar";
 import { MediaControls } from "./hooks/MediaControls";
 import { Recording } from "./hooks/Recording";
 import { RemoteParticipants } from "./hooks/RemoteParticipants";
@@ -79,6 +80,25 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isPipVisible, setIsPipVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 900;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsSidebarVisible((sideOpen) => {
+          if (sideOpen) {
+            setIsChatVisible(false);
+          }
+          return sideOpen;
+        });
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [chatMessages, setChatMessages] = useState([]);
   const chatIdCounterRef = useRef(0);
   const [timersEnabled, setTimersEnabled] = useState(false);
@@ -90,6 +110,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
+  const [sessionTitle, setSessionTitle] = useState("");
 
   const resolvedDisplayName = useMemo(
     () => resolveDisplayName(displayNameInput),
@@ -245,6 +266,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     setIsRecording,
     isRecordingPaused,
     setIsRecordingPaused,
+    sessionName: sessionTitle,
   });
 
   const {
@@ -263,6 +285,12 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     confirm,
     enabled: isHost,
   });
+
+  useEffect(() => {
+    if (isHost && token) {
+      setSessionTitle(getRoomTitleByHostToken(token));
+    }
+  }, [isHost, token]);
 
   useEffect(() => {
     setTimersEnabled(true);
@@ -299,6 +327,13 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     saveDisplayName(normalized);
   }, []);
 
+  const handleSessionTitleChange = useCallback((newTitle) => {
+    if (isHost && token) {
+      setSessionTitle(newTitle);
+      updateRoomTitle(token, newTitle);
+    }
+  }, [isHost, token]);
+
   const handleParticipantModeChange = useCallback((mode) => {
     setParticipantMode(mode);
     saveParticipantMode(mode);
@@ -309,7 +344,13 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   }, []);
 
   const handleToggleSidebar = useCallback(() => {
-    setIsSidebarVisible((v) => !v);
+    setIsSidebarVisible((v) => {
+      const next = !v;
+      if (next && typeof window !== "undefined" && window.innerWidth <= 900) {
+        setIsChatVisible(false);
+      }
+      return next;
+    });
   }, []);
 
   const handleTogglePip = useCallback(() => {
@@ -317,7 +358,13 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   }, []);
 
   const handleToggleChat = useCallback(() => {
-    setIsChatVisible((v) => !v);
+    setIsChatVisible((v) => {
+      const next = !v;
+      if (next && typeof window !== "undefined" && window.innerWidth <= 900) {
+        setIsSidebarVisible(false);
+      }
+      return next;
+    });
   }, []);
 
   const handleShowInviteBar = useCallback(() => {
@@ -452,16 +499,16 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       <Header
         meetingDurationSeconds={meetingSeconds}
         roomId={formattedRoomId || null}
+        sessionTitle={sessionTitle || null}
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
         onBack={handleBack}
         backLabel={isHost ? "Back to welcome" : "Back to join screen"}
         onShowInviteLink={
-          isHost && inviteLink && !inviteBarVisible
-            ? handleShowInviteBar
-            : null
+          isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
         }
+        onSessionTitleChange={isHost ? handleSessionTitleChange : null}
       />
 
       <ConnectionBanner
@@ -484,12 +531,15 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         : null}
 
       <main className={styles.workspace}>
-        {isSidebarVisible
+        {isSidebarVisible || isChatVisible
           ? <button
               type="button"
               className={styles.sidebarBackdrop}
-              aria-label="Close participants panel"
-              onClick={handleCloseSidebar}
+              aria-label="Close panels"
+              onClick={() => {
+                handleCloseSidebar();
+                handleCloseChat();
+              }}
             />
           : null}
 
@@ -531,9 +581,9 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
           )}
         </div>
 
-        {isSidebarVisible && isChatVisible
+        {isSidebarVisible && isChatVisible && !isMobile
           ? <div
-              className={`${styles.combinedSlot} ${isSidebarVisible && isChatVisible ? "" : styles.combinedSlotClosed}`}
+              className={`${styles.combinedSlot} ${isSidebarVisible && isChatVisible && !isMobile ? "" : styles.combinedSlotClosed}`}
             >
               <aside className={styles.combinedSidebar}>
                 <div className={styles.combinedSection}>

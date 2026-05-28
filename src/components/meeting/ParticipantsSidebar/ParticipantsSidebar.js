@@ -22,6 +22,10 @@ function getModeLabel(mode) {
   );
 }
 
+function isListening(modeLabel) {
+  return modeLabel === "Listening only";
+}
+
 function buildParticipantItems({
   isHost,
   isVideoMuted,

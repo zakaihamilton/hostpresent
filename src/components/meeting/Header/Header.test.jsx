@@ -98,4 +98,89 @@ describe("Header", () => {
     await user.click(screen.getByRole("button", { name: "Show invite link" }));
     expect(onShowInviteLink).toHaveBeenCalledTimes(1);
   });
+
+  it("enters edit mode and allows renaming when onSessionTitleChange is provided", async () => {
+    const user = userEvent.setup();
+    const onSessionTitleChange = jest.fn();
+
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+        sessionTitle="Initial Title"
+        onSessionTitleChange={onSessionTitleChange}
+      />,
+    );
+
+    // Initial title rendering as a button
+    const titleBtn = screen.getByRole("button", { name: "Initial Title" });
+    expect(titleBtn).toBeInTheDocument();
+
+    // Click to enter edit mode
+    await user.click(titleBtn);
+
+    // Should render input field with current value
+    const input = screen.getByRole("textbox", { name: "Rename meeting" });
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe("Initial Title");
+
+    // Change input and press Enter
+    await user.clear(input);
+    await user.type(input, "New Awesome Meeting{Enter}");
+
+    expect(onSessionTitleChange).toHaveBeenCalledWith("New Awesome Meeting");
+  });
+
+  it("reverts title to initial when Escape key is pressed", async () => {
+    const user = userEvent.setup();
+    const onSessionTitleChange = jest.fn();
+
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+        sessionTitle="Initial Title"
+        onSessionTitleChange={onSessionTitleChange}
+      />,
+    );
+
+    const titleBtn = screen.getByRole("button", { name: "Initial Title" });
+    await user.click(titleBtn);
+
+    const input = screen.getByRole("textbox", { name: "Rename meeting" });
+    await user.clear(input);
+    await user.type(input, "Discarded Changes{Escape}");
+
+    expect(onSessionTitleChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Initial Title" })).toBeInTheDocument();
+  });
+
+  it("allows clearing the title to return to default", async () => {
+    const user = userEvent.setup();
+    const onSessionTitleChange = jest.fn();
+
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+        sessionTitle="Initial Title"
+        onSessionTitleChange={onSessionTitleChange}
+      />,
+    );
+
+    const titleBtn = screen.getByRole("button", { name: "Initial Title" });
+    await user.click(titleBtn);
+
+    const input = screen.getByRole("textbox", { name: "Rename meeting" });
+    await user.clear(input);
+    await user.type(input, "{Enter}");
+
+    expect(onSessionTitleChange).toHaveBeenCalledWith("");
+  });
 });

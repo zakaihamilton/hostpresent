@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 
@@ -40,19 +40,15 @@ jest.mock("@/lib/settings/roomSettings", () => ({
 }));
 
 describe("WelcomeHostPanel", () => {
-  it("shows participant join code and invite link for saved room", async () => {
+  it("shows join code boxes and invite link for saved room", async () => {
     render(<WelcomeHostPanel legacyToken={null} navigate={() => {}} />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Participant join code")).toHaveValue(
-        "ABCD-EFGH",
-      );
+      expect(screen.getByLabelText("Character 1")).toHaveValue("A");
     });
 
-    expect(
-      screen.getByLabelText("Participant invite link"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
+    expect(screen.getByLabelText("Character 8")).toHaveValue("H");
+    expect(screen.getByRole("button", { name: /Copy code/ })).toBeInTheDocument();
   });
 
   it("navigates to the meeting with host token when join meeting is clicked", async () => {
@@ -62,11 +58,13 @@ describe("WelcomeHostPanel", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Join meeting" }),
+         screen.getByRole("button", { name: "Join meeting" }),
       ).toBeEnabled();
     });
 
-    screen.getByRole("button", { name: "Join meeting" }).click();
+    await act(async () => {
+      screen.getByRole("button", { name: "Join meeting" }).click();
+    });
 
     expect(navigate).toHaveBeenCalledWith({
       view: APP_VIEW.MEETING,

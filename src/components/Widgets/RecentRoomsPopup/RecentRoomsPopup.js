@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./RecentRoomsPopup.module.css";
 
 export function RecentRoomsPopup({
@@ -10,6 +11,7 @@ export function RecentRoomsPopup({
   formatLabel,
   onSelect,
   onClear,
+  onRemove,
   open,
   onOpenChange,
   emptyMessage = "No past rooms yet.",
@@ -89,7 +91,7 @@ export function RecentRoomsPopup({
                   const isActive = roomToken === activeToken;
 
                   return (
-                    <li key={roomToken}>
+                    <li key={roomToken} className={styles.itemRow}>
                       <button
                         type="button"
                         className={`${styles.item} ${isActive ? styles.itemActive : ""}`}
@@ -103,6 +105,20 @@ export function RecentRoomsPopup({
                           ? <span className={styles.itemBadge}>Current</span>
                           : null}
                       </button>
+                      <Tooltip text="Remove room" placement="left">
+                        <button
+                          type="button"
+                          className={styles.removeButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove?.(room);
+                            onOpenChange(false);
+                          }}
+                          aria-label={`Remove room`}
+                        >
+                          ×
+                        </button>
+                      </Tooltip>
                     </li>
                   );
                 })}

@@ -171,7 +171,7 @@ export function clearParticipantRooms() {
 
 export function formatParticipantRoomLabel(room) {
   if (room?.joinCode) {
-    return `Code ${formatJoinCode(room.joinCode)}`;
+    return formatJoinCode(room.joinCode);
   }
   const timestamp = room?.lastJoinedAt ?? room?.createdAt;
   if (!timestamp) return "Past room";

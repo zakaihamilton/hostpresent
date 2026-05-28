@@ -76,6 +76,69 @@
   color: var(--text-main);
 }
 
+.logoTextEditable {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.4rem;
+  margin: -0.15rem -0.4rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.logoTextEditable:hover {
+  background: var(--bg-hover);
+  color: var(--primary);
+}
+
+.logoTextEditable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  background: var(--bg-hover);
+}
+
+.editIconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.logoTextEditable:hover .editIconWrapper {
+  opacity: 1;
+  color: var(--primary);
+  transform: scale(1.05);
+}
+
+.editIcon {
+  display: block;
+}
+
+.logoTitleInput {
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.5rem;
+  margin: -0.2rem -0.5rem;
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-family: inherit;
+  width: 180px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.logoTitleInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
 .meta {
   display: flex;
   align-items: center;
@@ -255,7 +318,8 @@
     gap: 0.5rem;
   }
 
-  .logoText {
+  .logoText,
+  .logoTitleInput {
     display: none;
   }
 

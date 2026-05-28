@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggle";
+import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import {
   extractJoinCodeFromInput,
@@ -23,10 +23,13 @@ import {
   formatParticipantRoomLabel,
   getParticipantRoomByToken,
   listParticipantRooms,
+  removeParticipantRoomByToken,
   saveParticipantRoom,
   touchParticipantRoom,
 } from "@/lib/settings/participantRoomSettings";
+import { JoinCodeBoxes } from "./JoinCodeBoxes";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
+import ps from "./WelcomeParticipantPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
 function extractLegacyTokenFromInput(value) {
@@ -49,8 +52,8 @@ export function WelcomeParticipantPanel({
   joinCode,
   autoJoinFromRoute = false,
   navigate,
-  navigateJoinCode,
-  navigateParticipantWelcome,
+  navigateJoinCode: _navigateJoinCode,
+  navigateParticipantWelcome: _navigateParticipantWelcome,
 }) {
   const [roomIdInput, setRoomIdInput] = useState(
     joinCode ? formatRoomIdInput(joinCode) : "",
@@ -181,7 +184,9 @@ export function WelcomeParticipantPanel({
       return;
     }
 
-    setResolveError("[E051] Enter a valid participant join code or invite link.");
+    setResolveError(
+      "[E051] Enter a valid participant join code or invite link.",
+    );
   };
 
   const handleSelectRoom = (room) => {
@@ -193,17 +198,16 @@ export function WelcomeParticipantPanel({
     joinWithToken(room.participantToken);
   };
 
-  const handleBackToJoin = () => {
-    setRoomIdInput("");
-    setInviteLinkInput("");
-    setResolveError("");
-    resolvedJoinCodeRef.current = null;
-    navigateParticipantWelcome();
-  };
-
   const handleClearRecentRooms = () => {
     clearParticipantRooms();
     refreshRecentRooms();
+  };
+
+  const handleRemoveRoom = (room) => {
+    if (room.participantToken) {
+      removeParticipantRoomByToken(room.participantToken);
+      refreshRecentRooms();
+    }
   };
 
   const handleDisplayNameChange = (value) => {
@@ -225,9 +229,12 @@ export function WelcomeParticipantPanel({
       formatLabel={(room) => formatParticipantRoomLabel(room)}
       onSelect={handleSelectRoom}
       onClear={handleClearRecentRooms}
+      onRemove={handleRemoveRoom}
       emptyMessage="Rooms you join will appear here for quick reuse."
     />
   );
+
+  const allFilled = (roomIdInput ?? "").replace(/-/g, "").length === 8;
 
   if (isResolving) {
     return (
@@ -242,12 +249,19 @@ export function WelcomeParticipantPanel({
 
   return (
     <div className={shared.welcomePanel}>
-      <p className={shared.helpText}>
-        Enter the participant join code from your host, paste an invite link, or
-        open recent rooms you joined before.
-      </p>
-
-      {recentRoomsTrigger}
+      <div className={ps.codeSection}>
+        <label className={ps.codeLabel} htmlFor="join-code-box-0">
+          Enter meeting code
+        </label>
+        <JoinCodeBoxes
+          value={roomIdInput}
+          onChange={setRoomIdInput}
+          autoFocus
+        />
+        <p className={ps.codeHint}>
+          Enter the 8-character code shared by the host
+        </p>
+      </div>
 
       <DisplayNameField
         id="participant-display-name"
@@ -269,41 +283,31 @@ export function WelcomeParticipantPanel({
         </p>
       </div>
 
-      <div className={shared.fieldGroup}>
-        <label className={shared.label} htmlFor="participant-room-id">
-          Participant join code
-        </label>
-        <input
-          id="participant-room-id"
-          className={shared.tokenInput}
-          value={roomIdInput}
-          onChange={(event) =>
-            setRoomIdInput(formatRoomIdInput(event.target.value))
-          }
-          onKeyDown={(event) => {
-            if (event.key === "Enter") handleJoinRoomId();
-          }}
-          placeholder="e.g. ABCD-EFGH"
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </div>
-
-      <div className={shared.fieldGroup}>
-        <label className={shared.label} htmlFor="participant-invite-link">
-          Or paste invite link
-        </label>
-        <input
-          id="participant-invite-link"
-          className={shared.tokenInput}
-          value={inviteLinkInput}
-          onChange={(event) => setInviteLinkInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") void handleJoinInviteLink();
-          }}
-          placeholder="https://…/#/j/…"
-        />
-      </div>
+      <details className={ps.details}>
+        <summary className={ps.summary}>Paste invite link instead</summary>
+        <div className={shared.fieldGroup}>
+          <input
+            id="participant-invite-link"
+            className={shared.tokenInput}
+            value={inviteLinkInput}
+            onChange={(event) => setInviteLinkInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void handleJoinInviteLink();
+            }}
+            placeholder="https://…/#/j/…"
+          />
+        </div>
+        <div className={shared.actions}>
+          <button
+            type="button"
+            className={`${shared.button} ${shared.buttonSecondary}`}
+            onClick={handleJoinInviteLink}
+            disabled={!inviteLinkInput.trim()}
+          >
+            Join with link
+          </button>
+        </div>
+      </details>
 
       <div className={shared.statusArea}>
         {resolveError
@@ -316,18 +320,11 @@ export function WelcomeParticipantPanel({
           type="button"
           className={shared.button}
           onClick={handleJoinRoomId}
-          disabled={!roomIdInput.trim()}
+          disabled={!allFilled}
         >
-          Join with join code
+          Join meeting
         </button>
-        <button
-          type="button"
-          className={`${shared.button} ${shared.buttonSecondary}`}
-          onClick={handleJoinInviteLink}
-          disabled={!inviteLinkInput.trim()}
-        >
-          Join with link
-        </button>
+        {recentRoomsTrigger}
       </div>
     </div>
   );

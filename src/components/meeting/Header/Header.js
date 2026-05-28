@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/routing/BackButton";
-import { Link, Logo } from "@/components/ui/Icons";
+import { Link, Logo, Edit } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -12,15 +12,54 @@ import styles from "./Header.module.css";
 export const Header = memo(function Header({
   meetingDurationSeconds,
   roomId,
+  sessionTitle,
   isRecording,
   isRecordingPaused,
   recordingDurationSeconds,
   onBack,
   backLabel = "Back",
   onShowInviteLink = null,
+  onSessionTitleChange = null,
 }) {
   const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");
   const roomIdCopyTimerRef = useRef(null);
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(sessionTitle || "");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setEditedTitle(sessionTitle || "");
+  }, [sessionTitle]);
+
+  const handleTitleClick = useCallback(() => {
+    if (onSessionTitleChange) {
+      setIsEditingTitle(true);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 0);
+    }
+  }, [onSessionTitleChange]);
+
+  const handleTitleSubmit = useCallback(() => {
+    setIsEditingTitle(false);
+    const trimmed = editedTitle.trim();
+    if (trimmed !== (sessionTitle || "")) {
+      onSessionTitleChange(trimmed);
+    } else {
+      setEditedTitle(sessionTitle || "");
+    }
+  }, [editedTitle, sessionTitle, onSessionTitleChange]);
+
+  const handleTitleKeyDown = useCallback((e) => {
+    if (e.key === "Enter") {
+      handleTitleSubmit();
+    } else if (e.key === "Escape") {
+      setIsEditingTitle(false);
+      setEditedTitle(sessionTitle || "");
+    }
+  }, [handleTitleSubmit, sessionTitle]);
 
   useEffect(
     () => () => {
@@ -64,7 +103,41 @@ export const Header = memo(function Header({
         {onBack ? <BackButton label={backLabel} onClick={onBack} /> : null}
         <div className={styles.logo}>
           <Logo />
-          <span className={styles.logoText}>Host Present</span>
+          {isEditingTitle ? (
+            <input
+              ref={inputRef}
+              type="text"
+              className={styles.logoTitleInput}
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              onBlur={handleTitleSubmit}
+              onKeyDown={handleTitleKeyDown}
+              maxLength={50}
+              placeholder="Meeting name"
+              aria-label="Rename meeting"
+            />
+          ) : (
+            <span
+              className={`${styles.logoText} ${onSessionTitleChange ? styles.logoTextEditable : ""}`}
+              onClick={handleTitleClick}
+              role={onSessionTitleChange ? "button" : undefined}
+              tabIndex={onSessionTitleChange ? 0 : undefined}
+              onKeyDown={onSessionTitleChange ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleTitleClick();
+                }
+              } : undefined}
+              title={onSessionTitleChange ? "Click to rename meeting" : undefined}
+            >
+              {sessionTitle || "Host Present"}
+              {onSessionTitleChange && (
+                <span className={styles.editIconWrapper}>
+                  <Edit size={14} className={styles.editIcon} />
+                </span>
+              )}
+            </span>
+          )}
         </div>
       </div>
 

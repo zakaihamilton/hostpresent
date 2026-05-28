@@ -17,11 +17,14 @@ export function Recording({
   setIsRecording,
   isRecordingPaused,
   setIsRecordingPaused,
+  sessionName = "",
 }) {
   const [downloadState, setDownloadState] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
+  const audioRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const downloadDismissTimerRef = useRef(null);
 
   const publishRecordingState = useCallback(
@@ -55,8 +58,17 @@ export function Recording({
     setDownloadState({ phase, progress, filename });
   }, []);
 
+  const sessionNameRef = useRef(sessionName);
+  sessionNameRef.current = sessionName;
+
   const finalizeRecordingDownload = useCallback(async () => {
-    const filename = buildRecordingFilename();
+    const filename = buildRecordingFilename({
+      sessionName: sessionNameRef.current,
+    });
+    const audioFilename = buildRecordingFilename({
+      sessionName: sessionNameRef.current,
+      extension: "m4a",
+    });
     const chunks = recordingChunksRef.current;
     const chunkCount = chunks.length;
 
@@ -90,7 +102,52 @@ export function Recording({
       window.URL.revokeObjectURL(url);
     }, 100);
 
+    // Export .m4a audio file if we have audio chunks recorded
+    if (
+      audioRecorderRef.current &&
+      audioRecorderRef.current.state !== "inactive"
+    ) {
+      await new Promise((resolve) => {
+        const checkState = () => {
+          if (
+            !audioRecorderRef.current ||
+            audioRecorderRef.current.state === "inactive"
+          ) {
+            resolve();
+          } else {
+            setTimeout(checkState, 10);
+          }
+        };
+        checkState();
+      });
+    }
+
+    const audioChunks = audioChunksRef.current;
+    if (audioChunks.length > 0) {
+      let audioMimeType = "audio/mp4";
+      try {
+        audioMimeType = audioChunks[0].type || "audio/mp4";
+      } catch (e) {
+        console.warn("Failed to read audio chunk mimeType", e);
+      }
+      const audioBlob = new Blob(audioChunks, { type: audioMimeType });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioAnchor = document.createElement("a");
+      audioAnchor.style.display = "none";
+      audioAnchor.href = audioUrl;
+      audioAnchor.download = audioFilename;
+
+      document.body.appendChild(audioAnchor);
+      audioAnchor.click();
+
+      setTimeout(() => {
+        document.body.removeChild(audioAnchor);
+        window.URL.revokeObjectURL(audioUrl);
+      }, 100);
+    }
+
     recordingChunksRef.current = [];
+    audioChunksRef.current = [];
     updateDownloadProgress("complete", 100, filename);
 
     downloadDismissTimerRef.current = setTimeout(() => {
@@ -140,6 +197,37 @@ export function Recording({
       void finalizeRecordingDownload();
     };
 
+    // Setup separate audio recording
+    audioChunksRef.current = [];
+    if (audioTrack) {
+      const audioStream = new MediaStream([audioTrack]);
+      let audioOptions = { mimeType: "audio/mp4" };
+      if (!MediaRecorder.isTypeSupported(audioOptions.mimeType)) {
+        audioOptions = {};
+      }
+      let audioRecorder;
+      try {
+        audioRecorder = new MediaRecorder(audioStream, audioOptions);
+      } catch (e) {
+        console.warn(
+          "Audio MP4 format not supported, falling back to default.",
+          e,
+        );
+        audioRecorder = new MediaRecorder(audioStream);
+      }
+
+      audioRecorderRef.current = audioRecorder;
+      audioRecorder.ondataavailable = (event) => {
+        if (event.data?.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      audioRecorder.start(1000);
+    } else {
+      audioRecorderRef.current = null;
+    }
+
     recorder.start(1000);
     resetRecordingTimer();
     setIsRecording(true);
@@ -152,6 +240,7 @@ export function Recording({
     publishRecordingState,
     resetRecordingTimer,
     screenStream,
+    sessionName,
   ]);
 
   const pauseRecording = useCallback(() => {
@@ -160,6 +249,12 @@ export function Recording({
       mediaRecorderRef.current.state === "recording"
     ) {
       mediaRecorderRef.current.pause();
+      if (
+        audioRecorderRef.current &&
+        audioRecorderRef.current.state === "recording"
+      ) {
+        audioRecorderRef.current.pause();
+      }
       setIsRecordingPaused(true);
       publishRecordingState(true, true);
     }
@@ -171,6 +266,12 @@ export function Recording({
       mediaRecorderRef.current.state === "paused"
     ) {
       mediaRecorderRef.current.resume();
+      if (
+        audioRecorderRef.current &&
+        audioRecorderRef.current.state === "paused"
+      ) {
+        audioRecorderRef.current.resume();
+      }
       setIsRecordingPaused(false);
       publishRecordingState(true, false);
     }
@@ -183,6 +284,12 @@ export function Recording({
     ) {
       updateDownloadProgress("preparing", 5);
       mediaRecorderRef.current.stop();
+      if (
+        audioRecorderRef.current &&
+        audioRecorderRef.current.state !== "inactive"
+      ) {
+        audioRecorderRef.current.stop();
+      }
       setIsRecording(false);
       setIsRecordingPaused(false);
       resetRecordingTimer();

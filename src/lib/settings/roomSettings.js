@@ -81,6 +81,7 @@ export function saveRoom(settings) {
     hostToken: settings.hostToken,
     participantToken: settings.participantToken,
     joinCode: settings.joinCode ?? null,
+    title: settings.title ?? existing?.title ?? "",
     createdAt: existing?.createdAt ?? settings.createdAt ?? now,
     lastUsedAt: now,
   };
@@ -140,6 +141,13 @@ export function getRoomByHostToken(hostToken) {
   return current.rooms.find((room) => room.hostToken === hostToken) ?? null;
 }
 
+export function getRoomTitleByHostToken(hostToken) {
+  if (!hostToken) return "";
+  const current = readRaw();
+  const room = current.rooms.find((r) => r.hostToken === hostToken);
+  return room?.title ?? "";
+}
+
 export function getRoomByJoinCode(joinCode) {
   const normalized = normalizeJoinCode(joinCode);
   if (!normalized) return null;
@@ -163,6 +171,15 @@ export function removeHostRoomByToken(hostToken) {
       current.activeHostToken === hostToken ? null : current.activeHostToken,
     rooms: nextRooms,
   });
+}
+
+export function updateRoomTitle(hostToken, title) {
+  if (!hostToken) return;
+  const current = readRaw();
+  const nextRooms = current.rooms.map((room) =>
+    room.hostToken === hostToken ? { ...room, title: title ?? "" } : room,
+  );
+  writeRaw({ ...current, rooms: nextRooms });
 }
 
 export function clearActiveRoom() {

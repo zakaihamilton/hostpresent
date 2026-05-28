@@ -38,25 +38,26 @@ jest.mock("@/lib/settings/participantRoomSettings", () => ({
   touchParticipantRoom: jest.fn(),
 }));
 
-describe("WelcomeParticipantPanel", () => {
-  it("shows room id entry form", () => {
-    render(
-      <WelcomeParticipantPanel
-        token={null}
-        joinCode={null}
-        navigate={() => {}}
-        navigateJoinCode={() => {}}
-        navigateParticipantWelcome={() => {}}
-      />,
-    );
+const defaultProps = {
+  token: null,
+  joinCode: null,
+  navigate: () => {},
+  navigateJoinCode: () => {},
+  navigateParticipantWelcome: () => {},
+};
 
-    expect(screen.getByLabelText("Participant join code")).toBeInTheDocument();
+describe("WelcomeParticipantPanel", () => {
+  it("shows code entry boxes", () => {
+    render(<WelcomeParticipantPanel {...defaultProps} />);
+
+    expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Character 8")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Join with join code" }),
+      screen.getByRole("button", { name: "Join meeting" }),
     ).toBeDisabled();
   });
 
-  it("enables join when room id is entered", async () => {
+  it("enables join when all 8 code characters are entered", async () => {
     const user = userEvent.setup();
     const { resolveJoinCode } = await import("@/lib/room/inviteLink");
     resolveJoinCode.mockResolvedValue({
@@ -65,22 +66,15 @@ describe("WelcomeParticipantPanel", () => {
       joinCode: "ABCDEFGH",
     });
 
-    render(
-      <WelcomeParticipantPanel
-        token={null}
-        joinCode={null}
-        navigate={() => {}}
-        navigateJoinCode={() => {}}
-        navigateParticipantWelcome={() => {}}
-      />,
-    );
+    render(<WelcomeParticipantPanel {...defaultProps} />);
 
-    await user.type(
-      screen.getByLabelText("Participant join code"),
-      "ABCD-EFGH",
-    );
+    for (let i = 0; i < 8; i++) {
+      const char = String.fromCharCode(65 + i);
+      await user.type(screen.getByLabelText(`Character ${i + 1}`), char);
+    }
+
     expect(
-      screen.getByRole("button", { name: "Join with join code" }),
+      screen.getByRole("button", { name: "Join meeting" }),
     ).toBeEnabled();
   });
 
@@ -94,18 +88,14 @@ describe("WelcomeParticipantPanel", () => {
 
     render(
       <WelcomeParticipantPanel
-        token={null}
+        {...defaultProps}
         joinCode="ABCDEFGH"
         autoJoinFromRoute={false}
-        navigate={() => {}}
-        navigateJoinCode={() => {}}
-        navigateParticipantWelcome={() => {}}
       />,
     );
 
-    expect(screen.getByLabelText("Participant join code")).toHaveValue(
-      "ABCD-EFGH",
-    );
+    expect(screen.getByLabelText("Character 1")).toHaveValue("A");
+    expect(screen.getByLabelText("Character 5")).toHaveValue("E");
     expect(screen.queryByText("Joining meeting…")).not.toBeInTheDocument();
     expect(resolveJoinCode).not.toHaveBeenCalled();
   });
@@ -121,12 +111,10 @@ describe("WelcomeParticipantPanel", () => {
 
     render(
       <WelcomeParticipantPanel
-        token={null}
+        {...defaultProps}
         joinCode="ABCDEFGH"
         autoJoinFromRoute
         navigate={navigate}
-        navigateJoinCode={() => {}}
-        navigateParticipantWelcome={() => {}}
       />,
     );
 
@@ -140,21 +128,13 @@ describe("WelcomeParticipantPanel", () => {
     });
   });
 
-  it("uppercases join code while typing", async () => {
+  it("uppercases join code characters while typing", async () => {
     const user = userEvent.setup();
 
-    render(
-      <WelcomeParticipantPanel
-        token={null}
-        joinCode={null}
-        navigate={() => {}}
-        navigateJoinCode={() => {}}
-        navigateParticipantWelcome={() => {}}
-      />,
-    );
+    render(<WelcomeParticipantPanel {...defaultProps} />);
 
-    const input = screen.getByLabelText("Participant join code");
-    await user.type(input, "abcd-efgh");
-    expect(input).toHaveValue("ABCD-EFGH");
+    const box1 = screen.getByLabelText("Character 1");
+    await user.type(box1, "a");
+    expect(box1).toHaveValue("A");
   });
 });
