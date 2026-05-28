@@ -1,6 +1,6 @@
 .tile {
-  width: 260px;
-  flex: 0 0 260px;
+  width: 214px;
+  flex: 0 0 214px;
   height: 100%;
   background: var(--bg-panel);
   border-radius: calc(var(--radius) - 2px);
@@ -13,8 +13,8 @@
 
 @media (max-width: 900px) {
   .tile {
-    width: 180px;
-    flex-basis: 180px;
+    width: 156px;
+    flex-basis: 156px;
   }
 
   .placeholder {
@@ -30,8 +30,8 @@
 
 @media (max-width: 480px) {
   .tile {
-    width: 148px;
-    flex-basis: 148px;
+    width: 128px;
+    flex-basis: 128px;
   }
 
   .placeholder {
@@ -41,8 +41,8 @@
 
 @media (max-height: 500px) and (orientation: landscape) {
   .tile {
-    width: 120px;
-    flex-basis: 120px;
+    width: 102px;
+    flex-basis: 102px;
   }
 
   .placeholder {

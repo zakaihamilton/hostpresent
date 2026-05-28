@@ -99,6 +99,7 @@ export function useRoomDataChannel({
   const signalingOpenRef = useRef(false);
   const retryTimerRef = useRef(null);
   const connectRetryTimerRef = useRef(null);
+  const connectToHostRef = useRef(() => {});
   const connectTimeoutRef = useRef(null);
   const retryAttemptRef = useRef(0);
   const localParticipantIdRef = useRef("");
@@ -204,6 +205,28 @@ export function useRoomDataChannel({
       connectRetryTimerRef.current = null;
     }
   }, []);
+
+  const scheduleReconnectToHost = useCallback(() => {
+    if (isHost || destroyedRef.current) return;
+
+    clearConnectRetryTimer();
+    hostConnectionRef.current?.close();
+    hostConnectionRef.current = null;
+    setHostPresent(false);
+    onRemoteHostStreamRef.current?.(null);
+
+    if (openCountRef.current <= 0) {
+      setConnectionError((previous) => {
+        if (isWaitingForHostMessage(previous)) return previous;
+        return peerErrorMessage({ type: "peer-unavailable" }, { isHost: false });
+      });
+    }
+
+    connectRetryTimerRef.current = window.setTimeout(() => {
+      if (destroyedRef.current) return;
+      connectToHostRef.current();
+    }, CONNECT_RETRY_MS);
+  }, [clearConnectRetryTimer, isHost]);
 
   const clearConnectTimeout = useCallback(() => {
     if (connectTimeoutRef.current) {
@@ -519,6 +542,11 @@ export function useRoomDataChannel({
       conn.on("close", () => {
         if (destroyedRef.current) return;
         updateConnectedState(-1);
+        if (isHost) {
+          onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
+          return;
+        }
+        scheduleReconnectToHost();
       });
 
       conn.on("data", (raw) => {
@@ -584,6 +612,7 @@ export function useRoomDataChannel({
       enqueueMediaCall,
       isHost,
       notifyHandlers,
+      scheduleReconnectToHost,
       syncRelayForViewer,
       updateConnectedState,
     ],
@@ -958,15 +987,11 @@ export function useRoomDataChannel({
 
         conn.on("error", (error) => {
           if (destroyedRef.current) return;
-          hostConnectionRef.current = null;
           setConnectionError(peerErrorMessage(error, { isHost: false }));
-          clearConnectRetryTimer();
-          connectRetryTimerRef.current = window.setTimeout(
-            connectToHost,
-            CONNECT_RETRY_MS,
-          );
+          scheduleReconnectToHost();
         });
       };
+      connectToHostRef.current = connectToHost;
 
       peer.on("call", (call) => {
         if (destroyedRef.current) return;
@@ -1006,11 +1031,7 @@ export function useRoomDataChannel({
 
         if (error?.type === "peer-unavailable") {
           setConnectionError(peerErrorMessage(error, { isHost: false }));
-          clearConnectRetryTimer();
-          connectRetryTimerRef.current = window.setTimeout(
-            connectToHost,
-            CONNECT_RETRY_MS,
-          );
+          scheduleReconnectToHost();
           return;
         }
 
@@ -1058,6 +1079,7 @@ export function useRoomDataChannel({
     roomId,
     scheduleConnectTimeout,
     schedulePeerRetry,
+    scheduleReconnectToHost,
     token,
   ]);
 

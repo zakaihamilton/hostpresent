@@ -17,8 +17,8 @@
 
 .gallery {
   display: flex;
-  gap: 1rem;
-  height: 160px;
+  gap: 0.75rem;
+  height: 132px;
   justify-content: flex-start;
   overflow-x: auto;
   overflow-y: hidden;
@@ -39,15 +39,15 @@
 
 @media (max-width: 900px) {
   .gallery {
-    height: 120px;
-    gap: 0.65rem;
+    height: 104px;
+    gap: 0.55rem;
   }
 }
 
 @media (max-width: 480px) {
   .gallery {
-    height: 100px;
-    gap: 0.5rem;
+    height: 88px;
+    gap: 0.45rem;
   }
 }
 
@@ -57,8 +57,8 @@
   }
 
   .gallery {
-    height: 80px;
-    gap: 0.45rem;
+    height: 68px;
+    gap: 0.4rem;
   }
 }
 
