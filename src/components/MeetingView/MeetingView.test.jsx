@@ -38,6 +38,14 @@ jest.mock("@/components/VideoGallery", () => ({
   VideoGallery: () => null,
 }));
 
+jest.mock("./components/ConnectionBanner/ConnectionBanner", () => ({
+  ConnectionBanner: () => null,
+}));
+
+jest.mock("./components/InviteBar/InviteBar", () => ({
+  InviteBar: () => null,
+}));
+
 jest.mock("@/components/ErrorBanner", () => ({
   ErrorBanner: () => null,
 }));

@@ -1,0 +1,32 @@
+.hostWaitingBanner {
+  padding: 0.65rem max(0.75rem, env(safe-area-inset-left, 0))
+    max(0.65rem, env(safe-area-inset-right, 0));
+  background: color-mix(in srgb, var(--warning, #ca8a04) 12%, var(--bg-panel));
+  border-bottom: 1px solid var(--border);
+}
+
+.hostWaitingText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-main);
+}
+
+.signalingErrorBanner {
+  padding: 0.65rem max(0.75rem, env(safe-area-inset-left, 0))
+    max(0.65rem, env(safe-area-inset-right, 0));
+  background: color-mix(in srgb, var(--danger, #dc2626) 10%, var(--bg-panel));
+  border-bottom: 1px solid var(--border);
+}
+
+.signalingErrorText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-main);
+}
+
+@media (max-width: 900px) {
+  .hostWaitingBanner,
+  .signalingErrorBanner {
+    padding: 0.55rem max(0.75rem, env(safe-area-inset-left, 0));
+  }
+}
