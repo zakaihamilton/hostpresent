@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useIceServers } from "@/components/webrtc/PeerStreamConnection";
 import {
   canReceiveSignalingMessage,
   canSendSignalingMessage,
@@ -77,9 +78,11 @@ export function useRoomDataChannel({
   const [connectionError, setConnectionError] = useState(null);
   const [peerConfig, setPeerConfig] = useState(null);
   const [configReady, setConfigReady] = useState(false);
+  const iceServers = useIceServers();
 
   const peerRef = useRef(null);
   const peerConfigRef = useRef(null);
+  const iceServersRef = useRef(null);
   const connectionsRef = useRef(new Map());
   const mediaCallsRef = useRef(new Map());
   const hostConnectionRef = useRef(null);
@@ -613,7 +616,11 @@ export function useRoomDataChannel({
   }, []);
 
   useEffect(() => {
-    if (!configReady || !peerConfig) {
+    iceServersRef.current = iceServers;
+  }, [iceServers]);
+
+  useEffect(() => {
+    if (!configReady || !peerConfig || !iceServers) {
       return undefined;
     }
 
@@ -648,7 +655,11 @@ export function useRoomDataChannel({
 
       teardownPeer();
       scheduleConnectTimeout();
-      const options = peerConfigRef.current ?? peerConfig;
+      const baseOptions = peerConfigRef.current ?? peerConfig;
+      const options = {
+        ...baseOptions,
+        config: { iceServers: iceServersRef.current ?? iceServers },
+      };
       const peer = new Peer(hostPeerId(roomId), options);
       peerRef.current = peer;
 
@@ -734,7 +745,11 @@ export function useRoomDataChannel({
 
       teardownPeer();
       scheduleConnectTimeout();
-      const options = peerConfigRef.current ?? peerConfig;
+      const baseOptions = peerConfigRef.current ?? peerConfig;
+      const options = {
+        ...baseOptions,
+        config: { iceServers: iceServersRef.current ?? iceServers },
+      };
       const peer = new Peer(undefined, options);
       peerRef.current = peer;
 
@@ -860,6 +875,7 @@ export function useRoomDataChannel({
     clearRetryTimer,
     configReady,
     enabled,
+    iceServers,
     isHost,
     peerConfig,
     roomId,

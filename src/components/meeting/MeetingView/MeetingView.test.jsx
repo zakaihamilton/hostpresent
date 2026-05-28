@@ -106,6 +106,11 @@ jest.mock("@/components/meeting/ChatPanel", () => ({
     visible ? <div data-testid="chat-panel">Chat</div> : null,
 }));
 
+jest.mock("@/components/webrtc/PeerStreamConnection", () => ({
+  PeerStreamConnection: ({ children }) => children,
+  useIceServers: () => [{ urls: "stun:stun.l.google.com:19302" }],
+}));
+
 jest.mock("@/hooks", () => ({
   useConfirmDialog: () => ({
     confirm: jest.fn(),

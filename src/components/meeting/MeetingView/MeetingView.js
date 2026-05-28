@@ -16,6 +16,7 @@ import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
 import { MeetingLoading } from "@/components/ui/MeetingLoading";
 import { RecordingDownloadBanner } from "@/components/ui/RecordingDownloadBanner";
+import { PeerStreamConnection } from "@/components/webrtc/PeerStreamConnection";
 import {
   useConfirmDialog,
   useHostControls,
@@ -34,7 +35,10 @@ import {
   saveDisplayName,
   saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
-import { getRoomTitleByHostToken, updateRoomTitle } from "@/lib/settings/roomSettings";
+import {
+  getRoomTitleByHostToken,
+  updateRoomTitle,
+} from "@/lib/settings/roomSettings";
 import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 import {
   getSignalingConfigHint,
@@ -49,7 +53,15 @@ import { Recording } from "./hooks/Recording";
 import { RemoteParticipants } from "./hooks/RemoteParticipants";
 import styles from "./MeetingView.module.css";
 
-export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
+export function MeetingView(props) {
+  return (
+    <PeerStreamConnection>
+      <MeetingViewInner {...props} />
+    </PeerStreamConnection>
+  );
+}
+
+function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const isHost = role === "host";
   const roomConnectionRef = useRef(null);
   const onRemoteParticipantRef = useRef(null);
@@ -339,12 +351,15 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     saveDisplayName(normalized);
   }, []);
 
-  const handleSessionTitleChange = useCallback((newTitle) => {
-    if (isHost && token) {
-      setSessionTitle(newTitle);
-      updateRoomTitle(token, newTitle);
-    }
-  }, [isHost, token]);
+  const handleSessionTitleChange = useCallback(
+    (newTitle) => {
+      if (isHost && token) {
+        setSessionTitle(newTitle);
+        updateRoomTitle(token, newTitle);
+      }
+    },
+    [isHost, token],
+  );
 
   const handleParticipantModeChange = useCallback((mode) => {
     setParticipantMode(mode);
@@ -671,7 +686,10 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
       </main>
 
       <ConfirmDialog {...dialogProps} />
-      <DiagnosticsDialog open={diagnosticsOpen} onClose={() => setDiagnosticsOpen(false)} />
+      <DiagnosticsDialog
+        open={diagnosticsOpen}
+        onClose={() => setDiagnosticsOpen(false)}
+      />
 
       <Toolbar
         isAudioMuted={isAudioMuted}
