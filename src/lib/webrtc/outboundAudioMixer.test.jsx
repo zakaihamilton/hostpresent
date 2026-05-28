@@ -60,6 +60,15 @@ describe("needsOutboundAudioMix", () => {
 });
 
 describe("OutboundAudioMixer.getMixedAudioTrack", () => {
+  it("returns the raw microphone track when only the mic is live", async () => {
+    const mixer = new OutboundAudioMixer();
+    const track = await mixer.getMixedAudioTrack(
+      mockStream({ audio: true, audioId: "mic" }),
+      null,
+    );
+    expect(track.id).toBe("mic");
+  });
+
   it("returns only screen audio when the microphone is disabled", async () => {
     const mixer = new OutboundAudioMixer();
     const track = await mixer.getMixedAudioTrack(

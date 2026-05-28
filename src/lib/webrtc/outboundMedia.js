@@ -33,7 +33,7 @@ export async function resolveOutboundAudioTrack(localStream, screenStream) {
 }
 
 export async function buildOutboundMediaStream(localStream, screenStream) {
-  if (!localStream) return null;
+  if (!localStream && !screenStream) return null;
 
   const tracks = [];
   const videoTrack = pickOutboundVideoTrack(localStream, screenStream);
@@ -57,7 +57,9 @@ export async function syncOutboundTracks(call, localStream, screenStream) {
   const audioSender = senders.find((sender) => sender.track?.kind === "audio");
 
   if (videoSender) {
-    await videoSender.replaceTrack(videoTrack);
+    if (videoTrack !== videoSender.track) {
+      await videoSender.replaceTrack(videoTrack);
+    }
   } else if (videoTrack) {
     const outbound = new MediaStream([videoTrack]);
     if (audioTrack) {
@@ -67,7 +69,10 @@ export async function syncOutboundTracks(call, localStream, screenStream) {
   }
 
   if (audioSender) {
-    await audioSender.replaceTrack(audioTrack);
+    const currentAudio = audioSender.track;
+    if (audioTrack !== currentAudio) {
+      await audioSender.replaceTrack(audioTrack);
+    }
   } else if (audioTrack) {
     peerConnection.addTrack(audioTrack, new MediaStream([audioTrack]));
   }

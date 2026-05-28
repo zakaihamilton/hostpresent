@@ -4,11 +4,12 @@ export function isRemoteTrackMuted(track) {
 }
 
 export function hasPlayableRemoteAudio(stream) {
-  return (
-    stream
-      ?.getAudioTracks()
-      .some((track) => track.readyState === "live" && track.enabled) ?? false
-  );
+  const track = stream
+    ?.getAudioTracks()
+    .find((entry) => entry.readyState === "live");
+  if (!track) return false;
+  // WebRTC marks tracks muted until the first audio packet; still allow playback.
+  return track.enabled;
 }
 
 export function readRemoteStreamMediaState(stream) {

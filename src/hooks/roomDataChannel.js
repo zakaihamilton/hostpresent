@@ -114,7 +114,12 @@ export function useRoomDataChannel({
   const onRemoteHostStreamRef = useRef();
   const onChatMessageRef = useRef(null);
   const sessionTitleRef = useRef("");
+  const roomIdRef = useRef(roomId);
   const destroyedRef = useRef(false);
+
+  useEffect(() => {
+    roomIdRef.current = roomId;
+  }, [roomId]);
 
   useEffect(() => {
     displayNameRef.current =
@@ -214,6 +219,16 @@ export function useRoomDataChannel({
     hostConnectionRef.current = null;
     setHostPresent(false);
     onRemoteHostStreamRef.current?.(null);
+
+    const currentRoomId = roomIdRef.current;
+    if (currentRoomId) {
+      const hostId = hostPeerId(currentRoomId);
+      const hostCall = mediaCallsRef.current.get(hostId);
+      if (hostCall) {
+        hostCall.close();
+        mediaCallsRef.current.delete(hostId);
+      }
+    }
 
     if (openCountRef.current <= 0) {
       setConnectionError((previous) => {
@@ -456,20 +471,32 @@ export function useRoomDataChannel({
     [bindMediaCall],
   );
 
-  const enqueueMediaCall = useCallback(
+  const ensureMediaCall = useCallback(
     async (remoteId) => {
       const next = syncQueueRef.current.then(async () => {
         const peer = peerRef.current;
+        if (!peer) return;
+
         const outbound = await buildOutboundMediaStream(
           localStreamRef.current,
           screenStreamRef.current,
         );
-        if (!peer || !outbound) return;
+        if (!outbound) return;
 
         const existing = mediaCallsRef.current.get(remoteId);
         if (existing) {
-          existing.close();
-          mediaCallsRef.current.delete(remoteId);
+          const peerConnection = existing.peerConnection;
+          if (
+            peerConnection &&
+            peerConnection.connectionState !== "closed"
+          ) {
+            await syncOutboundTracks(
+              existing,
+              localStreamRef.current,
+              screenStreamRef.current,
+            );
+          }
+          return;
         }
 
         const call = peer.call(remoteId, outbound);
@@ -500,13 +527,13 @@ export function useRoomDataChannel({
 
       if (isHost) {
         for (const remoteId of connectionsRef.current.keys()) {
-          await enqueueMediaCall(remoteId);
+          await ensureMediaCall(remoteId);
         }
       }
     });
     syncQueueRef.current = next.catch(() => {});
     return next;
-  }, [isHost, enqueueMediaCall]);
+  }, [isHost, ensureMediaCall]);
 
   useEffect(() => {
     if (!localStream && !screenStream) return undefined;
@@ -523,7 +550,7 @@ export function useRoomDataChannel({
         if (isHost) {
           sendOnConnection(conn, createHostPresencePayload());
           onRemoteParticipantRef.current?.({ id: remoteId, name: remoteName });
-          enqueueMediaCall(remoteId).catch((error) => {
+          ensureMediaCall(remoteId).catch((error) => {
             console.warn("[peer] placeOutgoingMediaCall failed", error);
           });
           syncRelayForViewer(remoteId);
@@ -609,7 +636,7 @@ export function useRoomDataChannel({
     },
     [
       createHostPresencePayload,
-      enqueueMediaCall,
+      ensureMediaCall,
       isHost,
       notifyHandlers,
       scheduleReconnectToHost,
@@ -895,6 +922,12 @@ export function useRoomDataChannel({
         clearConnectTimeout();
         setConnectionError(null);
         retryAttemptRef.current = 0;
+
+        for (const remoteId of connectionsRef.current.keys()) {
+          ensureMediaCall(remoteId).catch((error) => {
+            console.warn("[peer] resync host media after signaling open failed", error);
+          });
+        }
       });
 
       peer.on("disconnected", () => {
@@ -1073,6 +1106,7 @@ export function useRoomDataChannel({
     clearRetryTimer,
     configReady,
     enabled,
+    ensureMediaCall,
     iceServers,
     isHost,
     peerConfig,

@@ -49,6 +49,14 @@ describe("remoteParticipantMedia", () => {
     expect(hasPlayableRemoteAudio(stream)).toBe(false);
   });
 
+  it("treats WebRTC pre-RTP muted tracks as playable when enabled", () => {
+    const audioTrack = createTrack({ kind: "audio", muted: true });
+    const stream = {
+      getAudioTracks: () => [audioTrack],
+    };
+    expect(hasPlayableRemoteAudio(stream)).toBe(true);
+  });
+
   it("detects muted remote tracks", () => {
     expect(
       isRemoteTrackMuted(createTrack({ kind: "audio", enabled: false })),

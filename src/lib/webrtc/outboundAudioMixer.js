@@ -51,6 +51,11 @@ export class OutboundAudioMixer {
       return screenTrack;
     }
 
+    if (micTrack && !screenTrack) {
+      this.#clearGraph();
+      return micTrack;
+    }
+
     const context = this.#ensureContext();
     if (context.state === "suspended") {
       await context.resume();
