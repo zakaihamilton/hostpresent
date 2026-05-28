@@ -23,7 +23,7 @@ describe("Header", () => {
       />,
     );
 
-    expect(screen.getByText("Host Present")).toBeInTheDocument();
+    expect(screen.getByText("Host Present logo")).toBeInTheDocument();
     expect(screen.getByText("02:05")).toBeInTheDocument();
   });
 
@@ -157,6 +157,30 @@ describe("Header", () => {
 
     expect(onSessionTitleChange).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Initial Title" })).toBeInTheDocument();
+  });
+
+  it("shows meeting name in a tooltip when participant clicks the logo", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+        sessionTitle="Product Sync"
+        revealTitleOnLogoClick
+      />,
+    );
+
+    const logoButton = screen.getByRole("button", {
+      name: "Meeting name, Product Sync",
+    });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    await user.click(logoButton);
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Product Sync");
   });
 
   it("allows clearing the title to return to default", async () => {

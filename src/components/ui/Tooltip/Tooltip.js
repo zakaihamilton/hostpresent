@@ -3,6 +3,7 @@
 import {
   cloneElement,
   useCallback,
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -66,7 +67,9 @@ export function Tooltip({
   content = null,
   placement = "top",
   forceHidden = false,
+  trigger = "hover",
 }) {
+  const isClickTrigger = trigger === "click";
   const anchorRef = useRef(null);
   const tooltipRef = useRef(null);
   const suppressUntilLeaveRef = useRef(false);
@@ -127,12 +130,38 @@ export function Tooltip({
     hide();
   };
 
+  useEffect(() => {
+    if (!isClickTrigger || !visible) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (
+        anchorRef.current?.contains(event.target) ||
+        tooltipRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      hide();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isClickTrigger, visible]);
+
   const child = cloneElement(children, {
     ...(children.props["aria-describedby"]
       ? {}
       : { "aria-describedby": showTooltip ? tooltipId : undefined }),
+    onClick: (event) => {
+      if (isClickTrigger) {
+        suppressUntilLeaveRef.current = false;
+        setVisible((current) => !current);
+      }
+      children.props.onClick?.(event);
+    },
     onMouseDown: (event) => {
-      handleMouseDown();
+      if (!isClickTrigger) {
+        handleMouseDown();
+      }
       children.props.onMouseDown?.(event);
     },
   });
@@ -142,10 +171,10 @@ export function Tooltip({
       <div
         ref={anchorRef}
         className={styles.wrapper}
-        onMouseEnter={show}
-        onMouseLeave={handleMouseLeave}
-        onFocus={show}
-        onBlur={hide}
+        onMouseEnter={isClickTrigger ? undefined : show}
+        onMouseLeave={isClickTrigger ? undefined : handleMouseLeave}
+        onFocus={isClickTrigger ? undefined : show}
+        onBlur={isClickTrigger ? undefined : hide}
       >
         {child}
       </div>

@@ -164,6 +164,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostAudioMuted: false,
     hostVideoMuted: false,
     hostMode: isHost ? participantMode : undefined,
+    participantMode: isHost ? undefined : participantMode,
     localStream,
     screenStream,
     onRemoteParticipant: isHost ? onRemoteParticipant : undefined,
@@ -254,8 +255,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     isHost,
     roomConnectionRef,
     roomConnection,
-    resolvedDisplayName,
-    participantMode,
     localStream,
     isAudioMuted,
     isVideoMuted,
@@ -537,6 +536,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
           isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
+        revealTitleOnLogoClick={!isHost}
       />
 
       <ConnectionBanner

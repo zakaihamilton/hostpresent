@@ -5,7 +5,6 @@ import {
 } from "@/lib/settings/displayNameSettings";
 import {
   createParticipantProfileBroadcastMessage,
-  createParticipantProfileMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
 import { attachRemoteStreamMediaListeners } from "@/lib/webrtc/remoteParticipantMedia";
@@ -22,8 +21,6 @@ export function RemoteParticipants({
   isHost,
   roomConnectionRef,
   roomConnection,
-  resolvedDisplayName,
-  participantMode,
   localStream,
   isAudioMuted,
   isVideoMuted,
@@ -164,9 +161,10 @@ export function RemoteParticipants({
 
       setVideoParticipants((previous) => {
         const existing = previous.find((entry) => entry.id === participant.id);
-        const nextName = participant.name
-          ? resolveDisplayName(participant.name)
-          : undefined;
+        const nextName =
+          participant.name !== undefined
+            ? resolveDisplayName(participant.name)
+            : undefined;
         if (existing) {
           return previous.map((entry) =>
             entry.id === participant.id
@@ -398,24 +396,6 @@ export function RemoteParticipants({
   ]);
 
   useEffect(() => {
-    if (isHost || !roomConnectionRef.current?.localParticipantId) return;
-
-    roomConnectionRef.current.send(
-      createParticipantProfileMessage({
-        participantId: roomConnectionRef.current.localParticipantId,
-        displayName: resolvedDisplayName,
-        mode: participantMode,
-      }),
-    );
-  }, [
-    isHost,
-    participantMode,
-    resolvedDisplayName,
-    roomConnectionRef,
-    roomConnectionRef.current?.localParticipantId,
-  ]);
-
-  useEffect(() => {
     if (!isHost) return undefined;
 
     return roomConnectionRef.current?.subscribe((message) => {
@@ -428,7 +408,7 @@ export function RemoteParticipants({
 
       handleRemoteParticipant({
         id: message.participantId,
-        name: message.displayName,
+        name: resolveDisplayName(message.displayName),
         mode: message.mode,
       });
 

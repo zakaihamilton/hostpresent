@@ -20,6 +20,7 @@ export const Header = memo(function Header({
   backLabel = "Back",
   onShowInviteLink = null,
   onSessionTitleChange = null,
+  revealTitleOnLogoClick = false,
 }) {
   const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");
   const roomIdCopyTimerRef = useRef(null);
@@ -27,6 +28,7 @@ export const Header = memo(function Header({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(sessionTitle || "");
   const inputRef = useRef(null);
+  const meetingName = sessionTitle || "Host Present";
 
   useEffect(() => {
     setEditedTitle(sessionTitle || "");
@@ -95,6 +97,21 @@ export const Header = memo(function Header({
     .filter(Boolean)
     .join(" ");
 
+  const logoTrigger = revealTitleOnLogoClick
+    ? <button
+        type="button"
+        className={styles.logoButton}
+        aria-label={`Meeting name, ${meetingName}`}
+      >
+        <Logo />
+      </button>
+    : <span
+        style={{ display: "inline-flex", alignItems: "center" }}
+        aria-hidden
+      >
+        <Logo />
+      </span>;
+
   return (
     <header
       className={`${styles.header} ${isRecording ? styles.headerRecording : ""}`}
@@ -102,46 +119,46 @@ export const Header = memo(function Header({
       <div className={styles.leading}>
         {onBack ? <BackButton label={backLabel} onClick={onBack} /> : null}
         <div className={styles.logo}>
-          <Tooltip text={sessionTitle || "Host Present"} placement="right">
-            <span style={{ display: "inline-flex", alignItems: "center" }} aria-label="Meeting logo">
-              <Logo />
-            </span>
+          <Tooltip
+            text={meetingName}
+            placement="right"
+            trigger={revealTitleOnLogoClick ? "click" : "hover"}
+          >
+            {logoTrigger}
           </Tooltip>
-          {isEditingTitle ? (
-            <input
-              ref={inputRef}
-              type="text"
-              className={styles.logoTitleInput}
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              onBlur={handleTitleSubmit}
-              onKeyDown={handleTitleKeyDown}
-              maxLength={50}
-              placeholder="Meeting name"
-              aria-label="Rename meeting"
-            />
-          ) : (
-            <span
-              className={`${styles.logoText} ${onSessionTitleChange ? styles.logoTextEditable : ""}`}
-              onClick={handleTitleClick}
-              role={onSessionTitleChange ? "button" : undefined}
-              tabIndex={onSessionTitleChange ? 0 : undefined}
-              onKeyDown={onSessionTitleChange ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleTitleClick();
-                }
-              } : undefined}
-              title={onSessionTitleChange ? "Click to rename meeting" : undefined}
-            >
-              {sessionTitle || "Host Present"}
-              {onSessionTitleChange && (
-                <span className={styles.editIconWrapper}>
-                  <Edit size={14} className={styles.editIcon} />
+          {onSessionTitleChange
+            ? isEditingTitle
+              ? <input
+                  ref={inputRef}
+                  type="text"
+                  className={styles.logoTitleInput}
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onBlur={handleTitleSubmit}
+                  onKeyDown={handleTitleKeyDown}
+                  maxLength={50}
+                  placeholder="Meeting name"
+                  aria-label="Rename meeting"
+                />
+              : <span
+                  className={`${styles.logoText} ${styles.logoTextVisible} ${styles.logoTextEditable}`}
+                  onClick={handleTitleClick}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleTitleClick();
+                    }
+                  }}
+                  title="Click to rename meeting"
+                >
+                  {meetingName}
+                  <span className={styles.editIconWrapper}>
+                    <Edit size={14} className={styles.editIcon} />
+                  </span>
                 </span>
-              )}
-            </span>
-          )}
+            : null}
         </div>
       </div>
 

@@ -8,10 +8,12 @@ import {
   isParticipantStatusMessage,
   resolveParticipantStatusMessage,
 } from "@/lib/room/messageAuth";
+import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import {
   createChatMessage,
   createChatPrivateMessage,
   createHostPresentMessage,
+  createParticipantProfileMessage,
   isChatMessage,
   isSignalingMessage,
   parseSignalingMessage,
@@ -64,6 +66,7 @@ export function useRoomDataChannel({
   hostAudioMuted = false,
   hostVideoMuted = false,
   hostMode = "available",
+  participantMode = PARTICIPANT_MODE.AVAILABLE,
   localStream = null,
   screenStream = null,
   onRemoteParticipant,
@@ -102,6 +105,8 @@ export function useRoomDataChannel({
   const hostAudioMutedRef = useRef(false);
   const hostVideoMutedRef = useRef(false);
   const hostModeRef = useRef("available");
+  const participantModeRef = useRef(PARTICIPANT_MODE.AVAILABLE);
+  const sendParticipantProfileRef = useRef(() => false);
   const onRemoteParticipantRef = useRef();
   const onRemoteHostStreamRef = useRef();
   const onChatMessageRef = useRef(null);
@@ -128,6 +133,14 @@ export function useRoomDataChannel({
     if (!isHost) return;
     hostModeRef.current = hostMode === "listening" ? "listening" : "available";
   }, [hostMode, isHost]);
+
+  useEffect(() => {
+    if (isHost) return;
+    participantModeRef.current =
+      participantMode === PARTICIPANT_MODE.LISTENING
+        ? PARTICIPANT_MODE.LISTENING
+        : PARTICIPANT_MODE.AVAILABLE;
+  }, [isHost, participantMode]);
 
   useEffect(() => {
     onRemoteParticipantRef.current =
@@ -382,7 +395,10 @@ export function useRoomDataChannel({
           enqueueMediaCall(remoteId).catch((error) => {
             console.warn("[peer] placeOutgoingMediaCall failed", error);
           });
+          return;
         }
+
+        sendParticipantProfileRef.current();
       };
 
       if (conn.open) {
@@ -449,14 +465,6 @@ export function useRoomDataChannel({
             setHostPresent(true);
             setConnectionError(null);
           }
-          if (
-            isHost &&
-            resolvedMessage.type === SIGNALING_MESSAGE.PARTICIPANT_PROFILE
-          ) {
-            enqueueMediaCall(remoteId).catch((error) => {
-              console.warn("[peer] profile media call failed", error);
-            });
-          }
         } catch (error) {
           console.warn("[peer] invalid message", error);
         }
@@ -464,12 +472,45 @@ export function useRoomDataChannel({
     },
     [
       createHostPresencePayload,
+      enqueueMediaCall,
       isHost,
       notifyHandlers,
-      enqueueMediaCall,
       updateConnectedState,
     ],
   );
+
+  const sendParticipantProfile = useCallback(() => {
+    if (isHost) return false;
+
+    const participantId = localParticipantIdRef.current;
+    if (!participantId || !hostConnectionRef.current?.open) {
+      return false;
+    }
+
+    return sendOnConnection(
+      hostConnectionRef.current,
+      createParticipantProfileMessage({
+        participantId,
+        displayName: displayNameRef.current,
+        mode: participantModeRef.current,
+      }),
+    );
+  }, [isHost]);
+
+  useEffect(() => {
+    sendParticipantProfileRef.current = sendParticipantProfile;
+  }, [sendParticipantProfile]);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+    sendParticipantProfile();
+  }, [
+    displayName,
+    isHost,
+    localParticipantId,
+    participantMode,
+    sendParticipantProfile,
+  ]);
 
   const send = useCallback(
     (message) => {

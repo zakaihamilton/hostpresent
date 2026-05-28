@@ -49,6 +49,25 @@ describe("Tooltip", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  it("toggles tooltip on click when trigger is click", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Tooltip text="Product Sync" trigger="click">
+        <button type="button">Logo</button>
+      </Tooltip>,
+    );
+
+    const button = screen.getByRole("button", { name: "Logo" });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    await user.click(button);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Product Sync");
+
+    await user.click(button);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
   it("renders rich tooltip content when provided", async () => {
     const user = userEvent.setup();
 
