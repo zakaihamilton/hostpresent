@@ -36,7 +36,7 @@ export function jsonRateLimited(retryAfterMs) {
   const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
   return applySecurityHeaders(
     Response.json(
-      { error: "Too many requests" },
+      { error: "[E060] Too many requests" },
       {
         status: 429,
         headers: {
@@ -64,11 +64,11 @@ export async function enforceRateLimit(
 
 export function validateTokenParam(token) {
   if (!token || typeof token !== "string") {
-    return { ok: false, error: "Token required" };
+    return { ok: false, error: "[E061] Token required" };
   }
 
   if (token.length > MAX_TOKEN_LENGTH) {
-    return { ok: false, error: "Token too long" };
+    return { ok: false, error: "[E062] Token too long" };
   }
 
   return { ok: true };
@@ -88,12 +88,12 @@ export function validateJsonPost(
     return {
       ok: false,
       status: 415,
-      error: "Content-Type must be application/json",
+      error: "[E063] Content-Type must be application/json",
     };
   }
 
   if (contentLength > maxBodyBytes) {
-    return { ok: false, status: 413, error: "Request body too large" };
+    return { ok: false, status: 413, error: "[E064] Request body too large" };
   }
 
   return { ok: true };

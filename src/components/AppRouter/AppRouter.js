@@ -64,7 +64,7 @@ export function AppRouter() {
           title="Could not join meeting"
           message={
             resolveError ??
-            "Invalid or expired room link. Check the join code and try again."
+            "[E032] Invalid or expired room link. Check the join code and try again."
           }
           onBack={() => {
             if (role === APP_ROLE.PARTICIPANT) {

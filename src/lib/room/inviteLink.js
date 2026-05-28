@@ -48,7 +48,7 @@ export async function resolveJoinCode(joinCode) {
   );
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error ?? "Could not resolve join code");
+    throw new Error(payload.error ?? "[E031] Could not resolve join code");
   }
   return response.json();
 }

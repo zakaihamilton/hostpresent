@@ -195,7 +195,7 @@ export function useRoomDataChannel({
         setConnectionError((previous) => {
           if (isWaitingForHostMessage(previous)) return previous;
           if (openCountRef.current > 0) return null;
-          return previous ?? "Waiting for the host to join\u2026";
+          return previous ?? "[E011] Waiting for the host to join\u2026";
         });
         return;
       }

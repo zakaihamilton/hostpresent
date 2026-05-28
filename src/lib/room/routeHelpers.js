@@ -15,16 +15,16 @@ export function getSearchParam(request, name) {
 
 export function verifyRequestToken(token) {
   if (!token || typeof token !== "string") {
-    return { error: jsonError("Token required", 401) };
+    return { error: jsonError("[E065] Token required", 401) };
   }
 
   if (token.length > 2048) {
-    return { error: jsonError("Invalid token", 401) };
+    return { error: jsonError("[E066] Invalid token", 401) };
   }
 
   const verified = verifyRoomToken(token);
   if (!verified) {
-    return { error: jsonError("Invalid token", 401) };
+    return { error: jsonError("[E066] Invalid token", 401) };
   }
   return { verified };
 }

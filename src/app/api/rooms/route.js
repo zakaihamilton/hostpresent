@@ -39,6 +39,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("[api/rooms] create failed", error);
-    return jsonError("Failed to create room", 500);
+    return jsonError("[E067] Failed to create room", 500);
   }
 }

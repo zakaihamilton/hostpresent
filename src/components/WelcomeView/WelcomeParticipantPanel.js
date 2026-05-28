@@ -181,7 +181,7 @@ export function WelcomeParticipantPanel({
       return;
     }
 
-    setResolveError("Enter a valid participant join code or invite link.");
+    setResolveError("[E051] Enter a valid participant join code or invite link.");
   };
 
   const handleSelectRoom = (room) => {

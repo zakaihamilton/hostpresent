@@ -12,7 +12,7 @@ export async function fetchPeerJsConfig() {
       signal: controller.signal,
     });
     if (!response.ok) {
-      throw new Error("Could not load signaling configuration.");
+      throw new Error("[E082] Could not load signaling configuration.");
     }
 
     const data = await response.json();

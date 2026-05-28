@@ -9,13 +9,13 @@ import { getParticipantRoomByJoinCode } from "@/lib/settings/participantRoomSett
 import { getActiveRoom, getRoomByJoinCode } from "@/lib/settings/roomSettings";
 
 const HOST_ROOM_MISSING_ERROR =
-  "This browser does not have the host room saved. Go to the host welcome screen and open your room from there.";
+  "[E025] This browser does not have the host room saved. Go to the host welcome screen and open your room from there.";
 
 const PARTICIPANT_LINK_ON_HOST_ERROR =
-  "Participant join codes cannot be used to host. Create or open your room from the host welcome screen.";
+  "[E026] Participant join codes cannot be used to host. Create or open your room from the host welcome screen.";
 
 const HOST_LINK_ON_PARTICIPANT_ERROR =
-  "This link is for hosts only. Use a participant join code or invite link to join.";
+  "[E027] This link is for hosts only. Use a participant join code or invite link to join.";
 
 function roleMismatchError(routeRole, tokenRole) {
   if (routeRole === APP_ROLE.HOST && tokenRole === APP_ROLE.PARTICIPANT) {
@@ -24,7 +24,7 @@ function roleMismatchError(routeRole, tokenRole) {
   if (routeRole === APP_ROLE.PARTICIPANT && tokenRole === APP_ROLE.HOST) {
     return HOST_LINK_ON_PARTICIPANT_ERROR;
   }
-  return "This room link does not match the requested role.";
+  return "[E028] This room link does not match the requested role.";
 }
 
 function verifyTokenForRole(token, routeRole) {
@@ -117,7 +117,7 @@ export function useRouteToken({ role, token, joinCode, view }) {
         setParticipantState({
           token: null,
           loading: false,
-          error: "Could not get a participant token for this room.",
+          error: "[E029] Could not get a participant token for this room.",
         });
       })
       .catch((resolveError) => {
@@ -128,7 +128,7 @@ export function useRouteToken({ role, token, joinCode, view }) {
           error:
             resolveError instanceof Error
               ? resolveError.message
-              : "Could not join this room. Check the join code and try again.",
+              : "[E030] Could not join this room. Check the join code and try again.",
         });
       });
 

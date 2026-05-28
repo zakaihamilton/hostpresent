@@ -28,9 +28,9 @@ async function readErrorMessage(response, fallback) {
     // ignore non-JSON error bodies (e.g. HTML 500 pages)
   }
   if (response.status === 401) {
-    return "This room link is no longer valid. Create a new room from the host welcome screen.";
+    return "[E021] This room link is no longer valid. Create a new room from the host welcome screen.";
   }
-  if (response.status === 404) return "Room not found. It may have expired.";
+  if (response.status === 404) return "[E022] Room not found. It may have expired.";
   return fallback;
 }
 
@@ -41,7 +41,7 @@ async function fetchRoomState(token) {
       `/api/rooms/state?token=${encodeURIComponent(token)}`,
     );
   } catch {
-    throw new Error("Could not reach the server. Check your connection.");
+    throw new Error("[E023] Could not reach the server. Check your connection.");
   }
   if (!response.ok) {
     if (response.status === 401) {
@@ -49,7 +49,7 @@ async function fetchRoomState(token) {
       removeParticipantRoomByToken(token);
     }
     throw new Error(
-      await readErrorMessage(response, "Failed to fetch room state"),
+      await readErrorMessage(response, "[E024] Failed to fetch room state"),
     );
   }
   return response.json();
@@ -58,7 +58,7 @@ async function fetchRoomState(token) {
 async function createRoomRequest() {
   const response = await fetch("/api/rooms", { method: "POST" });
   if (!response.ok) {
-    throw new Error("Failed to create room");
+    throw new Error("[E020] Failed to create room");
   }
   return response.json();
 }

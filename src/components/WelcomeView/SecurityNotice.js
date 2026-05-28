@@ -20,7 +20,7 @@ export function SecurityNotice() {
 
         if (!data.signalingServerConfigured) {
           setNotice({
-            title: "Signaling not configured.",
+            title: "[E080] Signaling not configured.",
             message:
               "WebRTC will not work until SIGNALING_SERVER_URL is set on the server (Vercel env vars or .env.local).",
           });
@@ -29,7 +29,7 @@ export function SecurityNotice() {
 
         if (!data.encrypted) {
           setNotice({
-            title: "Not encrypted.",
+            title: "[E081] Not encrypted.",
             message:
               "Room links are working, but tokens use a default secret. Set SIGNALING_SERVER_URL for production room signing.",
           });

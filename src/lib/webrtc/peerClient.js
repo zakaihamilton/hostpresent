@@ -4,27 +4,27 @@ const DEFAULT_SIGNALING_PORT = 443;
 export { DEFAULT_SIGNALING_PATH };
 
 const SIGNALING_CONFIG_HINT =
-  "Set SIGNALING_SERVER_URL to your PeerJS hostname (no https://) in Vercel env vars or .env.local, then redeploy.";
+  "[E015] Set SIGNALING_SERVER_URL to your PeerJS hostname (no https://) in Vercel env vars or .env.local, then redeploy.";
 
 export const SIGNALING_ERROR = {
   NOT_CONFIGURED:
-    "Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.",
-  CONFIG_LOAD_FAILED: "Could not load signaling configuration.",
-  HOST_TIMEOUT: "Could not reach the PeerJS server in time.",
+    "[E002] Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.",
+  CONFIG_LOAD_FAILED: "[E001] Could not load signaling configuration.",
+  HOST_TIMEOUT: "[E003] Could not reach the PeerJS server in time.",
   HOST_RETRY_EXHAUSTED:
-    "Could not connect to the PeerJS server after several attempts.",
-  PARTICIPANT_TIMEOUT: "Could not connect to the meeting in time.",
+    "[E004] Could not connect to the PeerJS server after several attempts.",
+  PARTICIPANT_TIMEOUT: "[E005] Could not connect to the meeting in time.",
   PARTICIPANT_RETRY_EXHAUSTED:
-    "Could not connect to the meeting after several attempts.",
+    "[E006] Could not connect to the meeting after several attempts.",
   HOST_ID_RECONNECTING:
-    "Another host session may still be disconnecting. Reconnecting…",
+    "[E007] Another host session may still be disconnecting. Reconnecting…",
 };
 
 export const HOST_SIGNING_REACHABILITY_HINT =
-  "SIGNALING_SERVER_URL is set, but the browser could not connect to the PeerJS server. Confirm the PeerJS process is running, the host/path/port match your env vars, and that WebSockets are allowed.";
+  "[E013] SIGNALING_SERVER_URL is set, but the browser could not connect to the PeerJS server. Confirm the PeerJS process is running, the host/path/port match your env vars, and that WebSockets are allowed.";
 
 export const PARTICIPANT_REACHABILITY_HINT =
-  "Ask the host to join the meeting first. If they are already in the room, the PeerJS server may be down, restarting, or blocked by your network.";
+  "[E014] Ask the host to join the meeting first. If they are already in the room, the PeerJS server may be down, restarting, or blocked by your network.";
 
 function normalizeSignalingHost(value) {
   if (!value || typeof value !== "string") return null;
@@ -195,20 +195,20 @@ export function peerErrorMessage(error, { isHost = false } = {}) {
   const type = error?.type ?? "unknown";
 
   if (type === "peer-unavailable" && !isHost) {
-    return "Waiting for the host to join…";
+    return "[E011] Waiting for the host to join…";
   }
 
   switch (type) {
     case "network":
     case "socket-error":
     case "socket-closed":
-      return "Could not reach the signaling server. Check your connection and try again.";
+      return "[E008] Could not reach the signaling server. Check your connection and try again.";
     case "server-error":
-      return "The signaling server returned an error. It may be restarting.";
+      return "[E009] The signaling server returned an error. It may be restarting.";
     case "peer-unavailable":
-      return "Waiting for participants…";
+      return "[E010] Waiting for participants…";
     default:
-      return "Signaling connection failed. Retrying…";
+      return "[E012] Signaling connection failed. Retrying…";
   }
 }
 

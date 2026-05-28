@@ -27,7 +27,7 @@ export async function POST(request) {
 
     const body = await readJsonBody(request);
     if (!body) {
-      return jsonError("Invalid JSON body", 400);
+      return jsonError("[E070] Invalid JSON body", 400);
     }
 
     const { token, message } = body;
@@ -43,19 +43,19 @@ export async function POST(request) {
     if (roomBlocked) return roomBlocked;
 
     if (!isSignalingMessage(message)) {
-      return jsonError("Invalid message", 400);
+      return jsonError("[E071] Invalid message", 400);
     }
 
     if (!canRelayMessage({ role: verified.role, message })) {
-      return jsonError("Forbidden", 403);
+      return jsonError("[E072] Forbidden", 403);
     }
 
     return jsonError(
-      "Room messages are relayed over WebRTC data channels",
+      "[E073] Room messages are relayed over WebRTC data channels",
       410,
     );
   } catch (error) {
     console.error("[api/rooms/messages] relay failed", error);
-    return jsonError("Failed to relay message", 500);
+    return jsonError("[E074] Failed to relay message", 500);
   }
 }

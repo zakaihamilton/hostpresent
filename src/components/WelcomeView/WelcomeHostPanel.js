@@ -26,7 +26,7 @@ async function fetchHostRoomDetails(hostToken) {
     `/api/rooms/state?token=${encodeURIComponent(hostToken)}`,
   );
   if (!response.ok) {
-    throw new Error("Could not load room");
+    throw new Error("[E050] Could not load room");
   }
   return response.json();
 }

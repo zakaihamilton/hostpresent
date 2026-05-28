@@ -119,7 +119,7 @@ export function MediaControls({
       } catch (err) {
         console.error("Failed to switch camera:", err);
         setErrorMsg(
-          "Could not switch camera. Check permissions and try again.",
+          "[E040] Could not switch camera. Check permissions and try again.",
         );
       }
     },
@@ -227,18 +227,18 @@ export function MediaControls({
 
         if (shareScreenAudio && stream.getAudioTracks().length === 0) {
           setErrorMsg(
-            "Screen shared without audio. Enable \u201cShare tab audio\u201d in the browser picker, or turn on Share Audio before sharing.",
+            "[E043] Screen shared without audio. Enable \u201cShare tab audio\u201d in the browser picker, or turn on Share Audio before sharing.",
           );
         }
       } catch (err) {
         console.warn("Screen sharing failed:", err);
         if (err?.name === "NotAllowedError") {
           setErrorMsg(
-            "Screen sharing was cancelled or denied. Allow screen capture and try again.",
+            "[E042] Screen sharing was cancelled or denied. Allow screen capture and try again.",
           );
         } else {
           setErrorMsg(
-            "Could not start screen sharing. Check browser permissions and try again.",
+            "[E041] Could not start screen sharing. Check browser permissions and try again.",
           );
         }
       }

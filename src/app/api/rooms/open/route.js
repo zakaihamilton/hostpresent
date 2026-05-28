@@ -22,7 +22,7 @@ export async function POST(request) {
 
     const { verified } = auth;
     if (verified.role !== ROOM_ROLE.HOST) {
-      return jsonError("Host token required", 403);
+      return jsonError("[E068] Host token required", 403);
     }
 
     let room = await getRoomById(verified.roomId, {
@@ -48,6 +48,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("[api/rooms/open] failed", error);
-    return jsonError("Failed to open room", 500);
+    return jsonError("[E069] Failed to open room", 500);
   }
 }
