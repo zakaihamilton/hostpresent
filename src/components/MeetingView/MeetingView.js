@@ -124,6 +124,9 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     setShareScreenAudioPreference,
     setIsAudioMuted,
     setIsVideoMuted,
+    availableCameras,
+    selectedCamera,
+    switchCamera,
   } = MediaControls({ isHost, roomConnection });
 
   const {
@@ -433,6 +436,9 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         }
         showRecording={isHost}
         allowScreenShare={isHost}
+        availableCameras={availableCameras}
+        selectedCamera={selectedCamera}
+        onCameraChange={switchCamera}
         onToggleAudio={toggleAudio}
         onToggleVideo={toggleVideo}
         onToggleScreenShare={toggleScreenShare}

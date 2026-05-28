@@ -4,6 +4,25 @@ import { MeetingView } from "./MeetingView";
 
 const mockDisconnect = jest.fn();
 
+beforeAll(() => {
+  Object.defineProperty(global.navigator, "mediaDevices", {
+    value: {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      enumerateDevices: jest.fn().mockResolvedValue([]),
+      getUserMedia: jest.fn().mockResolvedValue({
+        getVideoTracks: () => [{ getSettings: () => ({ deviceId: "" }), stop: jest.fn() }],
+        getAudioTracks: () => [],
+        getTracks: () => [],
+        addTrack: jest.fn(),
+        removeTrack: jest.fn(),
+      }),
+    },
+    writable: true,
+    configurable: true,
+  });
+});
+
 jest.mock("@/components/Header", () => ({
   Header: ({ onBack, backLabel = "Back" }) => (
     <button type="button" onClick={onBack}>

@@ -24,6 +24,9 @@ export function Toolbar({
   onDisplayNameChange = null,
   participantMode = null,
   onParticipantModeChange = null,
+  availableCameras = [],
+  selectedCamera = "",
+  onCameraChange,
   onToggleAudio,
   onToggleVideo,
   onToggleScreenShare,
@@ -57,6 +60,9 @@ export function Toolbar({
           isVideoMuted={isVideoMuted}
           onToggleAudio={onToggleAudio}
           onToggleVideo={onToggleVideo}
+          availableCameras={availableCameras}
+          selectedCamera={selectedCamera}
+          onCameraChange={onCameraChange}
         />
       </div>
 

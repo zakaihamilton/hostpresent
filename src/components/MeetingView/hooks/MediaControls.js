@@ -17,6 +17,8 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [shareScreenAudio, setShareScreenAudio] = useState(true);
+  const [availableCameras, setAvailableCameras] = useState([]);
+  const [selectedCamera, setSelectedCamera] = useState("");
 
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
@@ -33,6 +35,22 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
     screenStreamRef.current = screenStream;
   }, [screenStream]);
 
+  const enumerateCameras = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setAvailableCameras(devices.filter((d) => d.kind === "videoinput"));
+    } catch {
+      // ignore enumeration errors
+    }
+  }, []);
+
+  useEffect(() => {
+    navigator.mediaDevices.addEventListener("devicechange", enumerateCameras);
+    return () => {
+      navigator.mediaDevices.removeEventListener("devicechange", enumerateCameras);
+    };
+  }, [enumerateCameras]);
+
   useEffect(() => {
     const initLocalMedia = async () => {
       try {
@@ -41,6 +59,13 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
           audio: true,
         });
         setLocalStream(stream);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === "videoinput");
+        setAvailableCameras(videoInputs);
+        if (videoInputs.length > 0) {
+          const currentId = stream.getVideoTracks()[0]?.getSettings().deviceId;
+          setSelectedCamera(currentId || videoInputs[0].deviceId);
+        }
       } catch (err) {
         console.error("Failed to acquire camera/mic permissions:", err);
       }
@@ -60,6 +85,34 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
       }
     };
   }, []);
+
+  const switchCamera = useCallback(async (deviceId) => {
+    if (!localStream || !deviceId || !navigator.mediaDevices) return;
+
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack?.getSettings().deviceId === deviceId) return;
+
+    const wasMuted = isVideoMuted;
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+        audio: false,
+      });
+
+      const newTrack = newStream.getVideoTracks()[0];
+      if (videoTrack) {
+        localStream.removeTrack(videoTrack);
+        videoTrack.stop();
+      }
+      localStream.addTrack(newTrack);
+      newTrack.enabled = !wasMuted;
+      setSelectedCamera(deviceId);
+    } catch (err) {
+      console.error("Failed to switch camera:", err);
+      setErrorMsg("Could not switch camera. Check permissions and try again.");
+    }
+  }, [localStream, isVideoMuted, setErrorMsg]);
 
   const publishParticipantMediaStatus = useCallback(
     ({ audioMuted, videoMuted }) => {
@@ -204,5 +257,8 @@ export function MediaControls({ isHost, roomConnection, streamListenerCleanupsRe
     setShareScreenAudioPreference,
     localStreamRef,
     screenStreamRef,
+    availableCameras,
+    selectedCamera,
+    switchCamera,
   };
 }
