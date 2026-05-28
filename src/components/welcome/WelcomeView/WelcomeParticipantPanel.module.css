@@ -24,6 +24,10 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-main);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .summary {
@@ -44,10 +48,16 @@
 }
 
 .summary::after {
-  content: "▾";
-  font-size: 1rem;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  color: var(--text-muted);
+  content: "";
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--text-muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat center;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
 }
 
 .summary:hover {
@@ -55,7 +65,7 @@
 }
 
 .summary:hover::after {
-  color: var(--text-main);
+  background-color: var(--text-main);
 }
 
 .details[open] > .summary {
@@ -65,7 +75,7 @@
 
 .details[open] > .summary::after {
   transform: rotate(-180deg);
-  color: var(--primary);
+  background-color: var(--primary);
 }
 
 .details[open] > div {

@@ -22,6 +22,8 @@ import {
 } from "@/lib/settings/roomSettings";
 import { JoinCodeBoxes } from "./JoinCodeBoxes";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
+import { Copy as CopyIcon } from "@/components/ui/Icons";
+import { Tooltip } from "@/components/ui/Tooltip";
 import hs from "./WelcomeHostPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
@@ -321,14 +323,17 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
                 value={inviteLink}
                 onFocus={(event) => event.currentTarget.select()}
               />
-              <button
-                type="button"
-                className={shared.button}
-                onClick={handleCopyLink}
-                disabled={!inviteLink}
-              >
-                Copy
-              </button>
+              <Tooltip text={copyMessage || "Copy invite link"} placement="top">
+                <button
+                  type="button"
+                  className={`${shared.button} ${shared.iconButton}`}
+                  onClick={handleCopyLink}
+                  disabled={!inviteLink}
+                  aria-label="Copy invite link"
+                >
+                  <CopyIcon size={16} />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

@@ -13,7 +13,10 @@ export async function GET(request) {
 
   if (!isValidJoinCode(joinCode)) {
     return jsonError("[E075] Invalid join code", 400);
-    // ...
+  }
+
+  const room = await getRoomByJoinCode(joinCode);
+  if (!room) {
     return jsonError("[E076] Room not found", 404);
   }
 
