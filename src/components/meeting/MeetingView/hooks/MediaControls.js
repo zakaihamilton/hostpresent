@@ -19,8 +19,24 @@ export function MediaControls({
   screenStream,
   setScreenStream,
 }) {
-  const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const stored = window.localStorage.getItem("hostpresent.audioMuted");
+      return stored === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [isVideoMuted, setIsVideoMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const stored = window.localStorage.getItem("hostpresent.videoMuted");
+      return stored === "true";
+    } catch {
+      return false;
+    }
+  });
   const [errorMsg, setErrorMsg] = useState("");
   const [shareScreenAudio, setShareScreenAudio] = useState(true);
   const [availableCameras, setAvailableCameras] = useState([]);
@@ -67,6 +83,12 @@ export function MediaControls({
           video: true,
           audio: true,
         });
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = !isAudioMuted;
+        });
+        stream.getVideoTracks().forEach((track) => {
+          track.enabled = !isVideoMuted;
+        });
         setLocalStream(stream);
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = devices.filter((d) => d.kind === "videoinput");
@@ -93,7 +115,7 @@ export function MediaControls({
         }
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchCamera = useCallback(
     async (deviceId) => {
@@ -166,6 +188,9 @@ export function MediaControls({
     });
     const nextMuted = !localStream.getAudioTracks()[0]?.enabled;
     setIsAudioMuted(nextMuted);
+    try {
+      window.localStorage.setItem("hostpresent.audioMuted", String(nextMuted));
+    } catch {}
 
     if (isHost) {
       roomConnection.send(
@@ -187,6 +212,9 @@ export function MediaControls({
     });
     const nextMuted = !localStream.getVideoTracks()[0]?.enabled;
     setIsVideoMuted(nextMuted);
+    try {
+      window.localStorage.setItem("hostpresent.videoMuted", String(nextMuted));
+    } catch {}
 
     if (isHost) {
       roomConnection.send(

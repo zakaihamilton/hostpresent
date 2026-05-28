@@ -128,7 +128,9 @@ export function useRoomDataChannel({
 
   useEffect(() => {
     onRemoteParticipantRef.current =
-      typeof onRemoteParticipant === "function" ? onRemoteParticipant : undefined;
+      typeof onRemoteParticipant === "function"
+        ? onRemoteParticipant
+        : undefined;
     onRemoteHostStreamRef.current =
       typeof onRemoteHostStream === "function" ? onRemoteHostStream : undefined;
   }, [onRemoteParticipant, onRemoteHostStream]);
@@ -254,7 +256,10 @@ export function useRoomDataChannel({
       call.on("stream", (remoteStream) => {
         if (destroyedRef.current) return;
         if (isHost) {
-          onRemoteParticipantRef.current?.({ id: remoteId, stream: remoteStream });
+          onRemoteParticipantRef.current?.({
+            id: remoteId,
+            stream: remoteStream,
+          });
           return;
         }
         onRemoteHostStreamRef.current?.(remoteStream);
@@ -278,21 +283,24 @@ export function useRoomDataChannel({
     [isHost],
   );
 
-  const enqueueMediaCall = useCallback(async (remoteId) => {
-    const next = syncQueueRef.current.then(async () => {
-      const peer = peerRef.current;
-      const outbound = await buildOutboundMediaStream(
-        localStreamRef.current,
-        screenStreamRef.current,
-      );
-      if (!peer || !outbound || mediaCallsRef.current.has(remoteId)) return;
+  const enqueueMediaCall = useCallback(
+    async (remoteId) => {
+      const next = syncQueueRef.current.then(async () => {
+        const peer = peerRef.current;
+        const outbound = await buildOutboundMediaStream(
+          localStreamRef.current,
+          screenStreamRef.current,
+        );
+        if (!peer || !outbound || mediaCallsRef.current.has(remoteId)) return;
 
-      const call = peer.call(remoteId, outbound);
-      bindMediaCall(call, remoteId);
-    });
-    syncQueueRef.current = next.catch(() => {});
-    return next;
-  }, [bindMediaCall]);
+        const call = peer.call(remoteId, outbound);
+        bindMediaCall(call, remoteId);
+      });
+      syncQueueRef.current = next.catch(() => {});
+      return next;
+    },
+    [bindMediaCall],
+  );
 
   const syncQueueRef = useRef(Promise.resolve());
 
@@ -652,6 +660,14 @@ export function useRoomDataChannel({
         retryAttemptRef.current = 0;
       });
 
+      peer.on("disconnected", () => {
+        if (destroyedRef.current) return;
+        console.warn(
+          "[peer] host disconnected from signaling server, reconnecting...",
+        );
+        peer.reconnect();
+      });
+
       peer.on("connection", (conn) => {
         if (destroyedRef.current) return;
         const remoteId = conn.peer;
@@ -723,7 +739,11 @@ export function useRoomDataChannel({
       peerRef.current = peer;
 
       const connectToHost = () => {
-        if (destroyedRef.current || !peerRef.current || hostConnectionRef.current?.open) {
+        if (
+          destroyedRef.current ||
+          !peerRef.current ||
+          hostConnectionRef.current?.open
+        ) {
           return;
         }
 
@@ -778,6 +798,14 @@ export function useRoomDataChannel({
         setConnectionError(null);
         retryAttemptRef.current = 0;
         connectToHost();
+      });
+
+      peer.on("disconnected", () => {
+        if (destroyedRef.current) return;
+        console.warn(
+          "[peer] participant disconnected from signaling server, reconnecting...",
+        );
+        peer.reconnect();
       });
 
       peer.on("error", (error) => {
