@@ -45,11 +45,6 @@ export class OutboundAudioMixer {
       return null;
     }
 
-    if (micTrack && !screenTrack) {
-      this.#clearGraph();
-      return micTrack;
-    }
-
     if (!micTrack && screenTrack) {
       this.#clearGraph();
       return screenTrack;
@@ -62,16 +57,21 @@ export class OutboundAudioMixer {
 
     this.#clearGraph();
 
+    // Clone the mic track so Web Audio can read it while the raw track may
+    // still be attached to an RTCRtpSender until replaceTrack completes.
     const micSource = context.createMediaStreamSource(
-      new MediaStream([micTrack]),
+      new MediaStream([micTrack.clone()]),
     );
-    const screenSource = context.createMediaStreamSource(
-      new MediaStream([screenTrack]),
-    );
-
     micSource.connect(this.#destination);
-    screenSource.connect(this.#destination);
-    this.#nodes.push(micSource, screenSource);
+    this.#nodes.push(micSource);
+
+    if (screenTrack) {
+      const screenSource = context.createMediaStreamSource(
+        new MediaStream([screenTrack]),
+      );
+      screenSource.connect(this.#destination);
+      this.#nodes.push(screenSource);
+    }
 
     return this.#destination.stream.getAudioTracks()[0] ?? null;
   }

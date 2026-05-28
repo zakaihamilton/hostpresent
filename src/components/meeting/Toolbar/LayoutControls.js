@@ -1,4 +1,4 @@
-import { Activity, Chat, Gallery, Pip, Users } from "@/components/ui/Icons";
+import { Chat, Gallery, Pip, Users } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./LayoutControls.module.css";
 
@@ -15,23 +15,9 @@ export function LayoutControls({
   onToggleSidebar,
   onTogglePip,
   onToggleChat,
-  onToggleDiagnostics,
 }) {
   return (
     <div className={styles.cluster}>
-      {onToggleDiagnostics
-        ? <Tooltip text="Run Connection Diagnostics">
-            <button
-              type="button"
-              className={btnClass()}
-              onClick={onToggleDiagnostics}
-              aria-label="Run connection diagnostics"
-            >
-              <Activity />
-            </button>
-          </Tooltip>
-        : null}
-
       <Tooltip
         text={isGalleryVisible ? "Hide Video Gallery" : "Show Video Gallery"}
       >

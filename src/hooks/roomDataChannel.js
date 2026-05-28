@@ -254,6 +254,11 @@ export function useRoomDataChannel({
     (call, remoteId) => {
       if (!call) return;
 
+      const existing = mediaCallsRef.current.get(remoteId);
+      if (existing && existing !== call) {
+        existing.close();
+      }
+
       mediaCallsRef.current.set(remoteId, call);
 
       call.on("stream", (remoteStream) => {
@@ -270,7 +275,9 @@ export function useRoomDataChannel({
 
       call.on("close", () => {
         if (destroyedRef.current) return;
-        mediaCallsRef.current.delete(remoteId);
+        if (mediaCallsRef.current.get(remoteId) === call) {
+          mediaCallsRef.current.delete(remoteId);
+        }
         if (isHost) {
           onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
           return;
@@ -286,6 +293,25 @@ export function useRoomDataChannel({
     [isHost],
   );
 
+  const answerIncomingCall = useCallback((call, remoteId) => {
+    bindMediaCall(call, remoteId);
+    void (async () => {
+      if (destroyedRef.current) return;
+      const outbound = await buildOutboundMediaStream(
+        localStreamRef.current,
+        screenStreamRef.current,
+      );
+      if (destroyedRef.current) return;
+      if (outbound) {
+        call.answer(outbound);
+      } else {
+        call.answer();
+      }
+    })().catch((error) => {
+      console.warn("[peer] handle incoming call failed", error);
+    });
+  }, [bindMediaCall]);
+
   const enqueueMediaCall = useCallback(
     async (remoteId) => {
       const next = syncQueueRef.current.then(async () => {
@@ -294,9 +320,16 @@ export function useRoomDataChannel({
           localStreamRef.current,
           screenStreamRef.current,
         );
-        if (!peer || !outbound || mediaCallsRef.current.has(remoteId)) return;
+        if (!peer || !outbound) return;
+
+        const existing = mediaCallsRef.current.get(remoteId);
+        if (existing) {
+          existing.close();
+          mediaCallsRef.current.delete(remoteId);
+        }
 
         const call = peer.call(remoteId, outbound);
+        if (!call) return;
         bindMediaCall(call, remoteId);
       });
       syncQueueRef.current = next.catch(() => {});
@@ -415,6 +448,14 @@ export function useRoomDataChannel({
           if (!isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
             setHostPresent(true);
             setConnectionError(null);
+          }
+          if (
+            isHost &&
+            resolvedMessage.type === SIGNALING_MESSAGE.PARTICIPANT_PROFILE
+          ) {
+            enqueueMediaCall(remoteId).catch((error) => {
+              console.warn("[peer] profile media call failed", error);
+            });
           }
         } catch (error) {
           console.warn("[peer] invalid message", error);
@@ -693,22 +734,7 @@ export function useRoomDataChannel({
 
       peer.on("call", (call) => {
         if (destroyedRef.current) return;
-        (async () => {
-          if (destroyedRef.current) return;
-          const outbound = await buildOutboundMediaStream(
-            localStreamRef.current,
-            screenStreamRef.current,
-          );
-          if (destroyedRef.current) return;
-          if (outbound) {
-            call.answer(outbound);
-          } else {
-            call.answer();
-          }
-          bindMediaCall(call, call.peer);
-        })().catch((error) => {
-          console.warn("[peer] handle incoming call failed", error);
-        });
+        answerIncomingCall(call, call.peer);
       });
 
       peer.on("error", (error) => {
@@ -786,22 +812,7 @@ export function useRoomDataChannel({
 
       peer.on("call", (call) => {
         if (destroyedRef.current) return;
-        (async () => {
-          if (destroyedRef.current) return;
-          const outbound = await buildOutboundMediaStream(
-            localStreamRef.current,
-            screenStreamRef.current,
-          );
-          if (destroyedRef.current) return;
-          if (outbound) {
-            call.answer(outbound);
-          } else {
-            call.answer();
-          }
-          bindMediaCall(call, hostPeerId(roomId));
-        })().catch((error) => {
-          console.warn("[peer] handle incoming call failed", error);
-        });
+        answerIncomingCall(call, hostPeerId(roomId));
       });
 
       peer.on("open", (id) => {
@@ -868,8 +879,8 @@ export function useRoomDataChannel({
       teardownPeerRef.current();
     };
   }, [
+    answerIncomingCall,
     bindConnection,
-    bindMediaCall,
     clearConnectRetryTimer,
     clearConnectTimeout,
     clearRetryTimer,

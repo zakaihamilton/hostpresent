@@ -11,7 +11,6 @@ import { PrimaryView } from "@/components/meeting/PrimaryView";
 import { Toolbar } from "@/components/meeting/Toolbar";
 import { VideoGallery } from "@/components/meeting/VideoGallery";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { DiagnosticsDialog } from "@/components/ui/DiagnosticsDialog/DiagnosticsDialog";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
 import { MeetingLoading } from "@/components/ui/MeetingLoading";
@@ -142,7 +141,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
-  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 
   const onRemoteParticipant = useCallback(
     (arg) => onRemoteParticipantRef.current?.(arg),
@@ -686,10 +684,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       </main>
 
       <ConfirmDialog {...dialogProps} />
-      <DiagnosticsDialog
-        open={diagnosticsOpen}
-        onClose={() => setDiagnosticsOpen(false)}
-      />
 
       <Toolbar
         isAudioMuted={isAudioMuted}
@@ -724,7 +718,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         onPauseRecording={pauseRecording}
         onResumeRecording={resumeRecording}
         onStopRecording={stopRecording}
-        onToggleDiagnostics={() => setDiagnosticsOpen(true)}
       />
     </div>
   );
