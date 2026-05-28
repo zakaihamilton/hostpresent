@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/BackButton";
 import { Link, Logo } from "@/components/Icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -9,7 +9,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./Header.module.css";
 
-export function Header({
+export const Header = memo(function Header({
   meetingDurationSeconds,
   roomId,
   isRecording,
@@ -131,4 +131,4 @@ export function Header({
       </div>
     </header>
   );
-}
+});

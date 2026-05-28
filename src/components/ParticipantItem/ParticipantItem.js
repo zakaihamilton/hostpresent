@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Mic, MicOff, Video, VideoOff } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
 import styles from "./ParticipantItem.module.css";
@@ -75,7 +76,7 @@ function AudioControl({ isAudioMuted, onMuteAudio }) {
   );
 }
 
-export function ParticipantItem({
+export const ParticipantItem = memo(function ParticipantItem({
   name,
   initial,
   avatarColor,
@@ -114,4 +115,4 @@ export function ParticipantItem({
       </div>
     </div>
   );
-}
+});

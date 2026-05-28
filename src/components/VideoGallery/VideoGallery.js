@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { Mic, MicOff, VideoOff } from "@/components/Icons";
 import { VideoTile } from "@/components/VideoTile";
 import styles from "./VideoGallery.module.css";
 
-export function VideoGallery({
+export const VideoGallery = memo(function VideoGallery({
   visible,
   screenStream,
   localStream,
@@ -43,4 +44,4 @@ export function VideoGallery({
       </div>
     </div>
   );
-}
+});

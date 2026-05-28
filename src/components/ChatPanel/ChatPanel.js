@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useId,
@@ -16,6 +17,10 @@ function formatTime(ts) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function participantInitial(name) {
+  return (name || "?").charAt(0).toUpperCase();
+}
+
 function RecipientDropdown({ participants, recipientId, onChange }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -25,10 +30,11 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
   const menuRef = useRef(null);
   const menuId = useId();
 
-  const selectedName =
+  const selectedRecipient =
     recipientId && recipientId !== "everyone"
-      ? (participants.find((p) => p.id === recipientId)?.name ?? "Everyone")
-      : "Everyone";
+      ? participants.find((p) => p.id === recipientId) ?? null
+      : null;
+  const selectedName = selectedRecipient?.name ?? "Everyone";
 
   useLayoutEffect(() => {
     setMounted(true);
@@ -94,9 +100,16 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
         aria-expanded={open}
         aria-label="Select message recipient"
       >
+        {selectedRecipient
+          ? <span className={styles.triggerAvatar}>
+              {participantInitial(selectedRecipient.name)}
+            </span>
+          : <span className={styles.triggerEveryoneIcon}>
+              <ChatIcon size={12} />
+            </span>}
         <span className={styles.dropdownLabel}>{selectedName}</span>
         <span className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}>
-          <ChevronDown size={14} />
+          <ChevronDown size={12} />
         </span>
       </button>
       {mounted && open
@@ -119,10 +132,20 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
                 onClick={() => handleSelect("")}
               >
                 <span className={styles.dropdownItemIcon}>
-                  {!recipientId || recipientId === "everyone" ? <span className={styles.dropdownCheckmark}>&#10003;</span> : null}
+                  <ChatIcon size={14} />
                 </span>
-                <span>Everyone</span>
+                <span className={styles.dropdownItemName}>Everyone</span>
+                {!recipientId || recipientId === "everyone"
+                  ? <span className={styles.dropdownCheckmark}>&#10003;</span>
+                  : null}
               </button>
+              {participants.length > 0
+                ? <div className={styles.dropdownSection}>
+                    <div className={styles.dropdownSectionLabel}>
+                      Participants
+                    </div>
+                  </div>
+                : null}
               {participants.map((p) => (
                 <button
                   key={p.id}
@@ -132,10 +155,13 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
                   className={`${styles.dropdownItem} ${recipientId === p.id ? styles.dropdownItemSelected : ""}`}
                   onClick={() => handleSelect(p.id)}
                 >
-                  <span className={styles.dropdownItemIcon}>
-                    {recipientId === p.id ? <span className={styles.dropdownCheckmark}>&#10003;</span> : null}
+                  <span className={styles.dropdownItemAvatar}>
+                    {participantInitial(p.name)}
                   </span>
-                  <span>{p.name}</span>
+                  <span className={styles.dropdownItemName}>{p.name}</span>
+                  {recipientId === p.id
+                    ? <span className={styles.dropdownCheckmark}>&#10003;</span>
+                    : null}
                 </button>
               ))}
             </div>,
@@ -146,7 +172,7 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
   );
 }
 
-export function ChatPanel({
+export const ChatPanel = memo(function ChatPanel({
   visible,
   messages,
   participants = [],
@@ -260,7 +286,7 @@ export function ChatPanel({
 
         <div className={styles.inputArea}>
           <div className={styles.recipientToggle}>
-            <span>To:</span>
+            <span className={styles.recipientLabel}>To:</span>
             <RecipientDropdown
               participants={participants}
               recipientId={recipientId}
@@ -299,4 +325,4 @@ export function ChatPanel({
       </aside>
     </div>
   );
-}
+});

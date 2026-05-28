@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import styles from "./PipView.module.css";
 
-export function PipView({
+export const PipView = memo(function PipView({
   stream,
   isVideoMuted,
   name,
@@ -28,4 +29,4 @@ export function PipView({
       <span className={styles.label}>{name}</span>
     </div>
   );
-}
+});

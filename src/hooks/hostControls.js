@@ -157,7 +157,7 @@ export function useHostControls({
       applyParticipantAudioMuted(participantId, participantType);
       signaling.send(
         createHostMuteAudioMessage({ participantId, participantType }),
-      );
+      ).catch(() => {});
     },
     [
       applyParticipantAudioMuted,
@@ -196,7 +196,7 @@ export function useHostControls({
       if (!confirmed) return;
 
       applyParticipantVideoMuted(participantId);
-      signaling.send(createHostMuteVideoMessage({ participantId }));
+      signaling.send(createHostMuteVideoMessage({ participantId })).catch(() => {});
     },
     [
       applyParticipantVideoMuted,
@@ -228,7 +228,7 @@ export function useHostControls({
     if (!confirmed) return;
 
     applyMuteAllAudio();
-    signaling.send(createHostMuteAllAudioMessage());
+    signaling.send(createHostMuteAllAudioMessage()).catch(() => {});
   }, [
     applyMuteAllAudio,
     audioList,
@@ -257,7 +257,7 @@ export function useHostControls({
     if (!confirmed) return;
 
     applyMuteAllVideo();
-    signaling.send(createHostMuteAllVideoMessage());
+    signaling.send(createHostMuteAllVideoMessage()).catch(() => {});
   }, [applyMuteAllVideo, confirm, enabled, videoParticipants, signaling]);
 
   useEffect(() => {

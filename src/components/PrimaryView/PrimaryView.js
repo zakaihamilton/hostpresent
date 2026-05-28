@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { MicOff, VideoOff } from "@/components/Icons";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./PrimaryView.module.css";
 
-export function PrimaryView({
+export const PrimaryView = memo(function PrimaryView({
   stream,
   label,
   isRecording,
@@ -48,4 +49,4 @@ export function PrimaryView({
       </div>
     </div>
   );
-}
+});

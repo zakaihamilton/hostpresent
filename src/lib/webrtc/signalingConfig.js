@@ -1,15 +1,27 @@
 import { getPeerJsConfigFromApi } from "./peerClient.js";
 
+const CONFIG_FETCH_TIMEOUT_MS = 10000;
+
 export async function fetchPeerJsConfig() {
-  const response = await fetch("/api/rooms/config", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error("Could not load signaling configuration.");
-  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CONFIG_FETCH_TIMEOUT_MS);
 
-  const data = await response.json();
-  if (!data.signalingServerConfigured) {
-    return null;
-  }
+  try {
+    const response = await fetch("/api/rooms/config", {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error("Could not load signaling configuration.");
+    }
 
-  return getPeerJsConfigFromApi(data.peerJs);
+    const data = await response.json();
+    if (!data.signalingServerConfigured) {
+      return null;
+    }
+
+    return getPeerJsConfigFromApi(data.peerJs);
+  } finally {
+    clearTimeout(timeout);
+  }
 }

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Pause, Play, Record, Stop } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
 import { LayoutControls } from "./LayoutControls";
@@ -10,7 +11,7 @@ function btnClass(...classes) {
   return [styles.btn, ...classes.filter(Boolean)].join(" ");
 }
 
-export function Toolbar({
+export const Toolbar = memo(function Toolbar({
   isAudioMuted,
   isVideoMuted,
   screenStream,
@@ -147,4 +148,4 @@ export function Toolbar({
       </div>
     </footer>
   );
-}
+});

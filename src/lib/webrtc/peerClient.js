@@ -172,7 +172,10 @@ let peerModulePromise = null;
 
 export function loadPeer() {
   if (!peerModulePromise) {
-    peerModulePromise = loadPeerModule();
+    peerModulePromise = loadPeerModule().catch((error) => {
+      peerModulePromise = null;
+      throw error;
+    });
   }
   return peerModulePromise;
 }

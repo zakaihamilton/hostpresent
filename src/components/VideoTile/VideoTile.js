@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import styles from "./VideoTile.module.css";
 
-export function VideoTile({
+export const VideoTile = memo(function VideoTile({
   stream,
   name,
   initial,
@@ -43,4 +44,4 @@ export function VideoTile({
       </div>
     </div>
   );
-}
+});

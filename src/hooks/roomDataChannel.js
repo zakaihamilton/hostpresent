@@ -269,8 +269,8 @@ export function useRoomDataChannel({
     [isHost],
   );
 
-  const placeOutgoingMediaCall = useCallback(
-    async (remoteId) => {
+  const enqueueMediaCall = useCallback(async (remoteId) => {
+    const next = syncQueueRef.current.then(async () => {
       const peer = peerRef.current;
       const outbound = await buildOutboundMediaStream(
         localStreamRef.current,
@@ -280,36 +280,43 @@ export function useRoomDataChannel({
 
       const call = peer.call(remoteId, outbound);
       bindMediaCall(call, remoteId);
-    },
-    [bindMediaCall],
-  );
+    });
+    syncQueueRef.current = next.catch(() => {});
+    return next;
+  }, [bindMediaCall]);
 
-  const syncAllOutboundTracks = useCallback(async () => {
-    const tasks = [];
-    for (const call of mediaCallsRef.current.values()) {
-      tasks.push(
-        syncOutboundTracks(
-          call,
-          localStreamRef.current,
-          screenStreamRef.current,
-        ),
-      );
-    }
-    await Promise.all(tasks);
+  const syncQueueRef = useRef(Promise.resolve());
 
-    if (isHost) {
-      for (const remoteId of connectionsRef.current.keys()) {
-        await placeOutgoingMediaCall(remoteId);
+  const enqueueSync = useCallback(async () => {
+    const next = syncQueueRef.current.then(async () => {
+      const tasks = [];
+      for (const call of mediaCallsRef.current.values()) {
+        tasks.push(
+          syncOutboundTracks(
+            call,
+            localStreamRef.current,
+            screenStreamRef.current,
+          ),
+        );
       }
-    }
-  }, [isHost, placeOutgoingMediaCall]);
+      await Promise.all(tasks);
+
+      if (isHost) {
+        for (const remoteId of connectionsRef.current.keys()) {
+          await enqueueMediaCall(remoteId);
+        }
+      }
+    });
+    syncQueueRef.current = next.catch(() => {});
+    return next;
+  }, [isHost, enqueueMediaCall]);
 
   useEffect(() => {
     if (!localStream && !screenStream) return undefined;
-    syncAllOutboundTracks().catch((error) => {
+    enqueueSync().catch((error) => {
       console.warn("[peer] syncAllOutboundTracks failed", error);
     });
-  }, [localStream, screenStream, syncAllOutboundTracks]);
+  }, [localStream, screenStream, enqueueSync]);
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
@@ -319,7 +326,7 @@ export function useRoomDataChannel({
         if (isHost) {
           sendOnConnection(conn, createHostPresencePayload());
           onRemoteParticipantRef.current?.({ id: remoteId, name: remoteName });
-          placeOutgoingMediaCall(remoteId).catch((error) => {
+          enqueueMediaCall(remoteId).catch((error) => {
             console.warn("[peer] placeOutgoingMediaCall failed", error);
           });
         }
@@ -392,7 +399,7 @@ export function useRoomDataChannel({
       createHostPresencePayload,
       isHost,
       notifyHandlers,
-      placeOutgoingMediaCall,
+      enqueueMediaCall,
       updateConnectedState,
     ],
   );
@@ -591,7 +598,6 @@ export function useRoomDataChannel({
       return undefined;
     }
 
-    let destroyed = false;
     destroyedRef.current = false;
 
     const teardownPeer = () => {
@@ -615,7 +621,7 @@ export function useRoomDataChannel({
     teardownPeerRef.current = teardownPeer;
 
     const startHostPeer = (Peer) => {
-      if (destroyed) return;
+      if (destroyedRef.current) return;
 
       teardownPeer();
       scheduleConnectTimeout();
@@ -624,7 +630,7 @@ export function useRoomDataChannel({
       peerRef.current = peer;
 
       peer.on("open", () => {
-        if (destroyed) return;
+        if (destroyedRef.current) return;
         signalingOpenRef.current = true;
         clearConnectTimeout();
         setConnectionError(null);
@@ -632,6 +638,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("connection", (conn) => {
+        if (destroyedRef.current) return;
         const remoteId = conn.peer;
         connectionsRef.current.set(remoteId, conn);
         bindConnection(conn, { remoteId, remoteName: "Guest" });
@@ -643,11 +650,14 @@ export function useRoomDataChannel({
       });
 
       peer.on("call", (call) => {
+        if (destroyedRef.current) return;
         (async () => {
+          if (destroyedRef.current) return;
           const outbound = await buildOutboundMediaStream(
             localStreamRef.current,
             screenStreamRef.current,
           );
+          if (destroyedRef.current) return;
           if (outbound) {
             call.answer(outbound);
           } else {
@@ -660,7 +670,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("error", (error) => {
-        if (destroyed) return;
+        if (destroyedRef.current) return;
         console.warn("[peer] host error", error);
 
         if (error?.type === "unavailable-id") {
@@ -689,7 +699,7 @@ export function useRoomDataChannel({
     };
 
     const startParticipantPeer = (Peer) => {
-      if (destroyed) return;
+      if (destroyedRef.current) return;
 
       teardownPeer();
       scheduleConnectTimeout();
@@ -698,7 +708,7 @@ export function useRoomDataChannel({
       peerRef.current = peer;
 
       const connectToHost = () => {
-        if (destroyed || !peerRef.current || hostConnectionRef.current?.open) {
+        if (destroyedRef.current || !peerRef.current || hostConnectionRef.current?.open) {
           return;
         }
 
@@ -713,7 +723,7 @@ export function useRoomDataChannel({
         });
 
         conn.on("error", (error) => {
-          if (destroyed || destroyedRef.current) return;
+          if (destroyedRef.current) return;
           hostConnectionRef.current = null;
           setConnectionError(peerErrorMessage(error, { isHost: false }));
           clearConnectRetryTimer();
@@ -725,11 +735,14 @@ export function useRoomDataChannel({
       };
 
       peer.on("call", (call) => {
+        if (destroyedRef.current) return;
         (async () => {
+          if (destroyedRef.current) return;
           const outbound = await buildOutboundMediaStream(
             localStreamRef.current,
             screenStreamRef.current,
           );
+          if (destroyedRef.current) return;
           if (outbound) {
             call.answer(outbound);
           } else {
@@ -742,7 +755,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("open", (id) => {
-        if (destroyed) return;
+        if (destroyedRef.current) return;
         signalingOpenRef.current = true;
         clearConnectTimeout();
         localParticipantIdRef.current = id;
@@ -753,7 +766,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("error", (error) => {
-        if (destroyed) return;
+        if (destroyedRef.current) return;
         console.warn("[peer] participant error", error);
 
         if (error?.type === "peer-unavailable") {
@@ -777,7 +790,7 @@ export function useRoomDataChannel({
     };
 
     void loadPeer().then((Peer) => {
-      if (destroyed) return;
+      if (destroyedRef.current) return;
       if (isHost) {
         startHostPeer(Peer);
       } else {
@@ -786,7 +799,6 @@ export function useRoomDataChannel({
     });
 
     return () => {
-      destroyed = true;
       destroyedRef.current = true;
       clearRetryTimer();
       clearConnectRetryTimer();

@@ -60,14 +60,18 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     error: sessionError,
   } = useRoomSession({ role, token, enabled: Boolean(token) });
 
-  const formattedRoomId = formatJoinCode(
-    routeJoinCode ?? roomState?.joinCode ?? "",
+  const formattedRoomId = useMemo(
+    () => formatJoinCode(routeJoinCode ?? roomState?.joinCode ?? ""),
+    [routeJoinCode, roomState?.joinCode],
   );
 
-  const inviteLink =
-    isHost && formattedRoomId
-      ? buildParticipantInviteLink(routeJoinCode ?? roomState?.joinCode ?? "")
-      : "";
+  const inviteLink = useMemo(
+    () =>
+      isHost && formattedRoomId
+        ? buildParticipantInviteLink(routeJoinCode ?? roomState?.joinCode ?? "")
+        : "",
+    [isHost, formattedRoomId, routeJoinCode, roomState?.joinCode],
+  );
 
   const [inviteBarVisible, setInviteBarVisible] = useState(false);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
@@ -87,7 +91,10 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     loadParticipantMode(),
   );
 
-  const resolvedDisplayName = resolveDisplayName(displayNameInput);
+  const resolvedDisplayName = useMemo(
+    () => resolveDisplayName(displayNameInput),
+    [displayNameInput],
+  );
   const inviteCopyTimerRef = useRef(null);
 
   const { meetingSeconds, recordingSeconds, resetRecordingTimer } =
@@ -98,6 +105,19 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     });
 
   const { confirm, dialogProps } = useConfirmDialog();
+
+  const onRemoteParticipant = useCallback(
+    (arg) => onRemoteParticipantRef.current?.(arg),
+    [],
+  );
+  const onRemoteHostStream = useCallback(
+    (arg) => onRemoteHostStreamRef.current?.(arg),
+    [],
+  );
+  const onChatMessage = useCallback(
+    (message) => onChatMessageRef.current?.(message),
+    [],
+  );
 
   const roomConnection = useRoomDataChannel({
     role,
@@ -110,13 +130,9 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     hostMode: isHost ? participantMode : undefined,
     localStream: null,
     screenStream: null,
-    onRemoteParticipant: isHost
-      ? (arg) => onRemoteParticipantRef.current?.(arg)
-      : undefined,
-    onRemoteHostStream: isHost
-      ? undefined
-      : (arg) => onRemoteHostStreamRef.current?.(arg),
-    onChatMessage: (message) => onChatMessageRef.current?.(message),
+    onRemoteParticipant: isHost ? onRemoteParticipant : undefined,
+    onRemoteHostStream: isHost ? undefined : onRemoteHostStream,
+    onChatMessage,
   });
 
   roomConnectionRef.current = roomConnection;
@@ -288,6 +304,42 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     saveParticipantMode(mode);
   }, []);
 
+  const handleToggleGallery = useCallback(() => {
+    setIsGalleryVisible((v) => !v);
+  }, []);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarVisible((v) => !v);
+  }, []);
+
+  const handleTogglePip = useCallback(() => {
+    setIsPipVisible((v) => !v);
+  }, []);
+
+  const handleToggleChat = useCallback(() => {
+    setIsChatVisible((v) => !v);
+  }, []);
+
+  const handleShowInviteBar = useCallback(() => {
+    setInviteBarVisible(true);
+  }, []);
+
+  const handleDismissInviteBar = useCallback(() => {
+    setInviteBarVisible(false);
+  }, []);
+
+  const handleCloseSidebar = useCallback(() => {
+    setIsSidebarVisible(false);
+  }, []);
+
+  const handleCloseChat = useCallback(() => {
+    setIsChatVisible(false);
+  }, []);
+
+  const handleDismissError = useCallback(() => {
+    setErrorMsg("");
+  }, []);
+
   const handleCopyInviteLink = async () => {
     if (!inviteLink) return;
 
@@ -324,17 +376,33 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     return list;
   }, [isHost, videoParticipants, audioList, hostDisplayName, peerParticipants]);
 
-  const activeMainStream = screenStream || localStream;
-  const viewingHostStream = !isHost && hostStream;
-  const primaryStream = viewingHostStream ? hostStream : activeMainStream;
-  const primaryLabel = viewingHostStream
-    ? hostDisplayName
-    : screenStream
-      ? isScreenAudioShared
-        ? "You are sharing your screen with audio"
-        : "You are sharing your screen"
-      : resolvedDisplayName;
-  const primaryMuted = !viewingHostStream;
+  const primaryViewProps = useMemo(() => {
+    const viewingHostStream = !isHost && Boolean(hostStream);
+    const activeMain = screenStream || localStream;
+    return {
+      stream: viewingHostStream ? hostStream : activeMain,
+      label: viewingHostStream
+        ? hostDisplayName
+        : screenStream
+          ? isScreenAudioShared
+            ? "You are sharing your screen with audio"
+            : "You are sharing your screen"
+          : resolvedDisplayName,
+      isMuted: !viewingHostStream,
+      isAudioMuted: viewingHostStream ? hostAudioMuted : false,
+      isVideoMuted: viewingHostStream ? hostVideoMuted : false,
+    };
+  }, [
+    hostStream,
+    isHost,
+    screenStream,
+    localStream,
+    hostDisplayName,
+    isScreenAudioShared,
+    resolvedDisplayName,
+    hostAudioMuted,
+    hostVideoMuted,
+  ]);
 
   if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
     return <MeetingLoading message="Loading room\u2026" />;
@@ -391,7 +459,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         backLabel={isHost ? "Back to welcome" : "Back to join screen"}
         onShowInviteLink={
           isHost && inviteLink && !inviteBarVisible
-            ? () => setInviteBarVisible(true)
+            ? handleShowInviteBar
             : null
         }
       />
@@ -411,7 +479,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
             inviteLink={inviteLink}
             inviteCopyMessage={inviteCopyMessage}
             onCopyInviteLink={handleCopyInviteLink}
-            onDismiss={() => setInviteBarVisible(false)}
+            onDismiss={handleDismissInviteBar}
           />
         : null}
 
@@ -421,12 +489,12 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
               type="button"
               className={styles.sidebarBackdrop}
               aria-label="Close participants panel"
-              onClick={() => setIsSidebarVisible(false)}
+              onClick={handleCloseSidebar}
             />
           : null}
 
         <div className={styles.stage}>
-          <ErrorBanner message={errorMsg} onDismiss={() => setErrorMsg("")} />
+          <ErrorBanner message={errorMsg} onDismiss={handleDismissError} />
 
           <RecordingDownloadBanner
             downloadState={downloadState}
@@ -446,11 +514,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
 
           <div className={styles.videoStage}>
             <PrimaryView
-              stream={primaryStream}
-              label={primaryLabel}
-              isMuted={primaryMuted}
-              isAudioMuted={viewingHostStream ? hostAudioMuted : false}
-              isVideoMuted={viewingHostStream ? hostVideoMuted : false}
+              {...primaryViewProps}
               isRecording={isRecording}
               isRecordingPaused={isRecordingPaused}
               recordingDurationSeconds={recordingSeconds}
@@ -488,7 +552,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
                     isHost={isHost}
                     localDisplayName={displayNameInput}
                     localParticipantMode={participantMode}
-                    onClose={() => setIsSidebarVisible(false)}
+                    onClose={handleCloseSidebar}
                     onMuteParticipantVideo={muteParticipantVideo}
                     onMuteParticipantAudio={muteParticipantAudio}
                     onMuteAllVideo={muteAllVideo}
@@ -504,7 +568,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
                     flex
                     messages={chatMessages}
                     participants={chatParticipants}
-                    onClose={() => setIsChatVisible(false)}
+                    onClose={handleCloseChat}
                     onSendMessage={handleSendChatMessage}
                   />
                 </div>
@@ -525,7 +589,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
                 isHost={isHost}
                 localDisplayName={displayNameInput}
                 localParticipantMode={participantMode}
-                onClose={() => setIsSidebarVisible(false)}
+                onClose={handleCloseSidebar}
                 onMuteParticipantVideo={muteParticipantVideo}
                 onMuteParticipantAudio={muteParticipantAudio}
                 onMuteAllVideo={muteAllVideo}
@@ -538,7 +602,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
                 visible={isChatVisible}
                 messages={chatMessages}
                 participants={chatParticipants}
-                onClose={() => setIsChatVisible(false)}
+                onClose={handleCloseChat}
                 onSendMessage={handleSendChatMessage}
               />
             </>}
@@ -571,10 +635,10 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         onToggleVideo={toggleVideo}
         onToggleScreenShare={toggleScreenShare}
         onShareScreenAudioChange={setShareScreenAudioPreference}
-        onToggleGallery={() => setIsGalleryVisible(!isGalleryVisible)}
-        onToggleSidebar={() => setIsSidebarVisible(!isSidebarVisible)}
-        onTogglePip={() => setIsPipVisible(!isPipVisible)}
-        onToggleChat={() => setIsChatVisible(!isChatVisible)}
+        onToggleGallery={handleToggleGallery}
+        onToggleSidebar={handleToggleSidebar}
+        onTogglePip={handleTogglePip}
+        onToggleChat={handleToggleChat}
         onStartRecording={startRecording}
         onPauseRecording={pauseRecording}
         onResumeRecording={resumeRecording}

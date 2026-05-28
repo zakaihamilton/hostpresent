@@ -1,6 +1,7 @@
+import { memo } from "react";
 import styles from "./ConnectionBanner.module.css";
 
-export function ConnectionBanner({
+export const ConnectionBanner = memo(function ConnectionBanner({
   isHost,
   hostPresent,
   connectionError,
@@ -39,4 +40,4 @@ export function ConnectionBanner({
         : null}
     </>
   );
-}
+});

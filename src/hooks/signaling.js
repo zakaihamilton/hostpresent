@@ -17,6 +17,7 @@ export function useSignaling({ token, enabled = true }) {
   const handlersRef = useRef(new Set());
   const eventSourceRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  const destroyedRef = useRef(false);
   const [status, setStatus] = useState(SIGNALING_STATUS.DISCONNECTED);
 
   const notifyHandlers = useCallback((message) => {
@@ -31,6 +32,7 @@ export function useSignaling({ token, enabled = true }) {
   }, []);
 
   const disconnect = useCallback(() => {
+    destroyedRef.current = true;
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
@@ -51,6 +53,7 @@ export function useSignaling({ token, enabled = true }) {
     }
 
     disconnect();
+    destroyedRef.current = false;
     setStatus(SIGNALING_STATUS.CONNECTING);
 
     const streamUrl = `/api/rooms/stream?token=${encodeURIComponent(token)}`;
@@ -58,10 +61,12 @@ export function useSignaling({ token, enabled = true }) {
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
+      if (destroyedRef.current) return;
       setStatus(SIGNALING_STATUS.CONNECTED);
     };
 
     eventSource.addEventListener("signaling", (event) => {
+      if (destroyedRef.current) return;
       try {
         const message = parseSignalingMessage(event.data);
         if (isSignalingMessage(message)) {
@@ -73,6 +78,7 @@ export function useSignaling({ token, enabled = true }) {
     });
 
     eventSource.onerror = () => {
+      if (destroyedRef.current) return;
       setStatus(SIGNALING_STATUS.ERROR);
       eventSource.close();
       eventSourceRef.current = null;

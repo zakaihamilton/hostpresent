@@ -1,10 +1,11 @@
 "use client";
 
+import { memo } from "react";
 import { X } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
 import styles from "./InviteBar.module.css";
 
-export function InviteBar({
+export const InviteBar = memo(function InviteBar({
   inviteLink,
   inviteCopyMessage,
   onCopyInviteLink,
@@ -50,4 +51,4 @@ export function InviteBar({
       </div>
     </div>
   );
-}
+});

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import styles from "./RecordingDownloadBanner.module.css";
 
 const PHASE_LABELS = {
@@ -7,7 +8,7 @@ const PHASE_LABELS = {
   complete: "Download started",
 };
 
-export function RecordingDownloadBanner({ downloadState, onDismiss }) {
+export const RecordingDownloadBanner = memo(function RecordingDownloadBanner({ downloadState, onDismiss }) {
   if (!downloadState) return null;
 
   const { phase, progress, filename } = downloadState;
@@ -44,4 +45,4 @@ export function RecordingDownloadBanner({ downloadState, onDismiss }) {
       )}
     </output>
   );
-}
+});

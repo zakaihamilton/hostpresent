@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
-export function VideoPlayer({
+export const VideoPlayer = memo(function VideoPlayer({
   stream,
   isMuted = false,
   autoPlay = true,
@@ -53,4 +53,4 @@ export function VideoPlayer({
       muted={isMuted}
     />
   );
-}
+});

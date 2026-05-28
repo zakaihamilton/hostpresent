@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { MicOff, VideoOff, X } from "@/components/Icons";
 import { ParticipantItem } from "@/components/ParticipantItem";
 import { Tooltip } from "@/components/Tooltip";
@@ -135,6 +135,41 @@ function buildParticipantItems({
   return items;
 }
 
+const ParticipantRow = memo(function ParticipantRow({
+  item,
+  isHost,
+  onMuteParticipantVideo,
+  onMuteParticipantAudio,
+}) {
+  if (item.type === "section") {
+    return <div className={styles.sectionLabel}>{item.label}</div>;
+  }
+
+  const isHostItem = item.type === "host";
+  const isSelfItem = item.id === "self";
+  const isRemotePeer = item.type === "peer" || item.type === "host-remote";
+  const canMute = isHost && !isHostItem && !isSelfItem && !isRemotePeer;
+
+  return (
+    <ParticipantItem
+      name={item.name}
+      initial={item.initial}
+      avatarColor={item.avatarColor}
+      avatarFontSize={item.avatarFontSize}
+      isVideoMuted={item.isVideoMuted}
+      isAudioMuted={item.isAudioMuted}
+      hasVideo={item.hasVideo}
+      modeLabel={item.modeLabel}
+      onMuteVideo={canMute
+        ? () => onMuteParticipantVideo(item.id)
+        : undefined}
+      onMuteAudio={canMute
+        ? () => onMuteParticipantAudio(item.id, item.type)
+        : undefined}
+    />
+  );
+});
+
 function getParticipantItemSize(_index, item) {
   return item.type === "section"
     ? SECTION_LABEL_HEIGHT
@@ -145,7 +180,7 @@ function getParticipantItemKey(item) {
   return item.id;
 }
 
-export function ParticipantsSidebar({
+export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   visible,
   audioList,
   videoParticipants,
@@ -207,38 +242,14 @@ export function ParticipantsSidebar({
   );
 
   const renderItem = useCallback(
-    (item) => {
-      if (item.type === "section") {
-        return <div className={styles.sectionLabel}>{item.label}</div>;
-      }
-
-      const isHostItem = item.type === "host";
-      const isSelfItem = item.id === "self";
-      const isRemotePeer = item.type === "peer" || item.type === "host-remote";
-
-      return (
-        <ParticipantItem
-          name={item.name}
-          initial={item.initial}
-          avatarColor={item.avatarColor}
-          avatarFontSize={item.avatarFontSize}
-          isVideoMuted={item.isVideoMuted}
-          isAudioMuted={item.isAudioMuted}
-          hasVideo={item.hasVideo}
-          modeLabel={item.modeLabel}
-          onMuteVideo={
-            isHost && !isHostItem && !isSelfItem && !isRemotePeer
-              ? () => onMuteParticipantVideo(item.id)
-              : undefined
-          }
-          onMuteAudio={
-            isHost && !isHostItem && !isSelfItem && !isRemotePeer
-              ? () => onMuteParticipantAudio(item.id, item.type)
-              : undefined
-          }
-        />
-      );
-    },
+    (item) => (
+      <ParticipantRow
+        item={item}
+        isHost={isHost}
+        onMuteParticipantVideo={onMuteParticipantVideo}
+        onMuteParticipantAudio={onMuteParticipantAudio}
+      />
+    ),
     [isHost, onMuteParticipantAudio, onMuteParticipantVideo],
   );
 
@@ -307,4 +318,4 @@ export function ParticipantsSidebar({
       </aside>
     </div>
   );
-}
+});
