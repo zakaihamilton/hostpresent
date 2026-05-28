@@ -106,3 +106,22 @@
     font-size: 1.25rem;
   }
 }
+
+@media (max-width: 375px) {
+  .box {
+    width: 2rem;
+    height: 2.625rem;
+    font-size: 1rem;
+    border-radius: 6px;
+  }
+
+  .group {
+    gap: 0.25rem;
+  }
+
+  .separator {
+    width: 0.625rem;
+    font-size: 1rem;
+  }
+}
+

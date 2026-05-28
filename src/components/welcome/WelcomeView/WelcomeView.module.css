@@ -107,6 +107,17 @@
   }
 }
 
+@media (max-width: 375px) {
+  .card {
+    padding: 1.25rem 1rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+}
+
+
 @media (max-height: 500px) and (orientation: landscape) {
   .page {
     padding-top: max(0.75rem, env(safe-area-inset-top, 0));
