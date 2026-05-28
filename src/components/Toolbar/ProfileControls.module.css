@@ -73,6 +73,68 @@
   margin-top: -0.35rem;
 }
 
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.saveBtn {
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: white;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.saveBtn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.saveBtn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.saveBtn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.cancelBtn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--text-main);
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.cancelBtn:hover {
+  background: var(--bg-hover);
+  transform: translateY(-1px);
+}
+
+.cancelBtn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.cancelBtn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .modeHeading {
   font-size: 0.8125rem;
   font-weight: 600;

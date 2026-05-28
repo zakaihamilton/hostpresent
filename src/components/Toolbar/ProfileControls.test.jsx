@@ -27,6 +27,20 @@ describe("ProfileControls", () => {
 
   it("opens a popup to edit the display name", async () => {
     const user = userEvent.setup();
+
+    render(
+      <ProfileControls
+        displayName=""
+        onDisplayNameChange={() => {}}
+      />,
+    );
+
+    await user.click(getProfileButton());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("saves the name when the save button is clicked", async () => {
+    const user = userEvent.setup();
     const onDisplayNameChange = jest.fn();
 
     render(
@@ -37,10 +51,28 @@ describe("ProfileControls", () => {
     );
 
     await user.click(getProfileButton());
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-
     await user.type(screen.getByLabelText("Display name"), "Sam");
-    expect(onDisplayNameChange).toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onDisplayNameChange).toHaveBeenCalledWith("Sam");
+  });
+
+  it("does not save when cancel is clicked", async () => {
+    const user = userEvent.setup();
+    const onDisplayNameChange = jest.fn();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={onDisplayNameChange}
+      />,
+    );
+
+    await user.click(getProfileButton());
+    await user.type(screen.getByLabelText("Display name"), "Sam");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onDisplayNameChange).not.toHaveBeenCalled();
   });
 
   it("includes participation mode controls for participants", async () => {

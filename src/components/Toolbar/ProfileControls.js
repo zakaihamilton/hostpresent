@@ -57,6 +57,7 @@ export function ProfileControls({
   const [popupCoords, setPopupCoords] = useState({ top: 0, left: 0 });
   const [popupPositioned, setPopupPositioned] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [localDisplayName, setLocalDisplayName] = useState(displayName);
   const clusterRef = useRef(null);
   const anchorRef = useRef(null);
   const popupRef = useRef(null);
@@ -73,6 +74,12 @@ export function ProfileControls({
     const popupRect = popup.getBoundingClientRect();
     setPopupCoords(computePopupPosition(anchorRect, popupRect));
   };
+
+  useEffect(() => {
+    if (popupOpen) {
+      setLocalDisplayName(displayName);
+    }
+  }, [popupOpen, displayName]);
 
   useLayoutEffect(() => {
     setMounted(true);
@@ -182,11 +189,31 @@ export function ProfileControls({
               <DisplayNameField
                 id="meeting-display-name"
                 label="Display name"
-                value={displayName}
-                onChange={onDisplayNameChange}
+                value={localDisplayName}
+                onChange={setLocalDisplayName}
                 placeholder="Enter your name"
                 className={styles.nameField}
               />
+
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={() => setPopupOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.saveBtn}
+                  onClick={() => {
+                    onDisplayNameChange(localDisplayName);
+                    setPopupOpen(false);
+                  }}
+                >
+                  Save
+                </button>
+              </div>
 
               {onParticipantModeChange && participantMode
                 ? <>
