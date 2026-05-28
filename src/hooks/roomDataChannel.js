@@ -188,6 +188,7 @@ export function useRoomDataChannel({
     if (typeof window === "undefined") return;
 
     clearConnectTimeout();
+    const timeoutMs = isHost ? 10000 : SIGNALING_CONNECT_TIMEOUT_MS;
     connectTimeoutRef.current = window.setTimeout(() => {
       if (destroyedRef.current) return;
       if (signalingOpenRef.current) {
@@ -209,7 +210,7 @@ export function useRoomDataChannel({
           ? hostSignalingTimeoutError()
           : participantSignalingTimeoutError();
       });
-    }, SIGNALING_CONNECT_TIMEOUT_MS);
+    }, timeoutMs);
   }, [clearConnectTimeout, isHost]);
 
   const disconnect = useCallback(() => {
