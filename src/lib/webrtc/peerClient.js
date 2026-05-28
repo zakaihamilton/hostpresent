@@ -145,6 +145,15 @@ export function buildPeerJsConfig(host = getSignalingServerHost()) {
     port: readSignalingPortFromEnv(),
     path: getSignalingServerPath(),
     secure: readSignalingSecureFromEnv(),
+    config: {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
+      ],
+    },
   };
 }
 
@@ -156,6 +165,7 @@ export function getPeerJsConfigFromApi(payload) {
     port: Number(payload?.port ?? DEFAULT_SIGNALING_PORT),
     path: normalizeSignalingPath(payload?.path),
     secure: payload?.secure !== false,
+    config: payload?.config ?? undefined,
   };
 }
 

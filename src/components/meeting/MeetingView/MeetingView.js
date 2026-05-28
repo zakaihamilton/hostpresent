@@ -127,6 +127,9 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const { confirm, dialogProps } = useConfirmDialog();
 
+  const [localStream, setLocalStream] = useState(null);
+  const [screenStream, setScreenStream] = useState(null);
+
   const onRemoteParticipant = useCallback(
     (arg) => onRemoteParticipantRef.current?.(arg),
     [],
@@ -149,8 +152,8 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     hostAudioMuted: false,
     hostVideoMuted: false,
     hostMode: isHost ? participantMode : undefined,
-    localStream: null,
-    screenStream: null,
+    localStream,
+    screenStream,
     onRemoteParticipant: isHost ? onRemoteParticipant : undefined,
     onRemoteHostStream: isHost ? undefined : onRemoteHostStream,
     onChatMessage,
@@ -191,8 +194,6 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   }, []);
 
   const {
-    localStream,
-    screenStream,
     isAudioMuted,
     isVideoMuted,
     errorMsg,
@@ -209,7 +210,14 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
     availableCameras,
     selectedCamera,
     switchCamera,
-  } = MediaControls({ isHost, roomConnection });
+  } = MediaControls({
+    isHost,
+    roomConnection,
+    localStream,
+    setLocalStream,
+    screenStream,
+    setScreenStream,
+  });
 
   const {
     videoParticipants,

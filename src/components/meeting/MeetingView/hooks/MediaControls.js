@@ -14,9 +14,11 @@ export function MediaControls({
   isHost,
   roomConnection,
   streamListenerCleanupsRef,
+  localStream,
+  setLocalStream,
+  screenStream,
+  setScreenStream,
 }) {
-  const [localStream, setLocalStream] = useState(null);
-  const [screenStream, setScreenStream] = useState(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
