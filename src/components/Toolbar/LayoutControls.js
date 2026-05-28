@@ -1,4 +1,4 @@
-import { Gallery, Users } from "@/components/Icons";
+import { Gallery, Pip, Users } from "@/components/Icons";
 import { Tooltip } from "@/components/Tooltip";
 import styles from "./LayoutControls.module.css";
 
@@ -9,8 +9,10 @@ function btnClass(...classes) {
 export function LayoutControls({
   isGalleryVisible,
   isSidebarVisible,
+  isPipVisible,
   onToggleGallery,
   onToggleSidebar,
+  onTogglePip,
 }) {
   return (
     <div className={styles.cluster}>
@@ -38,7 +40,7 @@ export function LayoutControls({
         <button
           type="button"
           className={btnClass(
-            styles.participantsBtn,
+            styles.sidebarBtn,
             isSidebarVisible && styles.btnActive,
           )}
           onClick={onToggleSidebar}
@@ -47,6 +49,22 @@ export function LayoutControls({
           }
         >
           <Users />
+        </button>
+      </Tooltip>
+
+      <Tooltip
+        text={isPipVisible ? "Hide Self-View" : "Show Self-View"}
+      >
+        <button
+          type="button"
+          className={btnClass(
+            styles.pipBtn,
+            isPipVisible && styles.btnActive,
+          )}
+          onClick={onTogglePip}
+          aria-label={isPipVisible ? "Hide self-view" : "Show self-view"}
+        >
+          <Pip />
         </button>
       </Tooltip>
     </div>

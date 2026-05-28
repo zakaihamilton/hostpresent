@@ -47,7 +47,11 @@
   border-right: none;
 }
 
-.participantsBtn {
+.sidebarBtn {
+  border-right: none;
+}
+
+.pipBtn {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 

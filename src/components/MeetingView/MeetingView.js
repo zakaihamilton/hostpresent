@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { MeetingJoinError } from "@/components/MeetingJoinError";
 import { MeetingLoading } from "@/components/MeetingLoading";
 import { ParticipantsSidebar } from "@/components/ParticipantsSidebar";
+import { PipView } from "@/components/PipView";
 import { PrimaryView } from "@/components/PrimaryView";
 import { RecordingDownloadBanner } from "@/components/RecordingDownloadBanner";
 import { Toolbar } from "@/components/Toolbar";
@@ -66,6 +67,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
   const [isGalleryVisible, setIsGalleryVisible] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isPipVisible, setIsPipVisible] = useState(false);
   const [timersEnabled, setTimersEnabled] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState(() =>
     loadDisplayName(),
@@ -391,6 +393,15 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
               recordingDurationSeconds={recordingSeconds}
             />
           </div>
+
+          {isPipVisible && localStream && (
+            <PipView
+              stream={localStream}
+              isVideoMuted={isVideoMuted}
+              name={resolvedDisplayName}
+              initial={resolvedDisplayName?.charAt(0)}
+            />
+          )}
         </div>
 
         <ParticipantsSidebar
@@ -426,6 +437,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         isScreenAudioShared={isScreenAudioShared}
         isGalleryVisible={isGalleryVisible}
         isSidebarVisible={isSidebarVisible}
+        isPipVisible={isPipVisible}
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         displayName={displayNameInput}
@@ -445,6 +457,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
         onShareScreenAudioChange={setShareScreenAudioPreference}
         onToggleGallery={() => setIsGalleryVisible(!isGalleryVisible)}
         onToggleSidebar={() => setIsSidebarVisible(!isSidebarVisible)}
+        onTogglePip={() => setIsPipVisible(!isPipVisible)}
         onStartRecording={startRecording}
         onPauseRecording={pauseRecording}
         onResumeRecording={resumeRecording}

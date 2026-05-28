@@ -287,3 +287,14 @@ export function Gallery() {
     </Icon>
   );
 }
+
+export function Pip() {
+  return (
+    <Icon title="Self-view">
+      {/* Main outer screen (stroke only) */}
+      <rect width="16" height="12" x="4" y="6" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+      {/* Inner PiP window (solid fill) */}
+      <rect width="7" height="5" x="12" y="12" rx="1" fill="currentColor" />
+    </Icon>
+  );
+}

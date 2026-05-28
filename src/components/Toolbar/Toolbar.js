@@ -18,6 +18,7 @@ export function Toolbar({
   isScreenAudioShared,
   isGalleryVisible,
   isSidebarVisible,
+  isPipVisible,
   isRecording,
   isRecordingPaused,
   displayName = "",
@@ -33,6 +34,7 @@ export function Toolbar({
   onShareScreenAudioChange,
   onToggleGallery,
   onToggleSidebar,
+  onTogglePip,
   onStartRecording,
   onPauseRecording,
   onResumeRecording,
@@ -82,8 +84,10 @@ export function Toolbar({
         <LayoutControls
           isGalleryVisible={isGalleryVisible}
           isSidebarVisible={isSidebarVisible}
+          isPipVisible={isPipVisible}
           onToggleGallery={onToggleGallery}
           onToggleSidebar={onToggleSidebar}
+          onTogglePip={onTogglePip}
         />
       </div>
 

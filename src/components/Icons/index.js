@@ -10,6 +10,7 @@ export {
   MicOff,
   Moon,
   Pause,
+  Pip,
   Play,
   Record,
   ScreenShare,
