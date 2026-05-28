@@ -320,7 +320,7 @@ export function useRoomDataChannel({
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
-      conn.on("open", () => {
+      const handleOpen = () => {
         if (destroyedRef.current) return;
         updateConnectedState(1);
         if (isHost) {
@@ -330,7 +330,13 @@ export function useRoomDataChannel({
             console.warn("[peer] placeOutgoingMediaCall failed", error);
           });
         }
-      });
+      };
+
+      if (conn.open) {
+        handleOpen();
+      } else {
+        conn.on("open", handleOpen);
+      }
 
       conn.on("close", () => {
         if (destroyedRef.current) return;
