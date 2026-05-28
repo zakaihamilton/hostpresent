@@ -17,8 +17,27 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
-export async function fetchIceServers() {
-  const response = await fetchWithTimeout("/api/media/ice-config");
+export async function fetchIceServers(sessionToken) {
+  if (!sessionToken) {
+    throw new Error("Could not load secure streaming configuration.");
+  }
+
+  const stateResponse = await fetchWithTimeout(
+    `/api/rooms/state?token=${encodeURIComponent(sessionToken)}`,
+  );
+  if (!stateResponse.ok) {
+    throw new Error("Could not load secure streaming configuration.");
+  }
+
+  const state = await stateResponse.json();
+  const roomToken = state?.iceRoomToken;
+  if (!roomToken) {
+    throw new Error("Could not load secure streaming configuration.");
+  }
+
+  const response = await fetchWithTimeout(
+    `/api/media/ice-config?roomToken=${encodeURIComponent(roomToken)}`,
+  );
   if (!response.ok) {
     throw new Error("Could not load secure streaming configuration.");
   }

@@ -9,6 +9,7 @@ import {
   ROOM_STATUS,
   restoreRoomFromToken,
 } from "@/lib/room/store";
+import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import { ROOM_ROLE } from "@/lib/room/tokens";
 
 export const runtime = "nodejs";
@@ -33,6 +34,8 @@ export async function GET(request) {
     });
   }
 
+  const iceRoomToken = signIceRoomToken({ roomId: verified.roomId });
+
   const response = {
     roomId: verified.roomId,
     role: verified.role,
@@ -40,6 +43,7 @@ export async function GET(request) {
     openedAt: room.openedAt ?? null,
     createdAt: room.createdAt ?? null,
     joinCode: room.joinCode ?? verified.joinCode ?? null,
+    ...(iceRoomToken ? { iceRoomToken } : {}),
   };
 
   if (verified.role === ROOM_ROLE.HOST) {

@@ -52,10 +52,10 @@ import { Recording } from "./hooks/Recording";
 import { RemoteParticipants } from "./hooks/RemoteParticipants";
 import styles from "./MeetingView.module.css";
 
-export function MeetingView(props) {
+export function MeetingView({ token, ...props }) {
   return (
-    <PeerStreamConnection>
-      <MeetingViewInner {...props} />
+    <PeerStreamConnection sessionToken={token}>
+      <MeetingViewInner token={token} {...props} />
     </PeerStreamConnection>
   );
 }

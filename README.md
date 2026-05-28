@@ -49,6 +49,9 @@ Create `.env.local` for local development (or set the same keys in your host’s
 | `SIGNALING_SERVER_PATH` | PeerJS path prefix (default: `/myapp`). |
 | `SIGNALING_SERVER_PORT` | PeerJS port (default: `443`). |
 | `NEXT_PUBLIC_APP_URL` | Public app origin for participant invite links (e.g. `https://present.example.com`). |
+| `INTERNAL_AUTH_SECRET` | HMAC secret for short-lived ICE config room tokens (required for `/api/media/ice-config`). |
+| `TURN_SECRET_KEY` | Shared secret for CoTurn ephemeral credentials. |
+| `TURN_DOMAIN` | TURN/TURNS hostname (default: `hostpresent.duckdns.org`). |
 
 When `SIGNALING_SERVER_URL` is unset, room tokens use a development fallback secret. Set the signaling URL before deploying to production.
 
