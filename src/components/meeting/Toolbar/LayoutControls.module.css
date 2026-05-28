@@ -42,17 +42,19 @@
   background: var(--primary-hover);
 }
 
-.galleryBtn {
+/* Dynamic styling for buttons within the tooltip wrappers in the cluster */
+.cluster > div .btn {
+  border-right: none;
+  border-radius: 0;
+}
+
+.cluster > div:first-child .btn {
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  border-right: none;
 }
 
-.sidebarBtn {
-  border-right: none;
-}
-
-.pipBtn {
+.cluster > div:last-child .btn {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-right: 1px solid var(--border);
 }
 
 @media (max-width: 900px) {

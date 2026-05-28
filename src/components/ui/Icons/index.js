@@ -1,4 +1,5 @@
 export {
+  Activity,
   ArrowLeft,
   Chat,
   ChevronDown,

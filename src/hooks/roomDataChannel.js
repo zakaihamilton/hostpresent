@@ -68,6 +68,7 @@ export function useRoomDataChannel({
   onRemoteParticipant,
   onRemoteHostStream,
   onChatMessage,
+  sessionTitle = "",
 }) {
   const isHost = role === "host";
   const [isConnected, setIsConnected] = useState(false);
@@ -101,12 +102,18 @@ export function useRoomDataChannel({
   const onRemoteParticipantRef = useRef();
   const onRemoteHostStreamRef = useRef();
   const onChatMessageRef = useRef(null);
+  const sessionTitleRef = useRef("");
   const destroyedRef = useRef(false);
 
   useEffect(() => {
     displayNameRef.current =
       typeof displayName === "string" ? displayName.trim() : "";
   }, [displayName]);
+
+  useEffect(() => {
+    sessionTitleRef.current =
+      typeof sessionTitle === "string" ? sessionTitle.trim() : "";
+  }, [sessionTitle]);
 
   useEffect(() => {
     if (!isHost) return;
@@ -138,6 +145,7 @@ export function useRoomDataChannel({
         audioMuted: hostAudioMutedRef.current,
         videoMuted: hostVideoMutedRef.current,
         mode: hostModeRef.current,
+        sessionTitle: sessionTitleRef.current,
       }),
     [],
   );

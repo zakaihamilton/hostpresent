@@ -35,6 +35,7 @@ export function RemoteParticipants({
   publishParticipantMediaStatus,
   isRecording,
   isRecordingPaused,
+  setSessionTitle,
 }) {
   const [hostStream, setHostStream] = useState(null);
   const [videoParticipants, setVideoParticipants] = useState([]);
@@ -273,8 +274,11 @@ export function RemoteParticipants({
       if (message.mode === "listening" || message.mode === "available") {
         setHostMode(message.mode);
       }
+      if (message.sessionTitle && setSessionTitle) {
+        setSessionTitle(message.sessionTitle);
+      }
     });
-  }, [isHost, roomConnectionRef]);
+  }, [isHost, roomConnectionRef, setSessionTitle]);
 
   useEffect(() => {
     if (isHost) return undefined;

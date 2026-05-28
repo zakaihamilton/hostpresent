@@ -102,7 +102,11 @@ export const Header = memo(function Header({
       <div className={styles.leading}>
         {onBack ? <BackButton label={backLabel} onClick={onBack} /> : null}
         <div className={styles.logo}>
-          <Logo />
+          <Tooltip text={sessionTitle || "Host Present"} placement="right">
+            <span style={{ display: "inline-flex", alignItems: "center" }} aria-label="Meeting logo">
+              <Logo />
+            </span>
+          </Tooltip>
           {isEditingTitle ? (
             <input
               ref={inputRef}

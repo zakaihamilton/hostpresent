@@ -44,6 +44,7 @@ export const Toolbar = memo(function Toolbar({
   onStopRecording,
   showRecording = true,
   allowScreenShare = true,
+  onToggleDiagnostics = null,
 }) {
   return (
     <footer className={styles.toolbar}>
@@ -95,6 +96,7 @@ export const Toolbar = memo(function Toolbar({
             onToggleSidebar={onToggleSidebar}
             onTogglePip={onTogglePip}
             onToggleChat={onToggleChat}
+            onToggleDiagnostics={onToggleDiagnostics}
           />
         </div>
 

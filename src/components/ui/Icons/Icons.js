@@ -340,3 +340,11 @@ export function Copy({ size = 20 }) {
     </Icon>
   );
 }
+
+export function Activity({ size = 20 }) {
+  return (
+    <Icon title="Run Diagnostics" size={size}>
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </Icon>
+  );
+}

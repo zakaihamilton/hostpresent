@@ -1,4 +1,4 @@
-import { Chat, Gallery, Pip, Users } from "@/components/ui/Icons";
+import { Activity, Chat, Gallery, Pip, Users } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./LayoutControls.module.css";
 
@@ -15,18 +15,29 @@ export function LayoutControls({
   onToggleSidebar,
   onTogglePip,
   onToggleChat,
+  onToggleDiagnostics,
 }) {
   return (
     <div className={styles.cluster}>
+      {onToggleDiagnostics
+        ? <Tooltip text="Run Connection Diagnostics">
+            <button
+              type="button"
+              className={btnClass()}
+              onClick={onToggleDiagnostics}
+              aria-label="Run connection diagnostics"
+            >
+              <Activity />
+            </button>
+          </Tooltip>
+        : null}
+
       <Tooltip
         text={isGalleryVisible ? "Hide Video Gallery" : "Show Video Gallery"}
       >
         <button
           type="button"
-          className={btnClass(
-            styles.galleryBtn,
-            isGalleryVisible && styles.btnActive,
-          )}
+          className={btnClass(isGalleryVisible && styles.btnActive)}
           onClick={onToggleGallery}
           aria-label={
             isGalleryVisible ? "Hide video gallery" : "Show video gallery"
@@ -41,10 +52,7 @@ export function LayoutControls({
       >
         <button
           type="button"
-          className={btnClass(
-            styles.sidebarBtn,
-            isSidebarVisible && styles.btnActive,
-          )}
+          className={btnClass(isSidebarVisible && styles.btnActive)}
           onClick={onToggleSidebar}
           aria-label={
             isSidebarVisible ? "Hide participants" : "Show participants"
@@ -68,7 +76,7 @@ export function LayoutControls({
       <Tooltip text={isPipVisible ? "Hide Self-View" : "Show Self-View"}>
         <button
           type="button"
-          className={btnClass(styles.pipBtn, isPipVisible && styles.btnActive)}
+          className={btnClass(isPipVisible && styles.btnActive)}
           onClick={onTogglePip}
           aria-label={isPipVisible ? "Hide self-view" : "Show self-view"}
         >

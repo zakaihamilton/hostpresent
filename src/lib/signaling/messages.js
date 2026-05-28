@@ -24,6 +24,7 @@ export function createHostPresentMessage({
   audioMuted = false,
   videoMuted = false,
   mode = "available",
+  sessionTitle = "",
 } = {}) {
   return {
     type: SIGNALING_MESSAGE.HOST_PRESENT,
@@ -31,6 +32,7 @@ export function createHostPresentMessage({
     audioMuted: Boolean(audioMuted),
     videoMuted: Boolean(videoMuted),
     mode: mode === "listening" ? "listening" : "available",
+    sessionTitle: typeof sessionTitle === "string" ? sessionTitle.trim() : "",
     timestamp: Date.now(),
   };
 }
