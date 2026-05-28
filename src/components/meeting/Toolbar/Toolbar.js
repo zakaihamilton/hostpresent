@@ -27,6 +27,9 @@ export const Toolbar = memo(function Toolbar({
   onDisplayNameChange = null,
   participantMode = null,
   onParticipantModeChange = null,
+  availableMicrophones = [],
+  selectedMicrophone = "",
+  onMicrophoneChange,
   availableCameras = [],
   selectedCamera = "",
   onCameraChange,
@@ -65,6 +68,9 @@ export const Toolbar = memo(function Toolbar({
             isVideoMuted={isVideoMuted}
             onToggleAudio={onToggleAudio}
             onToggleVideo={onToggleVideo}
+            availableMicrophones={availableMicrophones}
+            selectedMicrophone={selectedMicrophone}
+            onMicrophoneChange={onMicrophoneChange}
             availableCameras={availableCameras}
             selectedCamera={selectedCamera}
             onCameraChange={onCameraChange}

@@ -41,6 +41,8 @@ export function MediaControls({
   const [shareScreenAudio, setShareScreenAudio] = useState(true);
   const [availableCameras, setAvailableCameras] = useState([]);
   const [selectedCamera, setSelectedCamera] = useState("");
+  const [availableMicrophones, setAvailableMicrophones] = useState([]);
+  const [selectedMicrophone, setSelectedMicrophone] = useState("");
 
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
@@ -57,24 +59,28 @@ export function MediaControls({
     screenStreamRef.current = screenStream;
   }, [screenStream]);
 
-  const enumerateCameras = useCallback(async () => {
+  const enumerateMediaDevices = useCallback(async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       setAvailableCameras(devices.filter((d) => d.kind === "videoinput"));
+      setAvailableMicrophones(devices.filter((d) => d.kind === "audioinput"));
     } catch {
       // ignore enumeration errors
     }
   }, []);
 
   useEffect(() => {
-    navigator.mediaDevices.addEventListener("devicechange", enumerateCameras);
+    navigator.mediaDevices.addEventListener(
+      "devicechange",
+      enumerateMediaDevices,
+    );
     return () => {
       navigator.mediaDevices.removeEventListener(
         "devicechange",
-        enumerateCameras,
+        enumerateMediaDevices,
       );
     };
-  }, [enumerateCameras]);
+  }, [enumerateMediaDevices]);
 
   useEffect(() => {
     const initLocalMedia = async () => {
@@ -92,10 +98,16 @@ export function MediaControls({
         setLocalStream(stream);
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = devices.filter((d) => d.kind === "videoinput");
+        const audioInputs = devices.filter((d) => d.kind === "audioinput");
         setAvailableCameras(videoInputs);
+        setAvailableMicrophones(audioInputs);
         if (videoInputs.length > 0) {
           const currentId = stream.getVideoTracks()[0]?.getSettings().deviceId;
           setSelectedCamera(currentId || videoInputs[0].deviceId);
+        }
+        if (audioInputs.length > 0) {
+          const currentId = stream.getAudioTracks()[0]?.getSettings().deviceId;
+          setSelectedMicrophone(currentId || audioInputs[0].deviceId);
         }
       } catch (err) {
         console.error("Failed to acquire camera/mic permissions:", err);
@@ -148,6 +160,39 @@ export function MediaControls({
       }
     },
     [localStream, isVideoMuted, setErrorMsg],
+  );
+
+  const switchMicrophone = useCallback(
+    async (deviceId) => {
+      if (!localStream || !deviceId || !navigator.mediaDevices) return;
+
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack?.getSettings().deviceId === deviceId) return;
+
+      const wasMuted = isAudioMuted;
+
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: deviceId } },
+          video: false,
+        });
+
+        const newTrack = newStream.getAudioTracks()[0];
+        if (audioTrack) {
+          localStream.removeTrack(audioTrack);
+          audioTrack.stop();
+        }
+        localStream.addTrack(newTrack);
+        newTrack.enabled = !wasMuted;
+        setSelectedMicrophone(deviceId);
+      } catch (err) {
+        console.error("Failed to switch microphone:", err);
+        setErrorMsg(
+          "[E044] Could not switch microphone. Check permissions and try again.",
+        );
+      }
+    },
+    [localStream, isAudioMuted, setErrorMsg],
   );
 
   const publishParticipantMediaStatus = useCallback(
@@ -302,5 +347,8 @@ export function MediaControls({
     availableCameras,
     selectedCamera,
     switchCamera,
+    availableMicrophones,
+    selectedMicrophone,
+    switchMicrophone,
   };
 }

@@ -223,6 +223,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     availableCameras,
     selectedCamera,
     switchCamera,
+    availableMicrophones,
+    selectedMicrophone,
+    switchMicrophone,
   } = MediaControls({
     isHost,
     roomConnection,
@@ -703,6 +706,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         onParticipantModeChange={handleParticipantModeChange}
         showRecording={isHost}
         allowScreenShare={isHost}
+        availableMicrophones={availableMicrophones}
+        selectedMicrophone={selectedMicrophone}
+        onMicrophoneChange={switchMicrophone}
         availableCameras={availableCameras}
         selectedCamera={selectedCamera}
         onCameraChange={switchCamera}

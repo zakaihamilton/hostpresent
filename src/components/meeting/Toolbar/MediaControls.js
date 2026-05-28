@@ -44,6 +44,9 @@ export function MediaControls({
   isVideoMuted,
   onToggleAudio,
   onToggleVideo,
+  availableMicrophones = [],
+  selectedMicrophone = "",
+  onMicrophoneChange,
   availableCameras = [],
   selectedCamera = "",
   onCameraChange,
@@ -57,6 +60,8 @@ export function MediaControls({
   const menuRef = useRef(null);
   const menuId = useId();
   const headingId = `${menuId}-heading`;
+  const audioSectionId = `${menuId}-audio`;
+  const videoSectionId = `${menuId}-video`;
 
   const updateMenuPosition = () => {
     const anchor = menuAnchorRef.current;
@@ -65,7 +70,12 @@ export function MediaControls({
 
     const anchorRect = anchor.getBoundingClientRect();
     const menuRect = menu.getBoundingClientRect();
-    setMenuCoords(computeMenuPosition(anchorRect, menuRect));
+    const nextCoords = computeMenuPosition(anchorRect, menuRect);
+    setMenuCoords((prev) =>
+      prev.top === nextCoords.top && prev.left === nextCoords.left
+        ? prev
+        : nextCoords,
+    );
   };
 
   useLayoutEffect(() => {
@@ -89,7 +99,7 @@ export function MediaControls({
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [menuOpen, availableCameras]);
+  }, [menuOpen, availableCameras, availableMicrophones]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -151,7 +161,7 @@ export function MediaControls({
         </Tooltip>
 
         <div className={styles.menuWrap} ref={menuAnchorRef}>
-          <Tooltip text="Camera settings" forceHidden={menuOpen}>
+          <Tooltip text="Audio & video settings" forceHidden={menuOpen}>
             <button
               type="button"
               className={btnClass(
@@ -184,34 +194,80 @@ export function MediaControls({
               }}
             >
               <p id={headingId} className={styles.menuHeading}>
-                Camera
+                Device settings
               </p>
 
-              {availableCameras.length === 0
-                ? <p className={styles.menuEmpty}>No cameras detected</p>
-                : <fieldset className={styles.menuFieldset}>
-                    <legend className={styles.menuLegend}>Camera</legend>
-                    {availableCameras.map((camera) => (
-                      <label
-                        key={camera.deviceId}
-                        className={`${styles.menuOption} ${selectedCamera === camera.deviceId ? styles.menuOptionSelected : ""}`}
-                      >
-                        <input
-                          type="radio"
-                          name="camera"
-                          checked={selectedCamera === camera.deviceId}
-                          onChange={() => onCameraChange?.(camera.deviceId)}
-                          className={styles.menuOptionInput}
-                        />
-                        <span className={styles.menuOptionContent}>
-                          <span className={styles.menuOptionTitle}>
-                            {camera.label ||
-                              `Camera ${availableCameras.indexOf(camera) + 1}`}
+              <section
+                className={styles.menuSection}
+                aria-labelledby={audioSectionId}
+              >
+                <h3 id={audioSectionId} className={styles.menuSectionTitle}>
+                  Audio
+                </h3>
+
+                {availableMicrophones.length === 0
+                  ? <p className={styles.menuEmpty}>No microphones detected</p>
+                  : <fieldset className={styles.menuFieldset}>
+                      <legend className={styles.menuLegend}>Microphone</legend>
+                      {availableMicrophones.map((microphone, index) => (
+                        <label
+                          key={microphone.deviceId}
+                          className={`${styles.menuOption} ${selectedMicrophone === microphone.deviceId ? styles.menuOptionSelected : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="microphone"
+                            checked={
+                              selectedMicrophone === microphone.deviceId
+                            }
+                            onChange={() =>
+                              onMicrophoneChange?.(microphone.deviceId)
+                            }
+                            className={styles.menuOptionInput}
+                          />
+                          <span className={styles.menuOptionContent}>
+                            <span className={styles.menuOptionTitle}>
+                              {microphone.label || `Microphone ${index + 1}`}
+                            </span>
                           </span>
-                        </span>
-                      </label>
-                    ))}
-                  </fieldset>}
+                        </label>
+                      ))}
+                    </fieldset>}
+              </section>
+
+              <section
+                className={`${styles.menuSection} ${styles.menuSectionDivider}`}
+                aria-labelledby={videoSectionId}
+              >
+                <h3 id={videoSectionId} className={styles.menuSectionTitle}>
+                  Video
+                </h3>
+
+                {availableCameras.length === 0
+                  ? <p className={styles.menuEmpty}>No cameras detected</p>
+                  : <fieldset className={styles.menuFieldset}>
+                      <legend className={styles.menuLegend}>Camera</legend>
+                      {availableCameras.map((camera, index) => (
+                        <label
+                          key={camera.deviceId}
+                          className={`${styles.menuOption} ${selectedCamera === camera.deviceId ? styles.menuOptionSelected : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="camera"
+                            checked={selectedCamera === camera.deviceId}
+                            onChange={() => onCameraChange?.(camera.deviceId)}
+                            className={styles.menuOptionInput}
+                          />
+                          <span className={styles.menuOptionContent}>
+                            <span className={styles.menuOptionTitle}>
+                              {camera.label || `Camera ${index + 1}`}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </fieldset>}
+              </section>
             </div>,
             document.body,
           )
