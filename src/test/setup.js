@@ -39,6 +39,8 @@ Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
 HTMLMediaElement.prototype.play = () => Promise.resolve();
 HTMLMediaElement.prototype.pause = () => {};
 
+Element.prototype.scrollIntoView = () => {};
+
 Object.defineProperty(global.navigator, "mediaDevices", {
   configurable: true,
   value: {
