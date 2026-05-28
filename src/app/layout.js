@@ -1,4 +1,4 @@
-import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { themeInitScript } from "@/lib/settings/themeScript";
 import "./globals.css";
 
