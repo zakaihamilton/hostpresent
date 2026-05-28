@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Tooltip } from "./Tooltip";
 
@@ -66,6 +66,32 @@ describe("Tooltip", () => {
 
     await user.click(button);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it("shows tooltip on long press for touch devices", () => {
+    jest.useFakeTimers();
+
+    render(
+      <Tooltip text="Hold to view">
+        <button type="button">Action</button>
+      </Tooltip>,
+    );
+
+    const button = screen.getByRole("button", { name: "Action" });
+
+    act(() => {
+      fireEvent.touchStart(button);
+      jest.advanceTimersByTime(450);
+    });
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Hold to view");
+
+    act(() => {
+      fireEvent.touchEnd(button);
+    });
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    jest.useRealTimers();
   });
 
   it("renders rich tooltip content when provided", async () => {

@@ -326,6 +326,34 @@
   }
 }
 
+.logoTextParticipantInline {
+  display: none;
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+  max-width: min(14rem, 35vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoTooltipNarrow {
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (min-width: 520px) {
+  .logoTextParticipantInline {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .logoTooltipNarrow {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .header {
     padding: 0 max(0.75rem, env(safe-area-inset-right, 0)) 0

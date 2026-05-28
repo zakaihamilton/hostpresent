@@ -1,6 +1,8 @@
 .wrapper {
   position: relative;
   display: inline-flex;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 .floating,

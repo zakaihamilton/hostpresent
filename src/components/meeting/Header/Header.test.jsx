@@ -183,6 +183,24 @@ describe("Header", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("Product Sync");
   });
 
+  it("shows meeting name inline for participants on wide mobile viewports", () => {
+    render(
+      <Header
+        meetingDurationSeconds={0}
+        isRecording={false}
+        isRecordingPaused={false}
+        recordingDurationSeconds={0}
+        sessionTitle="Product Sync"
+        revealTitleOnLogoClick
+      />,
+    );
+
+    expect(screen.getByText("Product Sync")).toBeInTheDocument();
+    expect(screen.getByText("Product Sync")).toHaveClass(
+      "logoTextParticipantInline",
+    );
+  });
+
   it("allows clearing the title to return to default", async () => {
     const user = userEvent.setup();
     const onSessionTitleChange = jest.fn();

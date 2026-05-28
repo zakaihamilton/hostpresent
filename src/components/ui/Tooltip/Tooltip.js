@@ -14,6 +14,7 @@ import styles from "./Tooltip.module.css";
 
 const GAP = 12;
 const VIEWPORT_PADDING = 8;
+const LONG_PRESS_MS = 450;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -70,9 +71,12 @@ export function Tooltip({
   trigger = "hover",
 }) {
   const isClickTrigger = trigger === "click";
+  const isHoverTrigger = trigger === "hover";
   const anchorRef = useRef(null);
   const tooltipRef = useRef(null);
   const suppressUntilLeaveRef = useRef(false);
+  const longPressTimerRef = useRef(null);
+  const longPressActiveRef = useRef(false);
   const tooltipId = useId();
   const [visible, setVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -113,22 +117,34 @@ export function Tooltip({
     };
   }, [showTooltip, updatePosition]);
 
-  const show = () => {
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const show = useCallback(() => {
     if (suppressUntilLeaveRef.current) return;
     setVisible(true);
-  };
-  const hide = () => {
+  }, []);
+
+  const hide = useCallback(() => {
     setVisible(false);
     setPositioned(false);
-  };
-  const handleMouseLeave = () => {
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
     suppressUntilLeaveRef.current = false;
+    longPressActiveRef.current = false;
+    clearLongPressTimer();
     hide();
-  };
-  const handleMouseDown = () => {
+  }, [clearLongPressTimer, hide]);
+
+  const handleMouseDown = useCallback(() => {
     suppressUntilLeaveRef.current = true;
     hide();
-  };
+  }, [hide]);
 
   useEffect(() => {
     if (!isClickTrigger || !visible) return undefined;
@@ -145,7 +161,36 @@ export function Tooltip({
 
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [isClickTrigger, visible]);
+  }, [hide, isClickTrigger, visible]);
+
+  const handleTouchStart = useCallback(() => {
+    if (!isHoverTrigger) return;
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressActiveRef.current = true;
+      suppressUntilLeaveRef.current = false;
+      show();
+    }, LONG_PRESS_MS);
+  }, [clearLongPressTimer, isHoverTrigger, show]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isHoverTrigger) return;
+    clearLongPressTimer();
+    if (longPressActiveRef.current) {
+      longPressActiveRef.current = false;
+      hide();
+    }
+  }, [clearLongPressTimer, hide, isHoverTrigger]);
+
+  const handleContextMenu = useCallback(
+    (event) => {
+      if (!isHoverTrigger) return;
+      event.preventDefault();
+    },
+    [isHoverTrigger],
+  );
+
+  useEffect(() => clearLongPressTimer, [clearLongPressTimer]);
 
   const child = cloneElement(children, {
     ...(children.props["aria-describedby"]
@@ -159,10 +204,26 @@ export function Tooltip({
       children.props.onClick?.(event);
     },
     onMouseDown: (event) => {
-      if (!isClickTrigger) {
+      if (isHoverTrigger) {
         handleMouseDown();
       }
       children.props.onMouseDown?.(event);
+    },
+    onTouchStart: (event) => {
+      handleTouchStart();
+      children.props.onTouchStart?.(event);
+    },
+    onTouchEnd: (event) => {
+      handleTouchEnd();
+      children.props.onTouchEnd?.(event);
+    },
+    onTouchCancel: (event) => {
+      handleTouchEnd();
+      children.props.onTouchCancel?.(event);
+    },
+    onContextMenu: (event) => {
+      handleContextMenu(event);
+      children.props.onContextMenu?.(event);
     },
   });
 
@@ -171,10 +232,11 @@ export function Tooltip({
       <div
         ref={anchorRef}
         className={styles.wrapper}
-        onMouseEnter={isClickTrigger ? undefined : show}
-        onMouseLeave={isClickTrigger ? undefined : handleMouseLeave}
-        onFocus={isClickTrigger ? undefined : show}
-        onBlur={isClickTrigger ? undefined : hide}
+        onMouseEnter={isHoverTrigger ? show : undefined}
+        onMouseLeave={isHoverTrigger ? handleMouseLeave : undefined}
+        onFocus={isHoverTrigger ? show : undefined}
+        onBlur={isHoverTrigger ? hide : undefined}
+        onContextMenu={isHoverTrigger ? handleContextMenu : undefined}
       >
         {child}
       </div>

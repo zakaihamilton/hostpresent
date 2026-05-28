@@ -218,12 +218,13 @@ export function RemoteParticipants({
       return;
     }
 
+    const nextName = resolveDisplayName(message.displayName);
+    const nextMode =
+      message.mode === PARTICIPANT_MODE.LISTENING
+        ? PARTICIPANT_MODE.LISTENING
+        : PARTICIPANT_MODE.AVAILABLE;
+
     setPeerParticipants((previous) => {
-      const nextName = resolveDisplayName(message.displayName);
-      const nextMode =
-        message.mode === PARTICIPANT_MODE.LISTENING
-          ? PARTICIPANT_MODE.LISTENING
-          : PARTICIPANT_MODE.AVAILABLE;
       const existing = previous.find(
         (entry) => entry.id === message.participantId,
       );
@@ -244,6 +245,14 @@ export function RemoteParticipants({
         },
       ];
     });
+
+    setVideoParticipants((previous) =>
+      previous.map((entry) =>
+        entry.id === message.participantId
+          ? { ...entry, name: nextName, mode: nextMode }
+          : entry,
+      ),
+    );
   }, []);
 
   useEffect(() => {

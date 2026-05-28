@@ -88,6 +88,8 @@ export function useRoomDataChannel({
   const iceServersRef = useRef(null);
   const connectionsRef = useRef(new Map());
   const mediaCallsRef = useRef(new Map());
+  const inboundStreamsRef = useRef(new Map());
+  const relayCallsRef = useRef(new Map());
   const hostConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
@@ -263,22 +265,114 @@ export function useRoomDataChannel({
     screenStreamRef.current = screenStream;
   }, [screenStream]);
 
+  const relayCallKey = (viewerId, sourceId) => `${viewerId}:${sourceId}`;
+
+  const closeRelayCallsForViewer = useCallback((viewerId) => {
+    for (const [key, call] of relayCallsRef.current.entries()) {
+      if (key.startsWith(`${viewerId}:`)) {
+        call.close();
+        relayCallsRef.current.delete(key);
+      }
+    }
+  }, []);
+
+  const closeRelayCallsForSource = useCallback((sourceId) => {
+    for (const [key, call] of relayCallsRef.current.entries()) {
+      if (key.endsWith(`:${sourceId}`)) {
+        call.close();
+        relayCallsRef.current.delete(key);
+      }
+    }
+    inboundStreamsRef.current.delete(sourceId);
+  }, []);
+
+  const ensureRelayCall = useCallback(
+    (viewerId, sourceId) => {
+      if (!isHost || viewerId === sourceId) return;
+
+      const stream = inboundStreamsRef.current.get(sourceId);
+      const peer = peerRef.current;
+      if (!stream || !peer) return;
+
+      const key = relayCallKey(viewerId, sourceId);
+      if (relayCallsRef.current.has(key)) return;
+
+      try {
+        const call = peer.call(viewerId, stream, {
+          metadata: { relayFrom: sourceId },
+        });
+        if (!call) return;
+        relayCallsRef.current.set(key, call);
+        call.on("close", () => {
+          if (relayCallsRef.current.get(key) === call) {
+            relayCallsRef.current.delete(key);
+          }
+        });
+      } catch (error) {
+        console.warn("[peer] relay call failed", error);
+      }
+    },
+    [isHost],
+  );
+
+  const syncRelayForViewer = useCallback(
+    (viewerId) => {
+      if (!isHost) return;
+      for (const sourceId of inboundStreamsRef.current.keys()) {
+        ensureRelayCall(viewerId, sourceId);
+      }
+    },
+    [ensureRelayCall, isHost],
+  );
+
+  const syncRelayForSource = useCallback(
+    (sourceId, stream) => {
+      if (!isHost) return;
+      if (!stream) {
+        closeRelayCallsForSource(sourceId);
+        return;
+      }
+      inboundStreamsRef.current.set(sourceId, stream);
+      for (const viewerId of connectionsRef.current.keys()) {
+        ensureRelayCall(viewerId, sourceId);
+      }
+    },
+    [closeRelayCallsForSource, ensureRelayCall, isHost],
+  );
+
   const bindMediaCall = useCallback(
     (call, remoteId) => {
       if (!call) return;
 
-      const existing = mediaCallsRef.current.get(remoteId);
-      if (existing && existing !== call) {
-        existing.close();
-      }
+      const relayFrom =
+        typeof call.metadata?.relayFrom === "string"
+          ? call.metadata.relayFrom
+          : null;
+      const participantId = relayFrom || remoteId;
 
-      mediaCallsRef.current.set(remoteId, call);
+      if (!relayFrom) {
+        const existing = mediaCallsRef.current.get(remoteId);
+        if (existing && existing !== call) {
+          existing.close();
+        }
+        mediaCallsRef.current.set(remoteId, call);
+      }
 
       call.on("stream", (remoteStream) => {
         if (destroyedRef.current) return;
         if (isHost) {
           onRemoteParticipantRef.current?.({
-            id: remoteId,
+            id: participantId,
+            stream: remoteStream,
+          });
+          if (!relayFrom) {
+            syncRelayForSource(participantId, remoteStream);
+          }
+          return;
+        }
+        if (relayFrom) {
+          onRemoteParticipantRef.current?.({
+            id: relayFrom,
             stream: remoteStream,
           });
           return;
@@ -288,11 +382,18 @@ export function useRoomDataChannel({
 
       call.on("close", () => {
         if (destroyedRef.current) return;
-        if (mediaCallsRef.current.get(remoteId) === call) {
+        if (!relayFrom && mediaCallsRef.current.get(remoteId) === call) {
           mediaCallsRef.current.delete(remoteId);
         }
         if (isHost) {
-          onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
+          if (!relayFrom) {
+            onRemoteParticipantRef.current?.({ id: participantId, stream: null });
+            syncRelayForSource(participantId, null);
+          }
+          return;
+        }
+        if (relayFrom) {
+          onRemoteParticipantRef.current?.({ id: relayFrom, stream: null });
           return;
         }
         onRemoteHostStreamRef.current?.(null);
@@ -303,27 +404,34 @@ export function useRoomDataChannel({
         console.warn("[peer] media call error", error);
       });
     },
-    [isHost],
+    [isHost, syncRelayForSource],
   );
 
-  const answerIncomingCall = useCallback((call, remoteId) => {
-    bindMediaCall(call, remoteId);
-    void (async () => {
-      if (destroyedRef.current) return;
-      const outbound = await buildOutboundMediaStream(
-        localStreamRef.current,
-        screenStreamRef.current,
-      );
-      if (destroyedRef.current) return;
-      if (outbound) {
-        call.answer(outbound);
-      } else {
+  const answerIncomingCall = useCallback(
+    (call, remoteId, { receiveOnly = false } = {}) => {
+      bindMediaCall(call, remoteId);
+      if (receiveOnly) {
         call.answer();
+        return;
       }
-    })().catch((error) => {
-      console.warn("[peer] handle incoming call failed", error);
-    });
-  }, [bindMediaCall]);
+      void (async () => {
+        if (destroyedRef.current) return;
+        const outbound = await buildOutboundMediaStream(
+          localStreamRef.current,
+          screenStreamRef.current,
+        );
+        if (destroyedRef.current) return;
+        if (outbound) {
+          call.answer(outbound);
+        } else {
+          call.answer();
+        }
+      })().catch((error) => {
+        console.warn("[peer] handle incoming call failed", error);
+      });
+    },
+    [bindMediaCall],
+  );
 
   const enqueueMediaCall = useCallback(
     async (remoteId) => {
@@ -395,6 +503,7 @@ export function useRoomDataChannel({
           enqueueMediaCall(remoteId).catch((error) => {
             console.warn("[peer] placeOutgoingMediaCall failed", error);
           });
+          syncRelayForViewer(remoteId);
           return;
         }
 
@@ -475,6 +584,7 @@ export function useRoomDataChannel({
       enqueueMediaCall,
       isHost,
       notifyHandlers,
+      syncRelayForViewer,
       updateConnectedState,
     ],
   );
@@ -717,6 +827,11 @@ export function useRoomDataChannel({
         call.close();
       }
       mediaCallsRef.current.clear();
+      for (const call of relayCallsRef.current.values()) {
+        call.close();
+      }
+      relayCallsRef.current.clear();
+      inboundStreamsRef.current.clear();
       for (const conn of connectionsRef.current.values()) {
         conn.close();
       }
@@ -770,6 +885,8 @@ export function useRoomDataChannel({
           connectionsRef.current.delete(remoteId);
           mediaCallsRef.current.get(remoteId)?.close();
           mediaCallsRef.current.delete(remoteId);
+          closeRelayCallsForViewer(remoteId);
+          closeRelayCallsForSource(remoteId);
         });
       });
 
@@ -853,6 +970,14 @@ export function useRoomDataChannel({
 
       peer.on("call", (call) => {
         if (destroyedRef.current) return;
+        const relayFrom =
+          typeof call.metadata?.relayFrom === "string"
+            ? call.metadata.relayFrom
+            : null;
+        if (relayFrom) {
+          answerIncomingCall(call, relayFrom, { receiveOnly: true });
+          return;
+        }
         answerIncomingCall(call, hostPeerId(roomId));
       });
 

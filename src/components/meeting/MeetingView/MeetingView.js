@@ -167,7 +167,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     participantMode: isHost ? undefined : participantMode,
     localStream,
     screenStream,
-    onRemoteParticipant: isHost ? onRemoteParticipant : undefined,
+    onRemoteParticipant,
     onRemoteHostStream: isHost ? undefined : onRemoteHostStream,
     onChatMessage,
     sessionTitle,
@@ -450,6 +450,63 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     return list;
   }, [isHost, videoParticipants, audioList, hostDisplayName, peerParticipants]);
 
+  const galleryParticipants = useMemo(() => {
+    if (isHost) {
+      return videoParticipants;
+    }
+
+    const nameById = new Map(
+      peerParticipants.map((participant) => [participant.id, participant.name]),
+    );
+    const localId = roomConnection?.localParticipantId;
+    const tiles = [];
+
+    if (hostStream) {
+      tiles.push({
+        id: "host",
+        name: hostDisplayName,
+        stream: hostStream,
+        isAudioMuted: hostAudioMuted,
+        isVideoMuted: hostVideoMuted,
+        avatarColor: "#6366f1",
+      });
+    }
+
+    for (const participant of videoParticipants) {
+      if (participant.id === localId) continue;
+      tiles.push({
+        ...participant,
+        name: nameById.get(participant.id) || participant.name,
+      });
+    }
+
+    if (localStream) {
+      tiles.push({
+        id: localId || "self",
+        name: resolvedDisplayName,
+        stream: localStream,
+        isAudioMuted,
+        isVideoMuted,
+        avatarColor: "#3b82f6",
+      });
+    }
+
+    return tiles;
+  }, [
+    hostAudioMuted,
+    hostDisplayName,
+    hostStream,
+    hostVideoMuted,
+    isAudioMuted,
+    isHost,
+    isVideoMuted,
+    localStream,
+    peerParticipants,
+    resolvedDisplayName,
+    roomConnection?.localParticipantId,
+    videoParticipants,
+  ]);
+
   const primaryViewProps = useMemo(() => {
     const viewingHostStream = !isHost && Boolean(hostStream);
     const activeMain = screenStream || localStream;
@@ -584,7 +641,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               visible={isGalleryVisible}
               screenStream={screenStream}
               localStream={localStream}
-              participants={videoParticipants}
+              participants={galleryParticipants}
               isAudioMuted={isAudioMuted}
               localDisplayName={resolvedDisplayName}
             />

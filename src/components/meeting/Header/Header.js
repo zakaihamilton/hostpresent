@@ -97,20 +97,7 @@ export const Header = memo(function Header({
     .filter(Boolean)
     .join(" ");
 
-  const logoTrigger = revealTitleOnLogoClick
-    ? <button
-        type="button"
-        className={styles.logoButton}
-        aria-label={`Meeting name, ${meetingName}`}
-      >
-        <Logo />
-      </button>
-    : <span
-        style={{ display: "inline-flex", alignItems: "center" }}
-        aria-hidden
-      >
-        <Logo />
-      </span>;
+  const logoIcon = <Logo />;
 
   return (
     <header
@@ -119,13 +106,31 @@ export const Header = memo(function Header({
       <div className={styles.leading}>
         {onBack ? <BackButton label={backLabel} onClick={onBack} /> : null}
         <div className={styles.logo}>
-          <Tooltip
-            text={meetingName}
-            placement="right"
-            trigger={revealTitleOnLogoClick ? "click" : "hover"}
-          >
-            {logoTrigger}
-          </Tooltip>
+          {revealTitleOnLogoClick
+            ? <>
+                <span className={styles.logoTooltipNarrow}>
+                  <Tooltip text={meetingName} placement="right" trigger="click">
+                    <button
+                      type="button"
+                      className={styles.logoButton}
+                      aria-label={`Meeting name, ${meetingName}`}
+                    >
+                      {logoIcon}
+                    </button>
+                  </Tooltip>
+                </span>
+                <span className={styles.logoTextParticipantInline}>
+                  {meetingName}
+                </span>
+              </>
+            : <Tooltip text={meetingName} placement="right">
+                <span
+                  style={{ display: "inline-flex", alignItems: "center" }}
+                  aria-hidden
+                >
+                  {logoIcon}
+                </span>
+              </Tooltip>}
           {onSessionTitleChange
             ? isEditingTitle
               ? <input
