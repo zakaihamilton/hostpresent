@@ -452,7 +452,7 @@ export function MeetingView({ role, token, joinCode: routeJoinCode, onBack }) {
   ]);
 
   if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
-    return <MeetingLoading message="Loading room\u2026" />;
+    return <MeetingLoading message="Loading room…" />;
   }
 
   if (sessionStatus === ROOM_SESSION_STATUS.ERROR) {

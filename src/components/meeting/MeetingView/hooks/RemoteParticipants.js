@@ -21,6 +21,7 @@ function participantColor(id) {
 export function RemoteParticipants({
   isHost,
   roomConnectionRef,
+  roomConnection,
   resolvedDisplayName,
   participantMode,
   localStream,
@@ -251,8 +252,8 @@ export function RemoteParticipants({
       setHostPresent(true);
       return;
     }
-    setHostPresent(roomConnectionRef.current?.hostPresent);
-  }, [isHost, roomConnectionRef.current?.hostPresent]);
+    setHostPresent(roomConnection?.hostPresent);
+  }, [isHost, roomConnection?.hostPresent]);
 
   useEffect(() => {
     if (isHost) return undefined;
