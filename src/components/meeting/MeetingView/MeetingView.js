@@ -241,6 +241,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     setVideoParticipants,
     peerParticipants,
     hostStream,
+    hostStreamPlaybackMuted,
     hostDisplayName,
     hostAudioMuted,
     hostVideoMuted,
@@ -519,7 +520,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
             ? "You are sharing your screen with audio"
             : "You are sharing your screen"
           : resolvedDisplayName,
-      isMuted: viewingHostStream ? hostAudioMuted : true,
+      isMuted: viewingHostStream ? hostStreamPlaybackMuted : true,
       isAudioMuted: viewingHostStream ? hostAudioMuted : isAudioMuted,
       isVideoMuted: viewingHostStream ? hostVideoMuted : false,
     };
@@ -532,6 +533,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     isScreenAudioShared,
     resolvedDisplayName,
     hostAudioMuted,
+    hostStreamPlaybackMuted,
     hostVideoMuted,
   ]);
 

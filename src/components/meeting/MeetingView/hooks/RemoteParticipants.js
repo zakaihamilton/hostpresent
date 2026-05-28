@@ -7,7 +7,10 @@ import {
   createParticipantProfileBroadcastMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import { attachRemoteStreamMediaListeners } from "@/lib/webrtc/remoteParticipantMedia";
+import {
+  attachRemoteStreamMediaListeners,
+  hasPlayableRemoteAudio,
+} from "@/lib/webrtc/remoteParticipantMedia";
 
 function participantColor(id) {
   let hash = 0;
@@ -35,6 +38,7 @@ export function RemoteParticipants({
   setSessionTitle,
 }) {
   const [hostStream, setHostStream] = useState(null);
+  const [hostStreamPlaybackMuted, setHostStreamPlaybackMuted] = useState(true);
   const [videoParticipants, setVideoParticipants] = useState([]);
   const [peerParticipants, setPeerParticipants] = useState([]);
   const [hostDisplayName, setHostDisplayName] = useState("Host");
@@ -49,7 +53,20 @@ export function RemoteParticipants({
 
   const handleRemoteHostStream = useCallback((stream) => {
     setHostStream(stream);
+    setHostStreamPlaybackMuted(!hasPlayableRemoteAudio(stream));
   }, []);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+    if (!hostStream) {
+      setHostStreamPlaybackMuted(true);
+      return undefined;
+    }
+
+    return attachRemoteStreamMediaListeners(hostStream, () => {
+      setHostStreamPlaybackMuted(!hasPlayableRemoteAudio(hostStream));
+    });
+  }, [hostStream, isHost]);
 
   const broadcastPeerProfile = useCallback(
     ({ participantId, displayName, mode }) => {
@@ -436,6 +453,7 @@ export function RemoteParticipants({
 
   return {
     hostStream,
+    hostStreamPlaybackMuted,
     videoParticipants,
     setVideoParticipants,
     peerParticipants,

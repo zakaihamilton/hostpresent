@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Mic, MicOff, VideoOff } from "@/components/ui/Icons";
 import { VideoTile } from "@/components/meeting/VideoTile";
+import { hasPlayableRemoteAudio } from "@/lib/webrtc/remoteParticipantMedia";
 import styles from "./VideoGallery.module.css";
 
 export const VideoGallery = memo(function VideoGallery({
@@ -35,7 +36,7 @@ export const VideoGallery = memo(function VideoGallery({
               initial={participant.name.charAt(0)}
               avatarColor={participant.avatarColor}
               overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
-              isMuted={participant.isAudioMuted}
+              isMuted={!hasPlayableRemoteAudio(participant.stream)}
               isVideoOff={participant.isVideoMuted}
               videoOffIcon={<VideoOff />}
             />

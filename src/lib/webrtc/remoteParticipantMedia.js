@@ -3,6 +3,14 @@ export function isRemoteTrackMuted(track) {
   return track.muted || !track.enabled || track.readyState !== "live";
 }
 
+export function hasPlayableRemoteAudio(stream) {
+  return (
+    stream
+      ?.getAudioTracks()
+      .some((track) => track.readyState === "live" && track.enabled) ?? false
+  );
+}
+
 export function readRemoteStreamMediaState(stream) {
   const audioTrack = stream?.getAudioTracks?.()[0];
   const videoTrack = stream?.getVideoTracks?.()[0];

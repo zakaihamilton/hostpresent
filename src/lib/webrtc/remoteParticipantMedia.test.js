@@ -1,5 +1,6 @@
 import {
   attachRemoteStreamMediaListeners,
+  hasPlayableRemoteAudio,
   isRemoteTrackMuted,
   readRemoteStreamMediaState,
 } from "./remoteParticipantMedia.js";
@@ -37,6 +38,17 @@ function createTrack({
 }
 
 describe("remoteParticipantMedia", () => {
+  it("detects playable remote audio from live enabled tracks", () => {
+    const audioTrack = createTrack({ kind: "audio" });
+    const stream = {
+      getAudioTracks: () => [audioTrack],
+    };
+    expect(hasPlayableRemoteAudio(stream)).toBe(true);
+
+    audioTrack.enabled = false;
+    expect(hasPlayableRemoteAudio(stream)).toBe(false);
+  });
+
   it("detects muted remote tracks", () => {
     expect(
       isRemoteTrackMuted(createTrack({ kind: "audio", enabled: false })),
