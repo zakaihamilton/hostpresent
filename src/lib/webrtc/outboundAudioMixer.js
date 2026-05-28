@@ -1,7 +1,8 @@
 function getLiveAudioTrack(stream) {
   return (
-    stream?.getAudioTracks().find((track) => track.readyState === "live") ??
-    null
+    stream
+      ?.getAudioTracks()
+      .find((track) => track.readyState === "live" && track.enabled) ?? null
   );
 }
 

@@ -243,6 +243,7 @@ export function MediaControls({
           ? createHostAudioMutedMessage()
           : createHostAudioUnmutedMessage(),
       );
+      void roomConnection.syncOutboundMedia?.();
       return;
     }
 
@@ -267,6 +268,7 @@ export function MediaControls({
           ? createHostVideoMutedMessage()
           : createHostVideoUnmutedMessage(),
       );
+      void roomConnection.syncOutboundMedia?.();
       return;
     }
 

@@ -519,8 +519,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
             ? "You are sharing your screen with audio"
             : "You are sharing your screen"
           : resolvedDisplayName,
-      isMuted: !viewingHostStream,
-      isAudioMuted: viewingHostStream ? hostAudioMuted : false,
+      isMuted: viewingHostStream ? hostAudioMuted : true,
+      isAudioMuted: viewingHostStream ? hostAudioMuted : isAudioMuted,
       isVideoMuted: viewingHostStream ? hostVideoMuted : false,
     };
   }, [

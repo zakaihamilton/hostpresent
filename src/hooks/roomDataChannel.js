@@ -158,17 +158,17 @@ export function useRoomDataChannel({
       typeof onChatMessage === "function" ? onChatMessage : null;
   }, [onChatMessage]);
 
-  const createHostPresencePayload = useCallback(
-    () =>
-      createHostPresentMessage({
-        displayName: displayNameRef.current,
-        audioMuted: hostAudioMutedRef.current,
-        videoMuted: hostVideoMutedRef.current,
-        mode: hostModeRef.current,
-        sessionTitle: sessionTitleRef.current,
-      }),
-    [],
-  );
+  const createHostPresencePayload = useCallback(() => {
+    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+    const videoTrack = localStreamRef.current?.getVideoTracks()[0];
+    return createHostPresentMessage({
+      displayName: displayNameRef.current,
+      audioMuted: audioTrack ? !audioTrack.enabled : hostAudioMutedRef.current,
+      videoMuted: videoTrack ? !videoTrack.enabled : hostVideoMutedRef.current,
+      mode: hostModeRef.current,
+      sessionTitle: sessionTitleRef.current,
+    });
+  }, []);
 
   const updateConnectedState = useCallback((delta) => {
     openCountRef.current = Math.max(0, openCountRef.current + delta);
@@ -1109,6 +1109,7 @@ export function useRoomDataChannel({
     sendPrivateChatMessage,
     subscribe,
     disconnect,
+    syncOutboundMedia: enqueueSync,
     isConnected,
     hostPresent,
     localParticipantId,

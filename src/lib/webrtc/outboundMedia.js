@@ -25,7 +25,7 @@ export async function resolveOutboundAudioTrack(localStream, screenStream) {
     return (
       localStream
         ?.getAudioTracks()
-        .find((track) => track.readyState === "live") ?? null
+        .find((track) => track.readyState === "live" && track.enabled) ?? null
     );
   }
 
@@ -49,11 +49,8 @@ export async function syncOutboundTracks(call, localStream, screenStream) {
   const peerConnection = call?.peerConnection;
   if (!peerConnection) return;
 
-  const outbound = await buildOutboundMediaStream(localStream, screenStream);
-  if (!outbound) return;
-
-  const videoTrack = outbound.getVideoTracks()[0] ?? null;
-  const audioTrack = outbound.getAudioTracks()[0] ?? null;
+  const videoTrack = pickOutboundVideoTrack(localStream, screenStream);
+  const audioTrack = await resolveOutboundAudioTrack(localStream, screenStream);
   const senders = peerConnection.getSenders();
 
   const videoSender = senders.find((sender) => sender.track?.kind === "video");
@@ -62,12 +59,16 @@ export async function syncOutboundTracks(call, localStream, screenStream) {
   if (videoSender) {
     await videoSender.replaceTrack(videoTrack);
   } else if (videoTrack) {
+    const outbound = new MediaStream([videoTrack]);
+    if (audioTrack) {
+      outbound.addTrack(audioTrack);
+    }
     peerConnection.addTrack(videoTrack, outbound);
   }
 
   if (audioSender) {
     await audioSender.replaceTrack(audioTrack);
   } else if (audioTrack) {
-    peerConnection.addTrack(audioTrack, outbound);
+    peerConnection.addTrack(audioTrack, new MediaStream([audioTrack]));
   }
 }
