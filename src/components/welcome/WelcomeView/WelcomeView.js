@@ -44,14 +44,16 @@ export function WelcomeView({
             <Logo size={36} className={styles.brandLogo} />
             <span className={styles.brandName}>Host Present</span>
           </div>
-          
+
           <h2 className={styles.heroTitle}>
             Premium video meetings. Designed for professional presenters.
           </h2>
           <p className={styles.heroSubtitle}>
-            Conduct reliable browser-based sessions with complete presenter control. Orchestrate participant stream focus and save crystal-clear recordings locally with zero installation.
+            Conduct reliable browser-based sessions with complete presenter
+            control. Orchestrate participant stream focus and save crystal-clear
+            recordings locally with zero installation.
           </p>
-          
+
           {/* Premium High-Fidelity App Preview Showcase */}
           <div className={styles.previewFrame}>
             <img
@@ -61,15 +63,21 @@ export function WelcomeView({
               loading="eager"
             />
           </div>
-          
+
           <div className={styles.featureList}>
             <div className={styles.featureRow}>
               <span className={styles.bullet} />
-              <span><strong>Sub-second latency:</strong> Peer-to-peer WebRTC connections for instant engagement.</span>
+              <span>
+                <strong>Sub-second latency:</strong> Peer-to-peer WebRTC
+                connections for instant engagement.
+              </span>
             </div>
             <div className={styles.featureRow}>
               <span className={styles.bullet} />
-              <span><strong>Local recording:</strong> Capture and save high-fidelity recordings directly in your browser.</span>
+              <span>
+                <strong>Local recording:</strong> Capture and save high-fidelity
+                recordings directly in your browser.
+              </span>
             </div>
           </div>
         </div>
@@ -112,7 +120,7 @@ export function WelcomeView({
             <div
               className={styles.tabPill}
               style={{
-                transform: `translateX(${role === APP_ROLE.HOST ? "0%" : "100%"})`
+                transform: `translateX(${role === APP_ROLE.HOST ? "0%" : "100%"})`,
               }}
             />
           </div>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><style>
+    path, rect { fill: none; stroke: #1f2937; } /* Default dark color for light tabs */
+    .bg-fill { fill: #1f2937; stroke: none; opacity: 0.12; }
+    .dimmed { opacity: 0.4; }
+    @media (prefers-color-scheme: dark) {
+      path, rect { stroke: #ffffff; } /* Flips to white for dark tabs */
+      .bg-fill { fill: #ffffff; stroke: none; opacity: 0.18; }
+    }
+  </style><rect x="76" y="110" width="230" height="210" rx="28" class="bg-fill"></rect><rect x="76" y="110" width="230" height="210" rx="28" stroke-width="38" stroke-linejoin="round"></rect><rect x="360" y="110" width="76" height="90" rx="16" stroke-width="38" stroke-linejoin="round"></rect><rect x="360" y="230" width="76" height="90" rx="16" stroke-width="38" stroke-linejoin="round" class="dimmed"></rect><path d="M140 405h232" stroke-width="38" stroke-linecap="round"></path><path d="M256 320v85" stroke-width="38" stroke-linecap="round"></path><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: contrast(1) brightness(1); } }
+</style></svg>

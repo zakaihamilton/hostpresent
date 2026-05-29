@@ -481,7 +481,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     (participantId) => {
       if (!isHost) return;
       const nextFocusedId =
-        participantId === focusedParticipantId ? "" : (participantId || "");
+        participantId === focusedParticipantId ? "" : participantId || "";
       setFocusedParticipantId(nextFocusedId);
       roomConnectionRef.current?.send(
         createHostFocusChangedMessage({ focusedId: nextFocusedId }),
@@ -494,8 +494,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     if (!isHost) return;
     const confirmed = await confirm({
       title: "End meeting",
-      message:
-        "All participants will be disconnected. This cannot be undone.",
+      message: "All participants will be disconnected. This cannot be undone.",
       confirmLabel: "End meeting",
       cancelLabel: "Cancel",
       variant: "danger",
@@ -514,9 +513,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const handleKickParticipant = useCallback(
     async (participantId) => {
       if (!isHost) return;
-      const participant = videoParticipants.find(
-        (p) => p.id === participantId,
-      );
+      const participant = videoParticipants.find((p) => p.id === participantId);
       const name = participant?.name ?? "this participant";
       const confirmed = await confirm({
         title: "Remove participant",
@@ -560,7 +557,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   }, [isHost, meetingDisconnectReason]);
 
   useEffect(() => {
-    if (!isHost || !focusedParticipantId || focusedParticipantId === "host") return;
+    if (!isHost || !focusedParticipantId || focusedParticipantId === "host")
+      return;
     if (
       !videoParticipants.some(
         (participant) => participant.id === focusedParticipantId,
@@ -912,7 +910,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
           {savedRecording
             ? <div className={styles.savedRecordingBanner}>
-                <span>Recording was interrupted. Save the partial recording?</span>
+                <span>
+                  Recording was interrupted. Save the partial recording?
+                </span>
                 <div className={styles.savedRecordingActions}>
                   <button
                     type="button"
@@ -1050,9 +1050,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 onMuteAllAudio={muteAllAudio}
                 canMuteAllVideo={canMuteAllVideo}
                 canMuteAllAudio={canMuteAllAudio}
-                onRemoveParticipant={
-                  isHost ? handleKickParticipant : undefined
-                }
+                onRemoveParticipant={isHost ? handleKickParticipant : undefined}
               />
 
               <ChatPanel

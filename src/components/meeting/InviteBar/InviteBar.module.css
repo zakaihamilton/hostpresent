@@ -128,8 +128,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -165,7 +169,7 @@
   .backdrop {
     padding: 1rem;
   }
-  
+
   .dialog {
     padding: 1.5rem;
     gap: 1rem;
@@ -185,4 +189,3 @@
     min-height: 44px;
   }
 }
-

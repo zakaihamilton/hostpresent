@@ -8,7 +8,13 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Chat as ChatIcon, ChevronDown, Download, Send, X } from "@/components/ui/Icons";
+import {
+  Chat as ChatIcon,
+  ChevronDown,
+  Download,
+  Send,
+  X,
+} from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { buildRecordingFilename } from "@/lib/recordingFilename";
 import styles from "./ChatPanel.module.css";
@@ -33,7 +39,7 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
 
   const selectedRecipient =
     recipientId && recipientId !== "everyone"
-      ? participants.find((p) => p.id === recipientId) ?? null
+      ? (participants.find((p) => p.id === recipientId) ?? null)
       : null;
   const selectedName = selectedRecipient?.name ?? "Everyone";
 
@@ -139,7 +145,7 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
                 type="button"
                 role="option"
                 aria-selected={!recipientId || recipientId === "everyone"}
-                className={`${styles.dropdownItem} ${(!recipientId || recipientId === "everyone") ? styles.dropdownItemSelected : ""}`}
+                className={`${styles.dropdownItem} ${!recipientId || recipientId === "everyone" ? styles.dropdownItemSelected : ""}`}
                 onClick={() => handleSelect("")}
               >
                 <span className={styles.dropdownItemIcon}>

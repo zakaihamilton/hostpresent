@@ -40,13 +40,13 @@ function pickTracksForFocus({
   if (focusedParticipant?.stream) {
     return {
       videoTrack:
-        focusedParticipant.stream.getVideoTracks().find(
-          (t) => t.readyState === "live",
-        ) ?? null,
+        focusedParticipant.stream
+          .getVideoTracks()
+          .find((t) => t.readyState === "live") ?? null,
       audioTrack:
-        focusedParticipant.stream.getAudioTracks().find(
-          (t) => t.readyState === "live",
-        ) ?? null,
+        focusedParticipant.stream
+          .getAudioTracks()
+          .find((t) => t.readyState === "live") ?? null,
     };
   }
 
@@ -316,12 +316,7 @@ export function Recording({
     setIsRecording(true);
     setIsRecordingPaused(false);
     publishRecordingState(true, false);
-  }, [
-    isHost,
-    rebuildRecorder,
-    resetRecordingTimer,
-    publishRecordingState,
-  ]);
+  }, [isHost, rebuildRecorder, resetRecordingTimer, publishRecordingState]);
 
   const pauseRecording = useCallback(() => {
     if (

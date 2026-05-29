@@ -81,4 +81,3 @@ export const InviteBar = memo(function InviteBar({
     </div>
   );
 });
-

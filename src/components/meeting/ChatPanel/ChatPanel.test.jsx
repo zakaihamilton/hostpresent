@@ -266,7 +266,9 @@ describe("ChatPanel", () => {
       await user.click(screen.getByLabelText("Select message recipient"));
 
       const listbox = screen.getByRole("listbox");
-      const everyoneOption = within(listbox).getByText("Everyone").closest('[role="option"]');
+      const everyoneOption = within(listbox)
+        .getByText("Everyone")
+        .closest('[role="option"]');
       expect(everyoneOption).toHaveAttribute("aria-selected", "true");
     });
 
@@ -284,7 +286,9 @@ describe("ChatPanel", () => {
       await user.click(screen.getByLabelText("Select message recipient"));
       const allOptions = screen.getAllByRole("option");
       const selectedAlice = allOptions.find(
-        (o) => o.textContent.includes("Alice") && o.getAttribute("aria-selected") === "true",
+        (o) =>
+          o.textContent.includes("Alice") &&
+          o.getAttribute("aria-selected") === "true",
       );
       expect(selectedAlice).toBeTruthy();
     });

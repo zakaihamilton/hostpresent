@@ -156,7 +156,9 @@ describe("Header", () => {
     await user.type(input, "Discarded Changes{Escape}");
 
     expect(onSessionTitleChange).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Initial Title" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Initial Title" }),
+    ).toBeInTheDocument();
   });
 
   it("shows meeting name in a tooltip when participant clicks the logo", async () => {

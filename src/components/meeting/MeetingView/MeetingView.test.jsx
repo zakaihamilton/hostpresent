@@ -206,8 +206,12 @@ describe("MeetingView", () => {
       />,
     );
 
-    expect(await screen.findByText("Meeting limit reached")).toBeInTheDocument();
-    expect(screen.getByText("This meeting has reached the 6-hour limit.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Meeting limit reached"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("This meeting has reached the 6-hour limit."),
+    ).toBeInTheDocument();
     expect(mockDisconnect).toHaveBeenCalled();
   });
 });

@@ -8,7 +8,10 @@ const PHASE_LABELS = {
   complete: "Download started",
 };
 
-export const RecordingDownloadBanner = memo(function RecordingDownloadBanner({ downloadState, onDismiss }) {
+export const RecordingDownloadBanner = memo(function RecordingDownloadBanner({
+  downloadState,
+  onDismiss,
+}) {
   if (!downloadState) return null;
 
   const { phase, progress, filename } = downloadState;

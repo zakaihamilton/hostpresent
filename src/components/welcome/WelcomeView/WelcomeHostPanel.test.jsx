@@ -57,7 +57,9 @@ describe("WelcomeHostPanel", () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Invite Link" }));
-    expect(screen.getByRole("button", { name: "Copy invite link" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy invite link" }),
+    ).toBeInTheDocument();
   });
 
   it("navigates to the meeting with host token when start meeting is clicked", async () => {

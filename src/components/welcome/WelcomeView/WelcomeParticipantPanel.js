@@ -254,7 +254,11 @@ export function WelcomeParticipantPanel({
     <div className={shared.welcomePanel}>
       {/* Join method — segmented tabs matching host panel design */}
       <div className={ps.joinSection}>
-        <div className={shared.shareTabs} role="tablist" aria-label="Join method">
+        <div
+          className={shared.shareTabs}
+          role="tablist"
+          aria-label="Join method"
+        >
           <button
             type="button"
             role="tab"
@@ -276,41 +280,39 @@ export function WelcomeParticipantPanel({
           <div
             className={shared.shareTabPill}
             style={{
-              transform: `translateX(${activeJoinTab === "link" ? "0%" : "100%"})`
+              transform: `translateX(${activeJoinTab === "link" ? "0%" : "100%"})`,
             }}
           />
         </div>
 
         <div className={shared.shareContentArea} key={activeJoinTab}>
           <div className={shared.sharePane}>
-            {activeJoinTab === "link" ? (
-              <>
-                <input
-                  id="participant-invite-link"
-                  className={shared.linkInput}
-                  value={inviteLinkInput}
-                  onChange={(event) => setInviteLinkInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void handleJoinInviteLink();
-                  }}
-                  placeholder="Paste invite link here…"
-                />
-                <p className={ps.joinHint}>
-                  Paste the full URL shared by the host
-                </p>
-              </>
-            ) : (
-              <>
-                <JoinCodeBoxes
-                  value={roomIdInput}
-                  onChange={setRoomIdInput}
-                  autoFocus
-                />
-                <p className={ps.joinHint}>
-                  Enter the 8-character code shared by the host
-                </p>
-              </>
-            )}
+            {activeJoinTab === "link"
+              ? <>
+                  <input
+                    id="participant-invite-link"
+                    className={shared.linkInput}
+                    value={inviteLinkInput}
+                    onChange={(event) => setInviteLinkInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void handleJoinInviteLink();
+                    }}
+                    placeholder="Paste invite link here…"
+                  />
+                  <p className={ps.joinHint}>
+                    Paste the full URL shared by the host
+                  </p>
+                </>
+              : <>
+                  <JoinCodeBoxes
+                    value={roomIdInput}
+                    onChange={setRoomIdInput}
+                    autoFocus
+                  />
+                  <p className={ps.joinHint}>
+                    Enter the 8-character code shared by the host
+                  </p>
+                </>}
           </div>
         </div>
       </div>
@@ -345,8 +347,12 @@ export function WelcomeParticipantPanel({
         <button
           type="button"
           className={shared.button}
-          onClick={activeJoinTab === "code" ? handleJoinRoomId : handleJoinInviteLink}
-          disabled={activeJoinTab === "code" ? !allFilled : !inviteLinkInput.trim()}
+          onClick={
+            activeJoinTab === "code" ? handleJoinRoomId : handleJoinInviteLink
+          }
+          disabled={
+            activeJoinTab === "code" ? !allFilled : !inviteLinkInput.trim()
+          }
         >
           Join meeting
         </button>

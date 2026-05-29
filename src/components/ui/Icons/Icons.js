@@ -18,7 +18,13 @@ function Icon({ size = 20, children }) {
 
 export function Logo({ size = 28 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+    >
       <title>Host Present logo</title>
       {/* Main presentation canvas background fill */}
       <rect
@@ -42,14 +48,7 @@ export function Logo({ size = 28 }) {
         strokeLinejoin="round"
       />
       {/* Controlled participant stream 1 */}
-      <rect
-        x="22"
-        y="6"
-        width="6"
-        height="6"
-        rx="1.5"
-        fill="currentColor"
-      />
+      <rect x="22" y="6" width="6" height="6" rx="1.5" fill="currentColor" />
       {/* Controlled participant stream 2 */}
       <rect
         x="22"
@@ -257,7 +256,6 @@ export function Edit({ size = 16 }) {
     </Icon>
   );
 }
-
 
 export function Chat({ size = 20 }) {
   return (

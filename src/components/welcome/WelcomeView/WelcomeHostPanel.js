@@ -154,9 +154,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const handleCopyJoinCode = async () => {
     if (!formattedJoinCode) return;
     const copied = await copyTextToClipboard(formattedJoinCode);
-    setCopyMessage(
-      copied ? "Copied!" : "Could not copy",
-    );
+    setCopyMessage(copied ? "Copied!" : "Could not copy");
     setTimeout(() => setCopyMessage(""), 2500);
   };
 
@@ -239,7 +237,11 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     <div className={shared.welcomePanel}>
       {/* Sharing section with segmented tabs */}
       <div className={hs.shareSection}>
-        <div className={shared.shareTabs} role="tablist" aria-label="Sharing options">
+        <div
+          className={shared.shareTabs}
+          role="tablist"
+          aria-label="Sharing options"
+        >
           <button
             type="button"
             role="tab"
@@ -261,44 +263,42 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
           <div
             className={shared.shareTabPill}
             style={{
-              transform: `translateX(${activeShareTab === "link" ? "0%" : "100%"})`
+              transform: `translateX(${activeShareTab === "link" ? "0%" : "100%"})`,
             }}
           />
         </div>
 
         <div className={shared.shareContentArea} key={activeShareTab}>
           <div className={shared.sharePane}>
-            {activeShareTab === "link" ? (
-              <>
-                <input
-                  id="invite-link"
-                  className={shared.linkInput}
-                  readOnly
-                  value={inviteLink}
-                  onFocus={(event) => event.currentTarget.select()}
-                />
-                <button
-                  type="button"
-                  className={shared.button}
-                  onClick={handleCopyLink}
-                  disabled={!inviteLink}
-                >
-                  {copyMessage || "Copy invite link"}
-                </button>
-              </>
-            ) : (
-              <>
-                <JoinCodeBoxes value={formattedJoinCode} readOnly />
-                <button
-                  type="button"
-                  className={shared.button}
-                  onClick={handleCopyJoinCode}
-                  disabled={!formattedJoinCode}
-                >
-                  {copyMessage || "Copy room code"}
-                </button>
-              </>
-            )}
+            {activeShareTab === "link"
+              ? <>
+                  <input
+                    id="invite-link"
+                    className={shared.linkInput}
+                    readOnly
+                    value={inviteLink}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className={shared.button}
+                    onClick={handleCopyLink}
+                    disabled={!inviteLink}
+                  >
+                    {copyMessage || "Copy invite link"}
+                  </button>
+                </>
+              : <>
+                  <JoinCodeBoxes value={formattedJoinCode} readOnly />
+                  <button
+                    type="button"
+                    className={shared.button}
+                    onClick={handleCopyJoinCode}
+                    disabled={!formattedJoinCode}
+                  >
+                    {copyMessage || "Copy room code"}
+                  </button>
+                </>}
           </div>
         </div>
       </div>

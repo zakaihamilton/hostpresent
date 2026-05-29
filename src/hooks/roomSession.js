@@ -30,7 +30,8 @@ async function readErrorMessage(response, fallback) {
   if (response.status === 401) {
     return "[E021] This room link is no longer valid. Create a new room from the host welcome screen.";
   }
-  if (response.status === 404) return "[E022] Room not found. It may have expired.";
+  if (response.status === 404)
+    return "[E022] Room not found. It may have expired.";
   return fallback;
 }
 
@@ -41,7 +42,9 @@ async function fetchRoomState(token) {
       `/api/rooms/state?token=${encodeURIComponent(token)}`,
     );
   } catch {
-    throw new Error("[E023] Could not reach the server. Check your connection.");
+    throw new Error(
+      "[E023] Could not reach the server. Check your connection.",
+    );
   }
   if (!response.ok) {
     if (response.status === 401) {
