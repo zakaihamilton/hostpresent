@@ -6,6 +6,7 @@ import {
   isSignalingRetryMessage,
   isSignalingServerReachabilityError,
   isWaitingForHostMessage,
+  isWaitingForParticipantsMessage,
   SIGNALING_CONNECT_TIMEOUT_MS,
   SIGNALING_ERROR,
 } from "./peerClient";
@@ -35,6 +36,12 @@ describe("peerClient signaling errors", () => {
     );
     expect(isFatalSignalingError(SIGNALING_ERROR.HOST_TIMEOUT)).toBe(true);
     expect(isWaitingForHostMessage("Waiting for the host to join…")).toBe(true);
+    expect(isWaitingForParticipantsMessage(SIGNALING_ERROR.HOST_TIMEOUT)).toBe(
+      false,
+    );
+    expect(
+      isWaitingForParticipantsMessage("[E010] Waiting for participants…"),
+    ).toBe(true);
     expect(isFatalSignalingError("Waiting for the host to join…")).toBe(false);
   });
 

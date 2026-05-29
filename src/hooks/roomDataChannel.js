@@ -1156,6 +1156,8 @@ export function useRoomDataChannel({
     };
   }, [createHostPresencePayload, enabled, isHost, send, token]);
 
+  const visibleConnectionError = isConnected ? null : connectionError;
+
   const status =
     connectionError && !isConnected
       ? "error"
@@ -1174,7 +1176,7 @@ export function useRoomDataChannel({
     isConnected,
     hostPresent,
     localParticipantId,
-    connectionError,
+    connectionError: visibleConnectionError,
     signalingConfigured: Boolean(peerConfig),
     status,
   };

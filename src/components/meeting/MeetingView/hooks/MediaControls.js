@@ -10,6 +10,20 @@ import {
   createParticipantVideoUnmutedMessage,
 } from "@/lib/signaling/messages";
 
+const VOICE_ISOLATION_AUDIO_CONSTRAINTS = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  voiceIsolation: true,
+};
+
+function audioConstraintsForDevice(deviceId) {
+  return {
+    ...VOICE_ISOLATION_AUDIO_CONSTRAINTS,
+    ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+  };
+}
+
 export function MediaControls({
   isHost,
   roomConnection,
@@ -87,7 +101,7 @@ export function MediaControls({
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: true,
+          audio: audioConstraintsForDevice(),
         });
         stream.getAudioTracks().forEach((track) => {
           track.enabled = !isAudioMuted;
@@ -200,7 +214,7 @@ export function MediaControls({
 
       try {
         const newStream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: { exact: deviceId } },
+          audio: audioConstraintsForDevice(deviceId),
           video: false,
         });
 
@@ -347,7 +361,7 @@ export function MediaControls({
           video: true,
           audio: shareScreenAudio
             ? {
-                suppressLocalAudioPlayback: false,
+                suppressLocalAudioPlayback: true,
                 echoCancellation: false,
                 noiseSuppression: false,
                 autoGainControl: false,

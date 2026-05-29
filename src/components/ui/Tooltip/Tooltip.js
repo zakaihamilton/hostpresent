@@ -192,6 +192,43 @@ export function Tooltip({
 
   useEffect(() => clearLongPressTimer, [clearLongPressTimer]);
 
+  useEffect(() => {
+    const hideAndReset = () => {
+      suppressUntilLeaveRef.current = false;
+      longPressActiveRef.current = false;
+      clearLongPressTimer();
+      hide();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hideAndReset();
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        hideAndReset();
+      }
+    };
+
+    window.addEventListener("blur", hideAndReset);
+    window.addEventListener("pagehide", hideAndReset);
+    window.addEventListener("pointercancel", hideAndReset);
+    window.addEventListener("touchcancel", hideAndReset);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("blur", hideAndReset);
+      window.removeEventListener("pagehide", hideAndReset);
+      window.removeEventListener("pointercancel", hideAndReset);
+      window.removeEventListener("touchcancel", hideAndReset);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [clearLongPressTimer, hide]);
+
   const child = cloneElement(children, {
     ...(children.props["aria-describedby"]
       ? {}

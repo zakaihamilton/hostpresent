@@ -115,4 +115,30 @@ describe("Tooltip", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("Alex");
     expect(screen.getByRole("tooltip")).toHaveTextContent("Click to edit name");
   });
+
+  it("hides the tooltip when the page becomes hidden", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Tooltip text="Helpful hint">
+        <button type="button">Action</button>
+      </Tooltip>,
+    );
+
+    await user.hover(screen.getByRole("button", { name: "Action" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Helpful hint");
+
+    Object.defineProperty(document, "hidden", {
+      value: true,
+      configurable: true,
+    });
+    fireEvent(document, new Event("visibilitychange"));
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    Object.defineProperty(document, "hidden", {
+      value: false,
+      configurable: true,
+    });
+  });
 });

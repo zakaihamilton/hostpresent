@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { MediaControls } from "./MediaControls";
 
 describe("MediaControls Hook", () => {
@@ -49,6 +49,32 @@ describe("MediaControls Hook", () => {
 
     expect(result.current.isAudioMuted).toBe(false);
     expect(result.current.isVideoMuted).toBe(false);
+  });
+
+  it("requests microphone capture with voice isolation constraints", async () => {
+    renderHook(() =>
+      MediaControls({
+        isHost: false,
+        roomConnection: { send: jest.fn() },
+        streamListenerCleanupsRef: { current: [] },
+        localStream: null,
+        setLocalStream: jest.fn(),
+        screenStream: null,
+        setScreenStream: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          voiceIsolation: true,
+        },
+      });
+    });
   });
 
   it("loads media states from localStorage if set to true", () => {

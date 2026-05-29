@@ -222,6 +222,12 @@ export function peerErrorMessage(error, { isHost = false } = {}) {
   }
 }
 
+export function isWaitingForParticipantsMessage(message) {
+  return (
+    typeof message === "string" && message.includes("Waiting for participants")
+  );
+}
+
 export function connectionRetryDelayMs(attempt) {
   return Math.min(2000 * 2 ** attempt, 15000);
 }
