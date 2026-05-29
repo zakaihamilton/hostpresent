@@ -18,35 +18,59 @@ function Icon({ size = 20, children }) {
 
 export function Logo({ size = 28 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <title>Host Present logo</title>
+      {/* Main presentation canvas background fill */}
       <rect
-        x="5"
-        y="7"
-        width="22"
+        x="4"
+        y="6"
+        width="15"
         height="14"
-        rx="2.5"
+        rx="2"
         fill="currentColor"
         opacity="0.12"
       />
+      {/* Main presentation frame */}
       <rect
-        x="5"
-        y="7"
-        width="22"
+        x="4"
+        y="6"
+        width="15"
         height="14"
-        rx="2.5"
+        rx="2"
         stroke="currentColor"
         strokeWidth="2"
+        strokeLinejoin="round"
       />
-      <path d="M14.5 11.5l5.5 3.25-5.5 3.25V11.5z" fill="currentColor" />
+      {/* Controlled participant stream 1 */}
+      <rect
+        x="22"
+        y="6"
+        width="6"
+        height="6"
+        rx="1.5"
+        fill="currentColor"
+      />
+      {/* Controlled participant stream 2 */}
+      <rect
+        x="22"
+        y="14"
+        width="6"
+        height="6"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        opacity="0.5"
+      />
+      {/* Stand base & column */}
       <path
-        d="M11 25h10"
+        d="M9 25h14"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
       <path
-        d="M16 21v4"
+        d="M16 20v5"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

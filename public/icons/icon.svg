@@ -1,8 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#2563eb"/>
-  <rect x="96" y="128" width="320" height="192" rx="24" fill="#ffffff" opacity="0.18"/>
-  <rect x="96" y="128" width="320" height="192" rx="24" fill="none" stroke="#ffffff" stroke-width="20"/>
-  <path d="M216 208l96 56-96 56V208z" fill="#ffffff"/>
-  <path d="M176 392h160" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
-  <path d="M256 344v48" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
+  <style>
+    path, rect { fill: none; stroke: #1f2937; } /* Default dark color for light tabs */
+    .bg-fill { fill: #1f2937; stroke: none; opacity: 0.12; }
+    .dimmed { opacity: 0.4; }
+    @media (prefers-color-scheme: dark) {
+      path, rect { stroke: #ffffff; } /* Flips to white for dark tabs */
+      .bg-fill { fill: #ffffff; stroke: none; opacity: 0.18; }
+    }
+  </style>
+  
+  <rect x="76" y="110" width="230" height="210" rx="28" class="bg-fill" />
+  <rect x="76" y="110" width="230" height="210" rx="28" stroke-width="38" stroke-linejoin="round"/>
+  
+  <rect x="360" y="110" width="76" height="90" rx="16" stroke-width="38" stroke-linejoin="round"/>
+  
+  <rect x="360" y="230" width="76" height="90" rx="16" stroke-width="38" stroke-linejoin="round" class="dimmed"/>
+  
+  <path d="M140 405h232" stroke-width="38" stroke-linecap="round"/>
+  <path d="M256 320v85" stroke-width="38" stroke-linecap="round"/>
 </svg>
