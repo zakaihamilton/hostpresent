@@ -31,6 +31,9 @@ export const Toolbar = memo(function Toolbar({
   availableMicrophones = [],
   selectedMicrophone = "",
   onMicrophoneChange,
+  availableSpeakers = [],
+  selectedSpeaker = "",
+  onSpeakerChange,
   availableCameras = [],
   selectedCamera = "",
   onCameraChange,
@@ -72,6 +75,9 @@ export const Toolbar = memo(function Toolbar({
             availableMicrophones={availableMicrophones}
             selectedMicrophone={selectedMicrophone}
             onMicrophoneChange={onMicrophoneChange}
+            availableSpeakers={availableSpeakers}
+            selectedSpeaker={selectedSpeaker}
+            onSpeakerChange={onSpeakerChange}
             availableCameras={availableCameras}
             selectedCamera={selectedCamera}
             onCameraChange={onCameraChange}

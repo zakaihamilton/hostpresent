@@ -57,6 +57,8 @@ export function MediaControls({
   const [selectedCamera, setSelectedCamera] = useState("");
   const [availableMicrophones, setAvailableMicrophones] = useState([]);
   const [selectedMicrophone, setSelectedMicrophone] = useState("");
+  const [availableSpeakers, setAvailableSpeakers] = useState([]);
+  const [selectedSpeaker, setSelectedSpeaker] = useState("");
 
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
@@ -78,6 +80,7 @@ export function MediaControls({
       const devices = await navigator.mediaDevices.enumerateDevices();
       setAvailableCameras(devices.filter((d) => d.kind === "videoinput"));
       setAvailableMicrophones(devices.filter((d) => d.kind === "audioinput"));
+      setAvailableSpeakers(devices.filter((d) => d.kind === "audiooutput"));
     } catch {
       // ignore enumeration errors
     }
@@ -113,8 +116,10 @@ export function MediaControls({
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = devices.filter((d) => d.kind === "videoinput");
         const audioInputs = devices.filter((d) => d.kind === "audioinput");
+        const audioOutputs = devices.filter((d) => d.kind === "audiooutput");
         setAvailableCameras(videoInputs);
         setAvailableMicrophones(audioInputs);
+        setAvailableSpeakers(audioOutputs);
         if (videoInputs.length > 0) {
           const currentId = stream.getVideoTracks()[0]?.getSettings().deviceId;
           setSelectedCamera(currentId || videoInputs[0].deviceId);
@@ -122,6 +127,9 @@ export function MediaControls({
         if (audioInputs.length > 0) {
           const currentId = stream.getAudioTracks()[0]?.getSettings().deviceId;
           setSelectedMicrophone(currentId || audioInputs[0].deviceId);
+        }
+        if (audioOutputs.length > 0) {
+          setSelectedSpeaker(audioOutputs[0].deviceId);
         }
       } catch (err) {
         console.error("Failed to acquire camera/mic permissions:", err);
@@ -401,6 +409,10 @@ export function MediaControls({
     setShareScreenAudio(includeAudio);
   }, []);
 
+  const switchSpeaker = useCallback((deviceId) => {
+    setSelectedSpeaker(deviceId || "");
+  }, []);
+
   return {
     localStream,
     setLocalStream,
@@ -427,5 +439,8 @@ export function MediaControls({
     availableMicrophones,
     selectedMicrophone,
     switchMicrophone,
+    availableSpeakers,
+    selectedSpeaker,
+    switchSpeaker,
   };
 }

@@ -11,6 +11,7 @@ export const VideoGallery = memo(function VideoGallery({
   participants,
   isAudioMuted,
   localDisplayName = "You",
+  audioOutputDeviceId = "",
 }) {
   return (
     <div
@@ -37,8 +38,10 @@ export const VideoGallery = memo(function VideoGallery({
               avatarColor={participant.avatarColor}
               overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
               isMuted={!hasPlayableRemoteAudio(participant.stream)}
+              isSpeaking={participant.isSpeaking}
               isVideoOff={participant.isVideoMuted}
               videoOffIcon={<VideoOff />}
+              audioOutputDeviceId={audioOutputDeviceId}
             />
           ))}
         </div>

@@ -5,6 +5,7 @@ import { memo, useEffect, useRef } from "react";
 export const VideoPlayer = memo(function VideoPlayer({
   stream,
   isMuted = false,
+  audioOutputDeviceId = "",
   autoPlay = true,
   className = "",
 }) {
@@ -43,6 +44,13 @@ export const VideoPlayer = memo(function VideoPlayer({
       video.srcObject = null;
     };
   }, [stream]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || typeof video.setSinkId !== "function") return;
+
+    void video.setSinkId(audioOutputDeviceId || "").catch(() => {});
+  }, [audioOutputDeviceId]);
 
   return (
     <video

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MeetingView } from "./MeetingView";
 
 const mockDisconnect = jest.fn();
+let latestToolbarProps = null;
 
 beforeAll(() => {
   Object.defineProperty(global.navigator, "mediaDevices", {
@@ -38,16 +39,19 @@ jest.mock("@/components/meeting/PrimaryView", () => ({
 }));
 
 jest.mock("@/components/meeting/Toolbar", () => ({
-  Toolbar: ({ onToggleAudio, onToggleSidebar }) => (
-    <div>
-      <button type="button" onClick={onToggleAudio}>
-        Toggle audio
-      </button>
-      <button type="button" onClick={onToggleSidebar}>
-        Toggle sidebar
-      </button>
-    </div>
-  ),
+  Toolbar: (props) => {
+    latestToolbarProps = props;
+    return (
+      <div>
+        <button type="button" onClick={props.onToggleAudio}>
+          Toggle audio
+        </button>
+        <button type="button" onClick={props.onToggleSidebar}>
+          Toggle sidebar
+        </button>
+      </div>
+    );
+  },
 }));
 
 jest.mock("@/components/meeting/ParticipantsSidebar", () => ({
@@ -144,6 +148,7 @@ jest.mock("@/hooks", () => ({
 describe("MeetingView", () => {
   beforeEach(() => {
     mockDisconnect.mockClear();
+    latestToolbarProps = null;
   });
 
   it("renders host meeting UI", async () => {
@@ -165,5 +170,20 @@ describe("MeetingView", () => {
     );
     expect(mockDisconnect).toHaveBeenCalledTimes(1);
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows participants to screen share", async () => {
+    render(
+      <MeetingView
+        role="participant"
+        token="participant-token"
+        onBack={() => {}}
+      />,
+    );
+
+    await screen.findByTestId("primary-view");
+
+    expect(latestToolbarProps.allowScreenShare).toBe(true);
+    expect(latestToolbarProps.showRecording).toBe(false);
   });
 });

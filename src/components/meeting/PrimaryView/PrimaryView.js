@@ -13,6 +13,7 @@ export const PrimaryView = memo(function PrimaryView({
   isMuted = true,
   isAudioMuted = false,
   isVideoMuted = false,
+  audioOutputDeviceId = "",
 }) {
   return (
     <div
@@ -39,7 +40,11 @@ export const PrimaryView = memo(function PrimaryView({
 
       {stream && (
         <div className={styles.media}>
-          <VideoPlayer stream={stream} isMuted={isMuted} />
+          <VideoPlayer
+            stream={stream}
+            isMuted={isMuted}
+            audioOutputDeviceId={audioOutputDeviceId}
+          />
         </div>
       )}
       <div className={styles.overlay}>

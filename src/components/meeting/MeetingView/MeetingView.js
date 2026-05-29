@@ -237,6 +237,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     availableMicrophones,
     selectedMicrophone,
     switchMicrophone,
+    availableSpeakers,
+    selectedSpeaker,
+    switchSpeaker,
   } = MediaControls({
     isHost,
     roomConnection,
@@ -255,6 +258,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostDisplayName,
     hostAudioMuted,
     hostVideoMuted,
+    hostIsSpeaking,
     hostMode,
     hostPresent,
     audioList,
@@ -479,6 +483,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         stream: hostStream,
         isAudioMuted: hostAudioMuted,
         isVideoMuted: hostVideoMuted,
+        isSpeaking: hostIsSpeaking,
         avatarColor: "#6366f1",
       });
     }
@@ -506,6 +511,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   }, [
     hostAudioMuted,
     hostDisplayName,
+    hostIsSpeaking,
     hostStream,
     hostVideoMuted,
     isAudioMuted,
@@ -519,7 +525,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   ]);
 
   const primaryViewProps = useMemo(() => {
-    const viewingHostStream = !isHost && Boolean(hostStream);
+    const viewingHostStream = !isHost && Boolean(hostStream) && !screenStream;
     const activeMain = screenStream || localStream;
     return {
       stream: viewingHostStream ? hostStream : activeMain,
@@ -656,6 +662,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               participants={galleryParticipants}
               isAudioMuted={isAudioMuted}
               localDisplayName={resolvedDisplayName}
+              audioOutputDeviceId={selectedSpeaker}
             />
           </div>
 
@@ -665,6 +672,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               isRecording={isRecording}
               isRecordingPaused={isRecordingPaused}
               recordingDurationSeconds={recordingSeconds}
+              audioOutputDeviceId={selectedSpeaker}
             />
           </div>
 
@@ -693,6 +701,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     hostDisplayName={hostDisplayName}
                     hostIsAudioMuted={hostAudioMuted}
                     hostIsVideoMuted={hostVideoMuted}
+                    hostIsSpeaking={hostIsSpeaking}
                     hostMode={hostMode}
                     isVideoMuted={isVideoMuted}
                     isAudioMuted={isAudioMuted}
@@ -730,6 +739,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 hostDisplayName={hostDisplayName}
                 hostIsAudioMuted={hostAudioMuted}
                 hostIsVideoMuted={hostVideoMuted}
+                hostIsSpeaking={hostIsSpeaking}
                 hostMode={hostMode}
                 isVideoMuted={isVideoMuted}
                 isAudioMuted={isAudioMuted}
@@ -775,10 +785,13 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         participantMode={participantMode}
         onParticipantModeChange={handleParticipantModeChange}
         showRecording={isHost}
-        allowScreenShare={isHost}
+        allowScreenShare
         availableMicrophones={availableMicrophones}
         selectedMicrophone={selectedMicrophone}
         onMicrophoneChange={switchMicrophone}
+        availableSpeakers={availableSpeakers}
+        selectedSpeaker={selectedSpeaker}
+        onSpeakerChange={switchSpeaker}
         availableCameras={availableCameras}
         selectedCamera={selectedCamera}
         onCameraChange={switchCamera}

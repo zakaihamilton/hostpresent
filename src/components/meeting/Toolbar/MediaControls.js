@@ -56,6 +56,9 @@ export function MediaControls({
   availableMicrophones = [],
   selectedMicrophone = "",
   onMicrophoneChange,
+  availableSpeakers = [],
+  selectedSpeaker = "",
+  onSpeakerChange,
   availableCameras = [],
   selectedCamera = "",
   onCameraChange,
@@ -72,7 +75,8 @@ export function MediaControls({
   const micTestCleanupRef = useRef(null);
   const menuId = useId();
   const headingId = `${menuId}-heading`;
-  const audioSectionId = `${menuId}-audio`;
+  const microphoneSectionId = `${menuId}-microphone`;
+  const outputSectionId = `${menuId}-output`;
   const videoSectionId = `${menuId}-video`;
 
   const updateMenuPosition = () => {
@@ -297,10 +301,13 @@ export function MediaControls({
 
               <section
                 className={styles.menuSection}
-                aria-labelledby={audioSectionId}
+                aria-labelledby={microphoneSectionId}
               >
-                <h3 id={audioSectionId} className={styles.menuSectionTitle}>
-                  Audio
+                <h3
+                  id={microphoneSectionId}
+                  className={styles.menuSectionTitle}
+                >
+                  Microphone
                 </h3>
 
                 {availableMicrophones.length === 0
@@ -355,6 +362,44 @@ export function MediaControls({
                     {micTestStatus}
                   </p>
                 </div>
+              </section>
+
+              <section
+                className={`${styles.menuSection} ${styles.menuSectionDivider}`}
+                aria-labelledby={outputSectionId}
+              >
+                <h3 id={outputSectionId} className={styles.menuSectionTitle}>
+                  Audio output
+                </h3>
+
+                {availableSpeakers.length === 0
+                  ? <p className={styles.menuEmpty}>
+                      Output selection is not available in this browser
+                    </p>
+                  : <fieldset className={styles.menuFieldset}>
+                      <legend className={styles.menuLegend}>
+                        Audio output
+                      </legend>
+                      {availableSpeakers.map((speaker, index) => (
+                        <label
+                          key={speaker.deviceId}
+                          className={`${styles.menuOption} ${selectedSpeaker === speaker.deviceId ? styles.menuOptionSelected : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="speaker"
+                            checked={selectedSpeaker === speaker.deviceId}
+                            onChange={() => onSpeakerChange?.(speaker.deviceId)}
+                            className={styles.menuOptionInput}
+                          />
+                          <span className={styles.menuOptionContent}>
+                            <span className={styles.menuOptionTitle}>
+                              {speaker.label || `Speaker ${index + 1}`}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </fieldset>}
               </section>
 
               <section

@@ -3,22 +3,22 @@ import { Mic, MicOff, Video, VideoOff } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./ParticipantItem.module.css";
 
-function MediaStatus({ muted, children }) {
+function MediaStatus({ muted, speaking = false, children }) {
   return (
     <span
-      className={`${styles.statusIcon} ${muted ? styles.statusIconMuted : ""}`}
+      className={`${styles.statusIcon} ${muted ? styles.statusIconMuted : ""} ${speaking ? styles.statusIconSpeaking : ""}`}
     >
       {children}
     </span>
   );
 }
 
-function HostMediaAction({ label, onAction, children }) {
+function HostMediaAction({ label, onAction, speaking = false, children }) {
   return (
     <Tooltip text={label} placement="left">
       <button
         type="button"
-        className={styles.statusBtn}
+        className={`${styles.statusBtn} ${speaking ? styles.statusIconSpeaking : ""}`}
         onClick={onAction}
         aria-label={label}
       >
@@ -52,7 +52,7 @@ function VideoControl({ isVideoMuted, onMuteVideo }) {
   );
 }
 
-function AudioControl({ isAudioMuted, onMuteAudio }) {
+function AudioControl({ isAudioMuted, isSpeaking, onMuteAudio }) {
   if (isAudioMuted) {
     return (
       <MediaStatus muted>
@@ -63,14 +63,18 @@ function AudioControl({ isAudioMuted, onMuteAudio }) {
 
   if (onMuteAudio) {
     return (
-      <HostMediaAction label="Mute participant" onAction={onMuteAudio}>
+      <HostMediaAction
+        label="Mute participant"
+        onAction={onMuteAudio}
+        speaking={isSpeaking}
+      >
         <Mic />
       </HostMediaAction>
     );
   }
 
   return (
-    <MediaStatus muted={isAudioMuted}>
+    <MediaStatus muted={isAudioMuted} speaking={isSpeaking}>
       <Mic />
     </MediaStatus>
   );
@@ -83,6 +87,7 @@ export const ParticipantItem = memo(function ParticipantItem({
   avatarFontSize,
   isVideoMuted = false,
   isAudioMuted = false,
+  isSpeaking = false,
   hasVideo = true,
   modeLabel = null,
   onMuteVideo,
@@ -111,7 +116,11 @@ export const ParticipantItem = memo(function ParticipantItem({
         {hasVideo && (
           <VideoControl isVideoMuted={isVideoMuted} onMuteVideo={onMuteVideo} />
         )}
-        <AudioControl isAudioMuted={isAudioMuted} onMuteAudio={onMuteAudio} />
+        <AudioControl
+          isAudioMuted={isAudioMuted}
+          isSpeaking={isSpeaking}
+          onMuteAudio={onMuteAudio}
+        />
       </div>
     </div>
   );

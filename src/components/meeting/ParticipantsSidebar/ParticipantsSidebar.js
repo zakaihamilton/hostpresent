@@ -32,6 +32,7 @@ function buildParticipantItems({
   isAudioMuted,
   hostIsAudioMuted,
   hostIsVideoMuted,
+  hostIsSpeaking,
   hostMode,
   localDisplayName,
   localParticipantMode,
@@ -54,6 +55,7 @@ function buildParticipantItems({
         avatarColor: "#6366f1",
         isVideoMuted: hostIsVideoMuted,
         isAudioMuted: hostIsAudioMuted,
+        isSpeaking: hostIsSpeaking,
         hasVideo: true,
         modeLabel: getModeLabel(hostMode),
       },
@@ -65,6 +67,7 @@ function buildParticipantItems({
         avatarColor: "#3b82f6",
         isVideoMuted,
         isAudioMuted,
+        isSpeaking: false,
         hasVideo: true,
         modeLabel: selfModeLabel,
       },
@@ -79,6 +82,7 @@ function buildParticipantItems({
         avatarColor: participant.avatarColor,
         isVideoMuted: false,
         isAudioMuted: false,
+        isSpeaking: false,
         hasVideo: false,
         modeLabel: getModeLabel(participant.mode),
       });
@@ -96,6 +100,7 @@ function buildParticipantItems({
       avatarColor: "#3b82f6",
       isVideoMuted,
       isAudioMuted,
+      isSpeaking: false,
       hasVideo: true,
       modeLabel: selfModeLabel,
     },
@@ -110,6 +115,7 @@ function buildParticipantItems({
       avatarColor: participant.avatarColor,
       isVideoMuted: participant.isVideoMuted,
       isAudioMuted: participant.isAudioMuted,
+      isSpeaking: participant.isSpeaking,
       hasVideo: true,
       modeLabel: getModeLabel(participant.mode),
     });
@@ -131,6 +137,7 @@ function buildParticipantItems({
         avatarColor: "#475569",
         avatarFontSize: "10px",
         isAudioMuted: participant.isMuted,
+        isSpeaking: participant.isSpeaking,
         hasVideo: false,
       });
     }
@@ -162,14 +169,13 @@ const ParticipantRow = memo(function ParticipantRow({
       avatarFontSize={item.avatarFontSize}
       isVideoMuted={item.isVideoMuted}
       isAudioMuted={item.isAudioMuted}
+      isSpeaking={item.isSpeaking}
       hasVideo={item.hasVideo}
       modeLabel={item.modeLabel}
-      onMuteVideo={canMute
-        ? () => onMuteParticipantVideo(item.id)
-        : undefined}
-      onMuteAudio={canMute
-        ? () => onMuteParticipantAudio(item.id, item.type)
-        : undefined}
+      onMuteVideo={canMute ? () => onMuteParticipantVideo(item.id) : undefined}
+      onMuteAudio={
+        canMute ? () => onMuteParticipantAudio(item.id, item.type) : undefined
+      }
     />
   );
 });
@@ -192,6 +198,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   hostDisplayName = "Host",
   hostIsAudioMuted = false,
   hostIsVideoMuted = false,
+  hostIsSpeaking = false,
   hostMode = "available",
   isVideoMuted,
   isAudioMuted,
@@ -221,6 +228,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
         isAudioMuted,
         hostIsAudioMuted,
         hostIsVideoMuted,
+        hostIsSpeaking,
         hostMode,
         localDisplayName,
         localParticipantMode,
@@ -234,6 +242,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
       hostDisplayName,
       hostIsAudioMuted,
       hostIsVideoMuted,
+      hostIsSpeaking,
       hostMode,
       isAudioMuted,
       isHost,

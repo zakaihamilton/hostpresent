@@ -36,6 +36,13 @@ const backCamera = {
   label: "Back Camera",
 };
 
+const builtInSpeaker = {
+  deviceId: "builtin-speaker-id",
+  groupId: "group-2",
+  kind: "audiooutput",
+  label: "Built-in Speakers",
+};
+
 describe("MediaControls", () => {
   let audioContextMock;
 
@@ -100,7 +107,7 @@ describe("MediaControls", () => {
     expect(onToggleVideo).toHaveBeenCalledTimes(1);
   });
 
-  it("opens device menu and shows available microphones and cameras", async () => {
+  it("opens device menu and separates microphone, output, and camera settings", async () => {
     const user = userEvent.setup();
 
     render(
@@ -112,6 +119,9 @@ describe("MediaControls", () => {
         availableMicrophones={[builtInMic, externalMic]}
         selectedMicrophone="builtin-mic-id"
         onMicrophoneChange={() => {}}
+        availableSpeakers={[builtInSpeaker]}
+        selectedSpeaker="builtin-speaker-id"
+        onSpeakerChange={() => {}}
         availableCameras={[frontCamera, backCamera]}
         selectedCamera="front-camera-id"
         onCameraChange={() => {}}
@@ -121,12 +131,40 @@ describe("MediaControls", () => {
     await user.click(getDeviceMenuChevron());
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Device settings")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Audio" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Microphone" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Audio output" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Video" })).toBeInTheDocument();
     expect(screen.getByText("Built-in Microphone")).toBeInTheDocument();
     expect(screen.getByText("External Microphone")).toBeInTheDocument();
+    expect(screen.getByText("Built-in Speakers")).toBeInTheDocument();
     expect(screen.getByText("Front Camera")).toBeInTheDocument();
     expect(screen.getByText("Back Camera")).toBeInTheDocument();
+  });
+
+  it("switches audio output when a different speaker is selected", async () => {
+    const user = userEvent.setup();
+    const onSpeakerChange = jest.fn();
+
+    render(
+      <MediaControls
+        isAudioMuted={false}
+        isVideoMuted={false}
+        onToggleAudio={() => {}}
+        onToggleVideo={() => {}}
+        availableSpeakers={[builtInSpeaker]}
+        selectedSpeaker=""
+        onSpeakerChange={onSpeakerChange}
+      />,
+    );
+
+    await user.click(getDeviceMenuChevron());
+    await user.click(screen.getByRole("radio", { name: /Built-in Speakers/i }));
+
+    expect(onSpeakerChange).toHaveBeenCalledWith("builtin-speaker-id");
   });
 
   it("switches camera when a different option is selected", async () => {

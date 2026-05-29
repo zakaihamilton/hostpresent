@@ -20,6 +20,62 @@ function participantColor(id) {
   return `hsl(${Math.abs(hash) % 360} 55% 45%)`;
 }
 
+const SPEAKING_SAMPLE_MS = 140;
+const SPEAKING_THRESHOLD = 0.055;
+
+function attachSpeakingDetector(stream, onSpeakingChange) {
+  if (
+    typeof window === "undefined" ||
+    !stream?.getAudioTracks?.().some((track) => track.readyState === "live") ||
+    typeof onSpeakingChange !== "function"
+  ) {
+    return () => {};
+  }
+
+  const AudioContextConstructor =
+    window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) return () => {};
+
+  let context;
+  let source;
+  let intervalId;
+  let lastSpeaking = false;
+
+  try {
+    context = new AudioContextConstructor();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    source = context.createMediaStreamSource(stream);
+    source.connect(analyser);
+    const samples = new Uint8Array(analyser.fftSize);
+
+    intervalId = window.setInterval(() => {
+      analyser.getByteTimeDomainData(samples);
+      let sum = 0;
+      for (const value of samples) {
+        const normalized = (value - 128) / 128;
+        sum += normalized * normalized;
+      }
+      const speaking = Math.sqrt(sum / samples.length) >= SPEAKING_THRESHOLD;
+      if (speaking !== lastSpeaking) {
+        lastSpeaking = speaking;
+        onSpeakingChange(speaking);
+      }
+    }, SPEAKING_SAMPLE_MS);
+  } catch {
+    return () => {};
+  }
+
+  return () => {
+    if (intervalId) window.clearInterval(intervalId);
+    if (lastSpeaking) onSpeakingChange(false);
+    try {
+      source?.disconnect();
+    } catch {}
+    void context?.close?.();
+  };
+}
+
 export function RemoteParticipants({
   isHost,
   roomConnectionRef,
@@ -46,14 +102,27 @@ export function RemoteParticipants({
   const [hostVideoMuted, setHostVideoMuted] = useState(false);
   const [hostMode, setHostMode] = useState("available");
   const [hostPresent, setHostPresent] = useState(isHost);
+  const [hostIsSpeaking, setHostIsSpeaking] = useState(false);
   const [audioList, setAudioList] = useState([]);
 
   const participantProfilesRef = useRef(new Map());
   const streamListenerCleanupsRef = useRef(new Map());
+  const speakingCleanupsRef = useRef(new Map());
+  const hostSpeakingCleanupRef = useRef(null);
 
   const handleRemoteHostStream = useCallback((stream) => {
+    hostSpeakingCleanupRef.current?.();
+    hostSpeakingCleanupRef.current = null;
     setHostStream(stream);
     setHostStreamPlaybackMuted(!hasPlayableRemoteAudio(stream));
+    if (stream) {
+      hostSpeakingCleanupRef.current = attachSpeakingDetector(
+        stream,
+        setHostIsSpeaking,
+      );
+    } else {
+      setHostIsSpeaking(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -161,6 +230,8 @@ export function RemoteParticipants({
       if (participant.stream === null) {
         streamListenerCleanupsRef.current.get(participant.id)?.();
         streamListenerCleanupsRef.current.delete(participant.id);
+        speakingCleanupsRef.current.get(participant.id)?.();
+        speakingCleanupsRef.current.delete(participant.id);
         setVideoParticipants((previous) =>
           previous.filter((entry) => entry.id !== participant.id),
         );
@@ -212,6 +283,17 @@ export function RemoteParticipants({
 
       if (participant.stream) {
         bindRemoteStreamMediaListeners(participant.id, participant.stream);
+        speakingCleanupsRef.current.get(participant.id)?.();
+        speakingCleanupsRef.current.set(
+          participant.id,
+          attachSpeakingDetector(participant.stream, (isSpeaking) => {
+            setVideoParticipants((previous) =>
+              previous.map((entry) =>
+                entry.id === participant.id ? { ...entry, isSpeaking } : entry,
+              ),
+            );
+          }),
+        );
       }
 
       if (isNewConnection) {
@@ -279,6 +361,17 @@ export function RemoteParticipants({
     }
     setHostPresent(roomConnection?.hostPresent);
   }, [isHost, roomConnection?.hostPresent]);
+
+  useEffect(
+    () => () => {
+      hostSpeakingCleanupRef.current?.();
+      for (const cleanup of speakingCleanupsRef.current.values()) {
+        cleanup?.();
+      }
+      speakingCleanupsRef.current.clear();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (isHost) return undefined;
@@ -460,6 +553,7 @@ export function RemoteParticipants({
     hostDisplayName,
     hostAudioMuted,
     hostVideoMuted,
+    hostIsSpeaking,
     hostMode,
     hostPresent,
     audioList,

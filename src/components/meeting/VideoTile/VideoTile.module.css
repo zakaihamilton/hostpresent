@@ -58,6 +58,9 @@
 
 .speaking {
   border-color: var(--primary);
+  box-shadow:
+    var(--shadow-md),
+    0 0 0 2px color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
 .placeholder {
@@ -101,6 +104,21 @@
   font-weight: 500;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.overlayIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.overlayIconSpeaking {
+  color: var(--success);
+  transform: scale(1.12);
 }
 
 .videoOffOverlay {

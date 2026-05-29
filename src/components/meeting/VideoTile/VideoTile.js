@@ -12,6 +12,7 @@ export const VideoTile = memo(function VideoTile({
   isSpeaking = false,
   isVideoOff = false,
   videoOffIcon = null,
+  audioOutputDeviceId = "",
 }) {
   const showVideo = Boolean(stream) && !isVideoOff;
 
@@ -21,6 +22,7 @@ export const VideoTile = memo(function VideoTile({
         ? <VideoPlayer
             stream={stream}
             isMuted={isMuted}
+            audioOutputDeviceId={audioOutputDeviceId}
             className={showVideo ? "" : styles.audioOnlyVideo}
           />
         : null}
@@ -39,7 +41,13 @@ export const VideoTile = memo(function VideoTile({
         </div>
       )}
       <div className={styles.overlay}>
-        {overlayIcon}
+        {overlayIcon
+          ? <span
+              className={`${styles.overlayIcon} ${isSpeaking ? styles.overlayIconSpeaking : ""}`}
+            >
+              {overlayIcon}
+            </span>
+          : null}
         {name}
       </div>
     </div>
