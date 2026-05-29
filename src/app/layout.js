@@ -34,7 +34,6 @@ export default function RootLayout({ children }) {
           sizes="180x180"
           href="/apple-touch-icon.png"
         />
-        <meta name="apple-mobile-web-app-title" content="Host Present" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body>
