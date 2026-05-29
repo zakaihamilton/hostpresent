@@ -501,6 +501,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         id: localId || "self",
         name: resolvedDisplayName,
         stream: localStream,
+        isSelf: true,
         isAudioMuted,
         isVideoMuted,
         avatarColor: "#3b82f6",

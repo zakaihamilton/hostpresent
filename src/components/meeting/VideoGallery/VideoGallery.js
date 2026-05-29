@@ -37,7 +37,10 @@ export const VideoGallery = memo(function VideoGallery({
               initial={participant.name.charAt(0)}
               avatarColor={participant.avatarColor}
               overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
-              isMuted={!hasPlayableRemoteAudio(participant.stream)}
+              isMuted={
+                participant.isSelf ||
+                !hasPlayableRemoteAudio(participant.stream)
+              }
               isSpeaking={participant.isSpeaking}
               isVideoOff={participant.isVideoMuted}
               videoOffIcon={<VideoOff />}
