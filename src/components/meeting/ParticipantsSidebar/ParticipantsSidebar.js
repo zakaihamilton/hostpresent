@@ -142,7 +142,6 @@ function buildParticipantItems({
         name: participant.name,
         initial: participant.name.charAt(0),
         avatarColor: "#475569",
-        avatarFontSize: "10px",
         isAudioMuted: participant.isMuted,
         isSpeaking: participant.isSpeaking,
         hasVideo: false,

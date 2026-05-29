@@ -314,6 +314,21 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   onRemoteParticipantRef.current = handleRemoteParticipant;
   onRemoteHostStreamRef.current = handleRemoteHostStream;
 
+  const effectiveFocusedId = useMemo(() => {
+    if (focusedParticipantId !== "") return focusedParticipantId;
+    const speaker = videoParticipants.find((p) => p.isSpeaking);
+    if (speaker) return speaker.id;
+    if (isHost && localIsSpeaking) return "host";
+    if (!isHost && hostIsSpeaking) return "host";
+    return "host";
+  }, [
+    focusedParticipantId,
+    videoParticipants,
+    isHost,
+    localIsSpeaking,
+    hostIsSpeaking,
+  ]);
+
   const {
     downloadState,
     dismissDownloadBanner,
@@ -327,7 +342,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     localStream,
     screenStream,
     videoParticipants,
-    focusedParticipantId,
+    focusedParticipantId: effectiveFocusedId,
     resetRecordingTimer,
     videoParticipantsLength: videoParticipants.length,
     isRecording,
@@ -413,32 +428,33 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const handleFocusParticipant = useCallback(
     (participantId) => {
       if (!isHost) return;
-      const nextFocusedId = participantId || "host";
+      const nextFocusedId =
+        participantId === focusedParticipantId ? "" : (participantId || "");
       setFocusedParticipantId(nextFocusedId);
       roomConnectionRef.current?.send(
         createHostFocusChangedMessage({ focusedId: nextFocusedId }),
       );
     },
-    [isHost],
+    [isHost, focusedParticipantId],
   );
 
   useEffect(() => {
     if (isHost) return undefined;
     return roomConnectionRef.current?.subscribe((message) => {
       if (message.type === SIGNALING_MESSAGE.HOST_FOCUS_CHANGED) {
-        setFocusedParticipantId(message.focusedId || "host");
+        setFocusedParticipantId(message.focusedId ?? "host");
       }
     });
   }, [isHost]);
 
   useEffect(() => {
-    if (!isHost || focusedParticipantId === "host") return;
+    if (!isHost || !focusedParticipantId || focusedParticipantId === "host") return;
     if (
       !videoParticipants.some(
         (participant) => participant.id === focusedParticipantId,
       )
     ) {
-      handleFocusParticipant("host");
+      handleFocusParticipant(focusedParticipantId);
     }
   }, [focusedParticipantId, handleFocusParticipant, isHost, videoParticipants]);
 
@@ -594,15 +610,15 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const primaryViewProps = useMemo(() => {
     const focusedParticipant =
-      focusedParticipantId && focusedParticipantId !== "host"
+      effectiveFocusedId && effectiveFocusedId !== "host"
         ? videoParticipants.find(
-            (participant) => participant.id === focusedParticipantId,
+            (participant) => participant.id === effectiveFocusedId,
           )
         : null;
     const focusedIsSelf =
       !isHost &&
-      focusedParticipantId &&
-      focusedParticipantId === roomConnection?.localParticipantId;
+      effectiveFocusedId &&
+      effectiveFocusedId === roomConnection?.localParticipantId;
     const viewingFocusedParticipant = Boolean(
       focusedParticipant || focusedIsSelf,
     );
@@ -648,7 +664,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
           : false,
     };
   }, [
-    focusedParticipantId,
+    effectiveFocusedId,
     hostStream,
     isHost,
     screenStream,
@@ -777,7 +793,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               localDisplayName={resolvedDisplayName}
               localIsSpeaking={localIsSpeaking}
               audioOutputDeviceId={selectedSpeaker}
-              focusedParticipantId={focusedParticipantId}
+              focusedParticipantId={effectiveFocusedId}
               allowFocus={isHost}
               onFocusParticipant={handleFocusParticipant}
             />
@@ -825,7 +841,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     isHost={isHost}
                     localDisplayName={displayNameInput}
                     localParticipantMode={participantMode}
-                    focusedParticipantId={focusedParticipantId}
+                    focusedParticipantId={effectiveFocusedId}
                     localIsSpeaking={localIsSpeaking}
                     localIsScreenSharing={Boolean(screenStream)}
                     hostIsScreenSharing={hostScreenSharing}
@@ -837,18 +853,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     onMuteAllAudio={muteAllAudio}
                     canMuteAllVideo={canMuteAllVideo}
                     canMuteAllAudio={canMuteAllAudio}
-                  />
-                </div>
-                <div className={styles.combinedDivider} />
-                <div className={styles.combinedSection}>
-                  <ChatPanel
-                    visible
-                    flex
-                    messages={chatMessages}
-                    participants={chatParticipants}
-                    onClose={handleCloseChat}
-                    onSendMessage={handleSendChatMessage}
-                    sessionName={sessionTitle}
                   />
                 </div>
               </aside>
@@ -869,7 +873,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 isHost={isHost}
                 localDisplayName={displayNameInput}
                 localParticipantMode={participantMode}
-                focusedParticipantId={focusedParticipantId}
+                focusedParticipantId={effectiveFocusedId}
                 localIsSpeaking={localIsSpeaking}
                 localIsScreenSharing={Boolean(screenStream)}
                 hostIsScreenSharing={hostScreenSharing}

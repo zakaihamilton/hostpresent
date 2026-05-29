@@ -43,7 +43,7 @@ export function createHostPresentMessage({
 }
 
 export function createHostFocusChangedMessage({ focusedId = "host" } = {}) {
-  const id = typeof focusedId === "string" && focusedId ? focusedId : "host";
+  const id = typeof focusedId === "string" ? focusedId : "host";
   return {
     type: SIGNALING_MESSAGE.HOST_FOCUS_CHANGED,
     focusedId: id,
