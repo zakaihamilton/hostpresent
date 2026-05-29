@@ -85,9 +85,9 @@ function buildParticipantItems({
         name: participant.name,
         initial: displayNameInitial(participant.name),
         avatarColor: participant.avatarColor,
-        isVideoMuted: false,
-        isAudioMuted: false,
-        isSpeaking: false,
+        isVideoMuted: participant.isVideoMuted ?? false,
+        isAudioMuted: participant.isAudioMuted ?? false,
+        isSpeaking: participant.isSpeaking ?? false,
         hasVideo: false,
         modeLabel: getModeLabel(participant.mode),
       });

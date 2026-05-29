@@ -6,6 +6,64 @@ import {
   resolveOutboundAudioTrack,
 } from "@/lib/webrtc/outboundMedia";
 
+function setStreamTracks(stream, tracks) {
+  const currentTracks = stream.getTracks();
+  for (const track of currentTracks) {
+    if (!tracks.includes(track)) {
+      stream.removeTrack(track);
+    }
+  }
+  for (const track of tracks) {
+    if (!currentTracks.includes(track)) {
+      stream.addTrack(track);
+    }
+  }
+}
+
+function pickTracksForFocus({
+  focusedParticipantId,
+  videoParticipants,
+  localStream,
+  screenStream,
+}) {
+  const focusedParticipant =
+    focusedParticipantId && focusedParticipantId !== "host"
+      ? videoParticipants.find((p) => p.id === focusedParticipantId)
+      : null;
+
+  if (focusedParticipant?.stream) {
+    return {
+      videoTrack:
+        focusedParticipant.stream.getVideoTracks().find(
+          (t) => t.readyState === "live",
+        ) ?? null,
+      audioTrack:
+        focusedParticipant.stream.getAudioTracks().find(
+          (t) => t.readyState === "live",
+        ) ?? null,
+    };
+  }
+
+  return {
+    videoTrack: pickOutboundVideoTrack(localStream, screenStream),
+    audioTrack: null,
+  };
+}
+
+function createRecorder(stream, options) {
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, options);
+  } catch (e) {
+    console.warn(
+      "MP4 format not fully supported by browser, falling back to default.",
+      e,
+    );
+    recorder = new MediaRecorder(stream);
+  }
+  return recorder;
+}
+
 export function Recording({
   isHost,
   roomConnection,
@@ -25,9 +83,11 @@ export function Recording({
 
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
+  const compositeStreamRef = useRef(null);
   const audioRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const downloadDismissTimerRef = useRef(null);
+  const switchingFocusRef = useRef(false);
 
   const publishRecordingState = useCallback(
     (active, paused = false) => {
@@ -104,7 +164,6 @@ export function Recording({
       window.URL.revokeObjectURL(url);
     }, 100);
 
-    // Export .m4a audio file if we have audio chunks recorded
     if (
       audioRecorderRef.current &&
       audioRecorderRef.current.state !== "inactive"
@@ -158,57 +217,37 @@ export function Recording({
     }, 5000);
   }, [updateDownloadProgress]);
 
-  const startRecording = useCallback(async () => {
-    if (!isHost) return;
+  const rebuildRecorder = useCallback(async () => {
+    const { videoTrack, audioTrack } = pickTracksForFocus({
+      focusedParticipantId,
+      videoParticipants,
+      localStream,
+      screenStream,
+    });
 
-    const focusedParticipant =
-      focusedParticipantId && focusedParticipantId !== "host"
-        ? videoParticipants.find(
-            (p) => p.id === focusedParticipantId,
-          )
-        : null;
-
-    let activeVideoTrack;
-    let audioTrack;
-
-    if (focusedParticipant?.stream) {
-      activeVideoTrack =
-        focusedParticipant.stream.getVideoTracks().find(
-          (t) => t.readyState === "live",
-        ) ?? null;
-      audioTrack =
-        focusedParticipant.stream.getAudioTracks().find(
-          (t) => t.readyState === "live",
-        ) ?? null;
-    } else {
-      activeVideoTrack = pickOutboundVideoTrack(localStream, screenStream);
-      audioTrack = await resolveOutboundAudioTrack(
+    let resolvedAudioTrack = audioTrack;
+    if (!resolvedAudioTrack) {
+      resolvedAudioTrack = await resolveOutboundAudioTrack(
         localStream,
         screenStream,
       );
     }
 
-    const tracksToRecord = [activeVideoTrack, audioTrack].filter(Boolean);
-    const compositeStream = new MediaStream(tracksToRecord);
+    const tracksToRecord = [videoTrack, resolvedAudioTrack].filter(Boolean);
+
+    if (!compositeStreamRef.current) {
+      compositeStreamRef.current = new MediaStream(tracksToRecord);
+    } else {
+      setStreamTracks(compositeStreamRef.current, tracksToRecord);
+    }
 
     let options = { mimeType: "video/mp4;codecs=avc1" };
     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
       options = { mimeType: "video/mp4" };
     }
 
-    let recorder;
-    try {
-      recorder = new MediaRecorder(compositeStream, options);
-    } catch (e) {
-      console.warn(
-        "MP4 format not fully supported by browser, falling back to default.",
-        e,
-      );
-      recorder = new MediaRecorder(compositeStream);
-    }
-
+    const recorder = createRecorder(compositeStreamRef.current, options);
     mediaRecorderRef.current = recorder;
-    recordingChunksRef.current = [];
 
     recorder.ondataavailable = (event) => {
       if (event.data?.size > 0) {
@@ -216,56 +255,45 @@ export function Recording({
       }
     };
 
-    recorder.onstop = () => {
-      void finalizeRecordingDownload();
-    };
-
-    // Setup separate audio recording
-    audioChunksRef.current = [];
-    if (audioTrack) {
-      const audioStream = new MediaStream([audioTrack]);
+    if (resolvedAudioTrack) {
+      const audioStream = new MediaStream([resolvedAudioTrack]);
       let audioOptions = { mimeType: "audio/mp4" };
       if (!MediaRecorder.isTypeSupported(audioOptions.mimeType)) {
         audioOptions = {};
       }
-      let audioRecorder;
-      try {
-        audioRecorder = new MediaRecorder(audioStream, audioOptions);
-      } catch (e) {
-        console.warn(
-          "Audio MP4 format not supported, falling back to default.",
-          e,
-        );
-        audioRecorder = new MediaRecorder(audioStream);
-      }
-
+      const audioRecorder = createRecorder(audioStream, audioOptions);
       audioRecorderRef.current = audioRecorder;
       audioRecorder.ondataavailable = (event) => {
         if (event.data?.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
       audioRecorder.start(1000);
     } else {
       audioRecorderRef.current = null;
     }
 
     recorder.start(1000);
+  }, [focusedParticipantId, localStream, screenStream, videoParticipants]);
+
+  const startRecording = useCallback(async () => {
+    if (!isHost) return;
+
+    recordingChunksRef.current = [];
+    audioChunksRef.current = [];
+    switchingFocusRef.current = false;
+
+    await rebuildRecorder();
+
     resetRecordingTimer();
     setIsRecording(true);
     setIsRecordingPaused(false);
     publishRecordingState(true, false);
   }, [
-    finalizeRecordingDownload,
-    focusedParticipantId,
     isHost,
-    localStream,
-    publishRecordingState,
+    rebuildRecorder,
     resetRecordingTimer,
-    screenStream,
-    sessionName,
-    videoParticipants,
+    publishRecordingState,
   ]);
 
   const pauseRecording = useCallback(() => {
@@ -308,7 +336,12 @@ export function Recording({
       mediaRecorderRef.current.state !== "inactive"
     ) {
       updateDownloadProgress("preparing", 5);
-      mediaRecorderRef.current.stop();
+      switchingFocusRef.current = false;
+      const recorder = mediaRecorderRef.current;
+      recorder.onstop = () => {
+        void finalizeRecordingDownload();
+      };
+      recorder.stop();
       if (
         audioRecorderRef.current &&
         audioRecorderRef.current.state !== "inactive"
@@ -320,7 +353,49 @@ export function Recording({
       resetRecordingTimer();
       publishRecordingState(false, false);
     }
-  }, [updateDownloadProgress, resetRecordingTimer, publishRecordingState]);
+  }, [
+    finalizeRecordingDownload,
+    resetRecordingTimer,
+    publishRecordingState,
+    updateDownloadProgress,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isHost ||
+      !isRecording ||
+      !focusedParticipantId ||
+      switchingFocusRef.current
+    ) {
+      return;
+    }
+
+    const prevRecorder = mediaRecorderRef.current;
+    if (!prevRecorder || prevRecorder.state === "inactive") return;
+
+    switchingFocusRef.current = true;
+    prevRecorder.stop();
+
+    const audioPrev = audioRecorderRef.current;
+    if (audioPrev && audioPrev.state !== "inactive") {
+      audioPrev.stop();
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      if (cancelled || !isRecording) return;
+      try {
+        await rebuildRecorder();
+      } finally {
+        switchingFocusRef.current = false;
+      }
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [focusedParticipantId, isHost, isRecording, rebuildRecorder]);
 
   return {
     downloadState,

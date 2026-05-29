@@ -180,6 +180,8 @@ export function createParticipantProfileBroadcastMessage({
   mode = "available",
   present = true,
   screenSharing = false,
+  isAudioMuted = false,
+  isVideoMuted = false,
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST,
@@ -189,6 +191,8 @@ export function createParticipantProfileBroadcastMessage({
       typeof displayName === "string" ? displayName.trim().slice(0, 32) : "",
     mode: mode === "listening" ? "listening" : "available",
     screenSharing: Boolean(screenSharing),
+    isAudioMuted: Boolean(isAudioMuted),
+    isVideoMuted: Boolean(isVideoMuted),
     timestamp: Date.now(),
   };
 }

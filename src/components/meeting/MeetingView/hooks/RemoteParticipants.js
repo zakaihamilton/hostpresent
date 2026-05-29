@@ -81,6 +81,7 @@ export function RemoteParticipants({
   roomConnectionRef,
   roomConnection,
   localStream,
+  screenStream,
   isAudioMuted,
   isVideoMuted,
   setIsAudioMuted,
@@ -141,15 +142,18 @@ export function RemoteParticipants({
   const broadcastPeerProfile = useCallback(
     ({ participantId, displayName, mode }) => {
       if (!isHost) return;
+      const participant = videoParticipants.find(
+        (entry) => entry.id === participantId,
+      );
       roomConnectionRef.current?.send(
         createParticipantProfileBroadcastMessage({
           participantId,
           displayName,
           mode,
           present: true,
-          screenSharing:
-            videoParticipants.find((entry) => entry.id === participantId)
-              ?.isScreenSharing ?? false,
+          screenSharing: participant?.isScreenSharing ?? false,
+          isAudioMuted: participant?.isAudioMuted ?? false,
+          isVideoMuted: participant?.isVideoMuted ?? false,
         }),
       );
     },
@@ -349,6 +353,9 @@ export function RemoteParticipants({
           name: nextName,
           mode: nextMode,
           isScreenSharing: Boolean(message.screenSharing),
+          isAudioMuted: Boolean(message.isAudioMuted),
+          isVideoMuted: Boolean(message.isVideoMuted),
+          isSpeaking: false,
           avatarColor: participantColor(message.participantId),
         },
       ];
@@ -482,6 +489,9 @@ export function RemoteParticipants({
           localStream?.getAudioTracks().forEach((track) => {
             track.enabled = false;
           });
+          screenStream?.getAudioTracks().forEach((track) => {
+            track.enabled = false;
+          });
           setIsAudioMuted(true);
           publishParticipantMediaStatus({ audioMuted: true });
           break;
@@ -520,6 +530,32 @@ export function RemoteParticipants({
           if (message.participantId === localId) return;
           setParticipantScreenSharing(message.participantId, false);
           break;
+        case SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED:
+        case SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED:
+        case SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED:
+        case SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED: {
+          if (message.participantId === localId) return;
+          const peerAudioMuted =
+            message.type === SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED;
+          const peerVideoMuted =
+            message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED;
+          const audioChanged =
+            message.type === SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED ||
+            message.type === SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED;
+          const videoChanged =
+            message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED ||
+            message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED;
+          setPeerParticipants(function updatePeer(prev) {
+            return prev.map(function mapPeer(entry) {
+              if (entry.id !== message.participantId) return entry;
+              const updated = { ...entry };
+              if (audioChanged) updated.isAudioMuted = peerAudioMuted;
+              if (videoChanged) updated.isVideoMuted = peerVideoMuted;
+              return updated;
+            });
+          });
+          break;
+        }
         default:
           break;
       }
@@ -528,6 +564,7 @@ export function RemoteParticipants({
     handlePeerProfileBroadcast,
     isHost,
     localStream,
+    screenStream,
     publishParticipantMediaStatus,
     resetRecordingTimer,
     roomConnectionRef,
@@ -555,6 +592,19 @@ export function RemoteParticipants({
     publishParticipantMediaStatus,
     roomConnectionRef.current?.localParticipantId,
   ]);
+
+  useEffect(() => {
+    if (isHost) return;
+    setPeerParticipants((prev) =>
+      prev.map((peer) => {
+        const videoEntry = videoParticipants.find((v) => v.id === peer.id);
+        if (videoEntry && videoEntry.isSpeaking !== peer.isSpeaking) {
+          return { ...peer, isSpeaking: videoEntry.isSpeaking };
+        }
+        return peer;
+      }),
+    );
+  }, [isHost, videoParticipants]);
 
   useEffect(() => {
     if (!isHost) return undefined;

@@ -628,16 +628,20 @@ export function useRoomDataChannel({
             return;
           }
           notifyHandlers(resolvedMessage);
-          if (
-            isHost &&
-            (resolvedMessage.type ===
-              SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED ||
-              resolvedMessage.type ===
-                SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED)
-          ) {
-            for (const [id, c] of connectionsRef.current) {
-              if (id !== remoteId) {
-                sendOnConnection(c, resolvedMessage);
+          if (isHost && resolvedMessage.participantId) {
+            const participantStatusRelayTypes = new Set([
+              SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
+              SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
+              SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
+              SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED,
+              SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED,
+              SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
+            ]);
+            if (participantStatusRelayTypes.has(resolvedMessage.type)) {
+              for (const [id, c] of connectionsRef.current) {
+                if (id !== remoteId) {
+                  sendOnConnection(c, resolvedMessage);
+                }
               }
             }
           }

@@ -38,6 +38,15 @@ const HOST_MUTE_ALL_TYPES = new Set([
   SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO,
 ]);
 
+const PARTICIPANT_STATUS_BROADCAST_TYPES = new Set([
+  SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
+  SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
+  SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
+  SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED,
+  SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED,
+  SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
+]);
+
 export function isHostCommandMessage(message) {
   return HOST_COMMAND_TYPES.has(message?.type);
 }
@@ -104,11 +113,11 @@ export function canReceiveSignalingMessage({
     return Boolean(participantId) && participantId === senderId;
   }
 
-  if (
-    message.type === SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED ||
-    message.type === SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED
-  ) {
-    return Boolean(message.participantId);
+  if (PARTICIPANT_STATUS_BROADCAST_TYPES.has(message.type)) {
+    return (
+      Boolean(message.participantId) &&
+      message.participantId !== localParticipantId
+    );
   }
 
   if (!isHostCommandMessage(message)) return false;

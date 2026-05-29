@@ -297,6 +297,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     roomConnectionRef,
     roomConnection,
     localStream,
+    screenStream,
     isAudioMuted,
     isVideoMuted,
     setIsAudioMuted,
