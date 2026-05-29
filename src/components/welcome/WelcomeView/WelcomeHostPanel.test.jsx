@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 
@@ -41,7 +42,10 @@ jest.mock("@/lib/settings/roomSettings", () => ({
 
 describe("WelcomeHostPanel", () => {
   it("shows join code boxes and invite link for saved room", async () => {
+    const user = userEvent.setup();
     render(<WelcomeHostPanel legacyToken={null} navigate={() => {}} />);
+
+    await user.click(screen.getByRole("tab", { name: "Room Code" }));
 
     await waitFor(() => {
       expect(screen.getByLabelText("Character 1")).toHaveValue("A");
@@ -49,27 +53,26 @@ describe("WelcomeHostPanel", () => {
 
     expect(screen.getByLabelText("Character 8")).toHaveValue("H");
     expect(
-      screen.getByRole("button", { name: /Copy code/ }),
+      screen.getByRole("button", { name: "Copy room code" }),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Invite link", { selector: "summary" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Copy invite link")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Invite Link" }));
+    expect(screen.getByRole("button", { name: "Copy invite link" })).toBeInTheDocument();
   });
 
-  it("navigates to the meeting with host token when join meeting is clicked", async () => {
+  it("navigates to the meeting with host token when start meeting is clicked", async () => {
     const navigate = jest.fn();
 
     render(<WelcomeHostPanel legacyToken={null} navigate={navigate} />);
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Join meeting" }),
+        screen.getByRole("button", { name: "Start meeting" }),
       ).toBeEnabled();
     });
 
     await act(async () => {
-      screen.getByRole("button", { name: "Join meeting" }).click();
+      screen.getByRole("button", { name: "Start meeting" }).click();
     });
 
     expect(navigate).toHaveBeenCalledWith({

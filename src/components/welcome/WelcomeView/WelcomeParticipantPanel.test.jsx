@@ -47,18 +47,14 @@ const defaultProps = {
 };
 
 describe("WelcomeParticipantPanel", () => {
-  it("shows code entry boxes", () => {
+  it("shows code entry boxes", async () => {
+    const user = userEvent.setup();
     render(<WelcomeParticipantPanel {...defaultProps} />);
+
+    await user.click(screen.getByRole("tab", { name: "Room Code" }));
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 8")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Paste invite link instead"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("Or paste invite link")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Join with link" }),
-    ).toBeDisabled();
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
   });
 
@@ -72,6 +68,8 @@ describe("WelcomeParticipantPanel", () => {
     });
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
+
+    await user.click(screen.getByRole("tab", { name: "Room Code" }));
 
     for (let i = 0; i < 8; i++) {
       const char = String.fromCharCode(65 + i);
@@ -135,6 +133,8 @@ describe("WelcomeParticipantPanel", () => {
     const user = userEvent.setup();
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
+
+    await user.click(screen.getByRole("tab", { name: "Room Code" }));
 
     const box1 = screen.getByLabelText("Character 1");
     await user.type(box1, "a");

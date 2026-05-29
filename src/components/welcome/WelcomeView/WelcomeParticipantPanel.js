@@ -66,7 +66,9 @@ export function WelcomeParticipantPanel({
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
-  const [activeJoinTab, setActiveJoinTab] = useState("link");
+  const [activeJoinTab, setActiveJoinTab] = useState(() =>
+    joinCode ? "code" : "link",
+  );
   const resolvedJoinCodeRef = useRef(null);
 
   const refreshRecentRooms = useCallback(() => {

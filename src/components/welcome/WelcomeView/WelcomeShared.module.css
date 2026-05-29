@@ -28,7 +28,8 @@
 /* Invite link / token read-only inputs */
 .linkInput,
 .tokenInput {
-  flex: 1;
+  height: 36px;
+  box-sizing: border-box;
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -243,10 +244,10 @@
 
 .sharePane {
   position: absolute;
-  inset: 0;
+  inset: 4px 2px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.5rem;
   animation: paneFadeSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
