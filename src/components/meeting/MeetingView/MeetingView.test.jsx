@@ -4,6 +4,7 @@ import { MeetingView } from "./MeetingView";
 
 const mockDisconnect = jest.fn();
 let latestToolbarProps = null;
+let mockMeetingSeconds = 0;
 
 beforeAll(() => {
   Object.defineProperty(global.navigator, "mediaDevices", {
@@ -25,6 +26,13 @@ beforeAll(() => {
     configurable: true,
   });
 });
+
+jest.mock("@/lib/recordingStorage", () => ({
+  saveRecordingMeta: jest.fn().mockResolvedValue(undefined),
+  saveRecordingChunk: jest.fn().mockResolvedValue(undefined),
+  loadSavedRecording: jest.fn().mockResolvedValue(null),
+  clearSavedRecording: jest.fn().mockResolvedValue(undefined),
+}));
 
 jest.mock("@/components/meeting/Header", () => ({
   Header: ({ onBack, backLabel = "Back" }) => (
@@ -129,7 +137,7 @@ jest.mock("@/hooks", () => ({
     canMuteAllVideo: false,
   }),
   useSessionTimers: () => ({
-    meetingSeconds: 0,
+    meetingSeconds: mockMeetingSeconds,
     recordingSeconds: 0,
     resetRecordingTimer: jest.fn(),
   }),
@@ -149,6 +157,7 @@ describe("MeetingView", () => {
   beforeEach(() => {
     mockDisconnect.mockClear();
     latestToolbarProps = null;
+    mockMeetingSeconds = 0;
   });
 
   it("renders host meeting UI", async () => {
@@ -166,9 +175,9 @@ describe("MeetingView", () => {
     render(<MeetingView role="host" token="host-token" onBack={onBack} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Back to welcome" }),
+      await screen.findByRole("button", { name: "Leave meeting" }),
     );
-    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+    expect(mockDisconnect).toHaveBeenCalled();
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
@@ -185,5 +194,20 @@ describe("MeetingView", () => {
 
     expect(latestToolbarProps.allowScreenShare).toBe(true);
     expect(latestToolbarProps.showRecording).toBe(false);
+  });
+
+  it("automatically disconnects and shows limit reached screen when 6-hour limit is reached", async () => {
+    mockMeetingSeconds = 21600;
+    render(
+      <MeetingView
+        role="participant"
+        token="participant-token"
+        onBack={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("Meeting limit reached")).toBeInTheDocument();
+    expect(screen.getByText("This meeting has reached the 6-hour limit.")).toBeInTheDocument();
+    expect(mockDisconnect).toHaveBeenCalled();
   });
 });

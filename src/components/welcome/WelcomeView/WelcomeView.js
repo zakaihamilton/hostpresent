@@ -52,29 +52,14 @@ export function WelcomeView({
             Conduct reliable browser-based sessions with complete presenter control. Orchestrate participant stream focus and save crystal-clear recordings locally with zero installation.
           </p>
           
-          {/* Abstract Skeleton UI Browser Frame */}
-          <div className={styles.browserFrame}>
-            {/* Browser Header Bar */}
-            <div className={styles.browserBar}>
-              <div className={styles.browserDots}>
-                <span className={styles.dot} />
-                <span className={styles.dot} />
-                <span className={styles.dot} />
-              </div>
-              <div className={styles.addressBar} />
-            </div>
-            
-            {/* Browser Content Area */}
-            <div className={styles.browserCanvas}>
-              {/* Main Presentation Screen Block (Large) */}
-              <div className={styles.skeletonMainScreen} />
-              
-              {/* Sidebar Participant Feeds (Small Blocks) */}
-              <div className={styles.skeletonSidebar}>
-                <div className={`${styles.skeletonFeed} ${styles.skeletonFeedActive}`} />
-                <div className={styles.skeletonFeed} />
-              </div>
-            </div>
+          {/* Premium High-Fidelity App Preview Showcase */}
+          <div className={styles.previewFrame}>
+            <img
+              src="/welcome-preview.png"
+              alt="Host Present Premium Presentation Interface"
+              className={styles.previewImage}
+              loading="eager"
+            />
           </div>
           
           <div className={styles.featureList}>

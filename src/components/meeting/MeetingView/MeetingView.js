@@ -404,6 +404,26 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   }, [isHost, token]);
 
   useEffect(() => {
+    if (meetingSeconds >= 21600) {
+      const autoEnd = async () => {
+        if (isHost) {
+          if (isRecording) {
+            try {
+              await stopRecordingAsync();
+            } catch (err) {
+              console.error("Failed to stop recording on timeout:", err);
+            }
+          }
+          roomConnectionRef.current?.send(createMeetingEndedMessage());
+        }
+        roomConnectionRef.current?.disconnect();
+        setMeetingDisconnectReason("limit_reached");
+      };
+      autoEnd();
+    }
+  }, [meetingSeconds, isHost, isRecording, stopRecordingAsync]);
+
+  useEffect(() => {
     setTimersEnabled(true);
     return () => {
       for (const cleanup of streamListenerCleanupsRef?.current?.values() ??
@@ -779,6 +799,16 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         message={signalingConfigError}
         hint={getSignalingConfigHint()}
         onBack={handleBack}
+      />
+    );
+  }
+
+  if (meetingDisconnectReason === "limit_reached") {
+    return (
+      <MeetingJoinError
+        title="Meeting limit reached"
+        message="This meeting has reached the 6-hour limit."
+        onBack={handleDisconnectBack}
       />
     );
   }
