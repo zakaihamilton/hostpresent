@@ -4,6 +4,7 @@
 }
 
 .btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,6 +20,31 @@
     color 0.2s ease,
     transform 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+.modeBadge {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--bg-panel);
+  border-radius: 999px;
+  color: white;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.modeBadgeAvailable {
+  background: var(--success);
+}
+
+.modeBadgeListening {
+  background: var(--warning);
 }
 
 .btn:hover {

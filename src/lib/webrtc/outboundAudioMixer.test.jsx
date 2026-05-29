@@ -77,4 +77,13 @@ describe("OutboundAudioMixer.getMixedAudioTrack", () => {
     );
     expect(track.id).toBe("tab");
   });
+
+  it("keeps a muted microphone track attached when it is the only audio", async () => {
+    const mixer = new OutboundAudioMixer();
+    const track = await mixer.getMixedAudioTrack(
+      mockStream({ audio: true, audioId: "mic", audioEnabled: false }),
+      null,
+    );
+    expect(track.id).toBe("mic");
+  });
 });

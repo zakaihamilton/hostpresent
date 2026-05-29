@@ -11,10 +11,18 @@ describe("MediaControls Hook", () => {
         enumerateDevices: jest.fn().mockResolvedValue([]),
         getUserMedia: jest.fn().mockResolvedValue({
           getVideoTracks: () => [
-            { getSettings: () => ({ deviceId: "" }), stop: jest.fn(), enabled: true },
+            {
+              getSettings: () => ({ deviceId: "" }),
+              stop: jest.fn(),
+              enabled: true,
+            },
           ],
           getAudioTracks: () => [
-            { getSettings: () => ({ deviceId: "" }), stop: jest.fn(), enabled: true },
+            {
+              getSettings: () => ({ deviceId: "" }),
+              stop: jest.fn(),
+              enabled: true,
+            },
           ],
           getTracks: () => [],
           addTrack: jest.fn(),
@@ -36,7 +44,7 @@ describe("MediaControls Hook", () => {
         setLocalStream: jest.fn(),
         screenStream: null,
         setScreenStream: jest.fn(),
-      })
+      }),
     );
 
     expect(result.current.isAudioMuted).toBe(false);
@@ -56,7 +64,7 @@ describe("MediaControls Hook", () => {
         setLocalStream: jest.fn(),
         screenStream: null,
         setScreenStream: jest.fn(),
-      })
+      }),
     );
 
     expect(result.current.isAudioMuted).toBe(true);
@@ -65,6 +73,7 @@ describe("MediaControls Hook", () => {
 
   it("saves media states to localStorage on toggle", () => {
     const sendMock = jest.fn();
+    const syncOutboundMedia = jest.fn();
     const mockAudioTrack = { enabled: true, stop: jest.fn() };
     const mockVideoTrack = { enabled: true, stop: jest.fn() };
     const mockStream = {
@@ -76,13 +85,17 @@ describe("MediaControls Hook", () => {
     const { result } = renderHook(() =>
       MediaControls({
         isHost: false,
-        roomConnection: { send: sendMock, localParticipantId: "p1" },
+        roomConnection: {
+          send: sendMock,
+          localParticipantId: "p1",
+          syncOutboundMedia,
+        },
         streamListenerCleanupsRef: { current: [] },
         localStream: mockStream,
         setLocalStream: jest.fn(),
         screenStream: null,
         setScreenStream: jest.fn(),
-      })
+      }),
     );
 
     act(() => {
@@ -90,11 +103,13 @@ describe("MediaControls Hook", () => {
     });
     expect(result.current.isAudioMuted).toBe(true);
     expect(window.localStorage.getItem("hostpresent.audioMuted")).toBe("true");
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.toggleVideo();
     });
     expect(result.current.isVideoMuted).toBe(true);
     expect(window.localStorage.getItem("hostpresent.videoMuted")).toBe("true");
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
   });
 });

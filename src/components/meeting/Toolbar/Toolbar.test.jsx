@@ -74,4 +74,44 @@ describe("Toolbar", () => {
 
     expect(handlers.onStartRecording).toHaveBeenCalledTimes(1);
   });
+
+  it("marks chat as changed while chat is hidden", () => {
+    const { container, rerender } = render(
+      <Toolbar
+        isAudioMuted={false}
+        isVideoMuted={false}
+        screenStream={null}
+        shareScreenAudio={false}
+        isScreenAudioShared={false}
+        isGalleryVisible={false}
+        isSidebarVisible={false}
+        isChatVisible={false}
+        hasUnreadChat
+        isRecording={false}
+        isRecordingPaused={false}
+        {...handlers}
+      />,
+    );
+
+    expect(container.querySelector(".unreadBadge")).toBeInTheDocument();
+
+    rerender(
+      <Toolbar
+        isAudioMuted={false}
+        isVideoMuted={false}
+        screenStream={null}
+        shareScreenAudio={false}
+        isScreenAudioShared={false}
+        isGalleryVisible={false}
+        isSidebarVisible={false}
+        isChatVisible
+        hasUnreadChat
+        isRecording={false}
+        isRecordingPaused={false}
+        {...handlers}
+      />,
+    );
+
+    expect(container.querySelector(".unreadBadge")).not.toBeInTheDocument();
+  });
 });

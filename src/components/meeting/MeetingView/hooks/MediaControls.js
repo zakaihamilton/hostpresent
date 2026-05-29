@@ -152,6 +152,7 @@ export function MediaControls({
         localStream.addTrack(newTrack);
         newTrack.enabled = !wasMuted;
         setSelectedCamera(deviceId);
+        void roomConnection.syncOutboundMedia?.();
       } catch (err) {
         console.error("Failed to switch camera:", err);
         setErrorMsg(
@@ -159,8 +160,34 @@ export function MediaControls({
         );
       }
     },
-    [localStream, isVideoMuted, setErrorMsg],
+    [localStream, isVideoMuted, roomConnection, setErrorMsg],
   );
+
+  const acquireReplacementVideoTrack = useCallback(async () => {
+    if (!localStream || !navigator.mediaDevices) return null;
+
+    const constraints = selectedCamera
+      ? { deviceId: { exact: selectedCamera } }
+      : true;
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: constraints,
+      audio: false,
+    });
+    const newTrack = newStream.getVideoTracks()[0] ?? null;
+    if (!newTrack) {
+      for (const track of newStream.getTracks()) {
+        track.stop();
+      }
+      return null;
+    }
+
+    for (const track of localStream.getVideoTracks()) {
+      localStream.removeTrack(track);
+      track.stop();
+    }
+    localStream.addTrack(newTrack);
+    return newTrack;
+  }, [localStream, selectedCamera]);
 
   const switchMicrophone = useCallback(
     async (deviceId) => {
@@ -185,6 +212,7 @@ export function MediaControls({
         localStream.addTrack(newTrack);
         newTrack.enabled = !wasMuted;
         setSelectedMicrophone(deviceId);
+        void roomConnection.syncOutboundMedia?.();
       } catch (err) {
         console.error("Failed to switch microphone:", err);
         setErrorMsg(
@@ -192,7 +220,7 @@ export function MediaControls({
         );
       }
     },
-    [localStream, isAudioMuted, setErrorMsg],
+    [localStream, isAudioMuted, roomConnection, setErrorMsg],
   );
 
   const publishParticipantMediaStatus = useCallback(
@@ -237,13 +265,14 @@ export function MediaControls({
       window.localStorage.setItem("hostpresent.audioMuted", String(nextMuted));
     } catch {}
 
+    void roomConnection.syncOutboundMedia?.();
+
     if (isHost) {
       roomConnection.send(
         nextMuted
           ? createHostAudioMutedMessage()
           : createHostAudioUnmutedMessage(),
       );
-      void roomConnection.syncOutboundMedia?.();
       return;
     }
 
@@ -253,27 +282,57 @@ export function MediaControls({
   const toggleVideo = useCallback(() => {
     if (!localStream) return;
 
-    localStream.getVideoTracks().forEach((track) => {
-      track.enabled = !track.enabled;
-    });
-    const nextMuted = !localStream.getVideoTracks()[0]?.enabled;
-    setIsVideoMuted(nextMuted);
-    try {
-      window.localStorage.setItem("hostpresent.videoMuted", String(nextMuted));
-    } catch {}
+    void (async () => {
+      const currentTracks = localStream.getVideoTracks();
+      const isCurrentlyMuted =
+        isVideoMuted || !currentTracks.some((track) => track.enabled);
+      const nextMuted = !isCurrentlyMuted;
 
-    if (isHost) {
-      roomConnection.send(
-        nextMuted
-          ? createHostVideoMutedMessage()
-          : createHostVideoUnmutedMessage(),
+      let nextTracks = currentTracks.filter(
+        (track) => track.readyState === "live",
       );
-      void roomConnection.syncOutboundMedia?.();
-      return;
-    }
+      if (!nextMuted && nextTracks.length === 0) {
+        const replacement = await acquireReplacementVideoTrack();
+        nextTracks = replacement ? [replacement] : [];
+      }
 
-    publishParticipantMediaStatus({ videoMuted: nextMuted });
-  }, [isHost, localStream, publishParticipantMediaStatus, roomConnection]);
+      for (const track of nextTracks) {
+        track.enabled = !nextMuted;
+      }
+      setIsVideoMuted(nextMuted);
+      try {
+        window.localStorage.setItem(
+          "hostpresent.videoMuted",
+          String(nextMuted),
+        );
+      } catch {}
+
+      void roomConnection.syncOutboundMedia?.();
+
+      if (isHost) {
+        roomConnection.send(
+          nextMuted
+            ? createHostVideoMutedMessage()
+            : createHostVideoUnmutedMessage(),
+        );
+        return;
+      }
+
+      publishParticipantMediaStatus({ videoMuted: nextMuted });
+    })().catch((err) => {
+      console.error("Failed to toggle camera:", err);
+      setErrorMsg(
+        "[E045] Could not turn camera back on. Check permissions and try again.",
+      );
+    });
+  }, [
+    acquireReplacementVideoTrack,
+    isHost,
+    isVideoMuted,
+    localStream,
+    publishParticipantMediaStatus,
+    roomConnection,
+  ]);
 
   const toggleScreenShare = useCallback(async () => {
     if (screenStream) {
@@ -281,6 +340,7 @@ export function MediaControls({
         track.stop();
       }
       setScreenStream(null);
+      void roomConnection.syncOutboundMedia?.();
     } else {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -297,6 +357,7 @@ export function MediaControls({
 
         stream.getVideoTracks()[0].onended = () => {
           setScreenStream(null);
+          void roomConnection.syncOutboundMedia?.();
         };
 
         setScreenStream(stream);

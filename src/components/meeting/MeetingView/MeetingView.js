@@ -92,6 +92,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isPipVisible, setIsPipVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -197,7 +198,16 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isSelf,
       },
     ]);
+    if (!isChatVisible) {
+      setHasUnreadChat(true);
+    }
   };
+
+  useEffect(() => {
+    if (isChatVisible) {
+      setHasUnreadChat(false);
+    }
+  }, [isChatVisible]);
 
   const handleSendChatMessage = useCallback((text, recipientId) => {
     if (recipientId) {
@@ -757,6 +767,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isSidebarVisible={isSidebarVisible}
         isPipVisible={isPipVisible}
         isChatVisible={isChatVisible}
+        hasUnreadChat={hasUnreadChat}
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         displayName={displayNameInput}

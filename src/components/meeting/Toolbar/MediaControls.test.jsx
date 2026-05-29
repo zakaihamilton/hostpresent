@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MediaControls } from "./MediaControls";
 
@@ -37,6 +37,35 @@ const backCamera = {
 };
 
 describe("MediaControls", () => {
+  let audioContextMock;
+
+  beforeEach(() => {
+    audioContextMock = {
+      createAnalyser: jest.fn(() => ({
+        fftSize: 0,
+        getByteTimeDomainData: (samples) => {
+          samples.fill(128);
+          samples[0] = 180;
+        },
+      })),
+      createMediaStreamSource: jest.fn(() => ({
+        connect: jest.fn(),
+        disconnect: jest.fn(),
+      })),
+      close: jest.fn(),
+    };
+    global.AudioContext = jest.fn(() => audioContextMock);
+    Object.defineProperty(global.navigator, "mediaDevices", {
+      value: {
+        getUserMedia: jest.fn().mockResolvedValue({
+          getTracks: () => [{ stop: jest.fn() }],
+        }),
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
   it("toggles audio mute on mic click", async () => {
     const user = userEvent.setup();
     const onToggleAudio = jest.fn();
@@ -167,5 +196,38 @@ describe("MediaControls", () => {
     await user.click(getDeviceMenuChevron());
     expect(screen.getByText("No microphones detected")).toBeInTheDocument();
     expect(screen.getByText("No cameras detected")).toBeInTheDocument();
+  });
+
+  it("tests the selected microphone and reports input", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    jest.useFakeTimers();
+
+    render(
+      <MediaControls
+        isAudioMuted={false}
+        isVideoMuted={false}
+        onToggleAudio={() => {}}
+        onToggleVideo={() => {}}
+        availableMicrophones={[builtInMic]}
+        selectedMicrophone="builtin-mic-id"
+        onMicrophoneChange={() => {}}
+      />,
+    );
+
+    await user.click(getDeviceMenuChevron());
+    await user.click(screen.getByRole("button", { name: "Test microphone" }));
+
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+      audio: { deviceId: { exact: "builtin-mic-id" } },
+      video: false,
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2300);
+    });
+
+    expect(screen.getByText("Microphone is working")).toBeInTheDocument();
+
+    jest.useRealTimers();
   });
 });

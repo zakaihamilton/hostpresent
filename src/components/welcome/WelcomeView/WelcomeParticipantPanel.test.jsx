@@ -53,8 +53,13 @@ describe("WelcomeParticipantPanel", () => {
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 8")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Join meeting" }),
+      screen.queryByText("Paste invite link instead"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Or paste invite link")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Join with link" }),
     ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
   });
 
   it("enables join when all 8 code characters are entered", async () => {
@@ -73,9 +78,7 @@ describe("WelcomeParticipantPanel", () => {
       await user.type(screen.getByLabelText(`Character ${i + 1}`), char);
     }
 
-    expect(
-      screen.getByRole("button", { name: "Join meeting" }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
   });
 
   it("does not auto-join from route join code on the welcome tab", async () => {

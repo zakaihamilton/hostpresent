@@ -25,7 +25,7 @@ export async function resolveOutboundAudioTrack(localStream, screenStream) {
     return (
       localStream
         ?.getAudioTracks()
-        .find((track) => track.readyState === "live" && track.enabled) ?? null
+        .find((track) => track.readyState === "live") ?? null
     );
   }
 
@@ -53,19 +53,25 @@ export async function syncOutboundTracks(call, localStream, screenStream) {
   const audioTrack = await resolveOutboundAudioTrack(localStream, screenStream);
   const senders = peerConnection.getSenders();
 
-  const videoSender = senders.find((sender) => sender.track?.kind === "video");
-  const audioSender = senders.find((sender) => sender.track?.kind === "audio");
+  const videoSender = senders.find(
+    (sender) => (sender._hostPresentKind ?? sender.track?.kind) === "video",
+  );
+  const audioSender = senders.find(
+    (sender) => (sender._hostPresentKind ?? sender.track?.kind) === "audio",
+  );
 
   if (videoSender) {
     if (videoTrack !== videoSender.track) {
       await videoSender.replaceTrack(videoTrack);
     }
+    videoSender._hostPresentKind = "video";
   } else if (videoTrack) {
     const outbound = new MediaStream([videoTrack]);
     if (audioTrack) {
       outbound.addTrack(audioTrack);
     }
-    peerConnection.addTrack(videoTrack, outbound);
+    const sender = peerConnection.addTrack(videoTrack, outbound);
+    sender._hostPresentKind = "video";
   }
 
   if (audioSender) {
@@ -73,7 +79,12 @@ export async function syncOutboundTracks(call, localStream, screenStream) {
     if (audioTrack !== currentAudio) {
       await audioSender.replaceTrack(audioTrack);
     }
+    audioSender._hostPresentKind = "audio";
   } else if (audioTrack) {
-    peerConnection.addTrack(audioTrack, new MediaStream([audioTrack]));
+    const sender = peerConnection.addTrack(
+      audioTrack,
+      new MediaStream([audioTrack]),
+    );
+    sender._hostPresentKind = "audio";
   }
 }

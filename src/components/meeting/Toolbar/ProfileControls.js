@@ -7,7 +7,11 @@ import { UserCircle } from "@/components/ui/Icons";
 import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import tooltipStyles from "@/components/ui/Tooltip/Tooltip.module.css";
-import { resolveDisplayName } from "@/lib/settings/displayNameSettings";
+import {
+  PARTICIPANT_MODE,
+  participantModeLabel,
+  resolveDisplayName,
+} from "@/lib/settings/displayNameSettings";
 import styles from "./ProfileControls.module.css";
 
 const POPUP_GAP = 24;
@@ -64,6 +68,14 @@ export function ProfileControls({
   const popupId = useId();
   const headingId = `${popupId}-heading`;
   const resolvedName = resolveDisplayName(displayName);
+  const hasParticipantMode = Boolean(
+    onParticipantModeChange && participantMode,
+  );
+  const isListeningOnly = participantMode === PARTICIPANT_MODE.LISTENING;
+  const modeLabel = participantModeLabel(participantMode);
+  const tooltipAction = hasParticipantMode
+    ? "Click to edit name and participation mode"
+    : "Click to edit name";
 
   const updatePopupPosition = () => {
     const anchor = anchorRef.current;
@@ -148,7 +160,7 @@ export function ProfileControls({
                 {resolvedName}
               </span>
               <span className={tooltipStyles.tooltipSecondary}>
-                Click to edit name
+                {tooltipAction}
               </span>
             </>
           }
@@ -159,10 +171,22 @@ export function ProfileControls({
             aria-expanded={popupOpen}
             aria-haspopup="dialog"
             aria-controls={popupId}
-            aria-label={`Display name: ${resolvedName}`}
+            aria-label={
+              hasParticipantMode
+                ? `Display name: ${resolvedName}. Participation mode: ${modeLabel}`
+                : `Display name: ${resolvedName}`
+            }
             onClick={() => setPopupOpen((open) => !open)}
           >
             <UserCircle />
+            {hasParticipantMode
+              ? <span
+                  className={`${styles.modeBadge} ${isListeningOnly ? styles.modeBadgeListening : styles.modeBadgeAvailable}`}
+                  aria-hidden
+                >
+                  {isListeningOnly ? "L" : "A"}
+                </span>
+              : null}
           </button>
         </Tooltip>
       </div>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 
@@ -48,7 +48,13 @@ describe("WelcomeHostPanel", () => {
     });
 
     expect(screen.getByLabelText("Character 8")).toHaveValue("H");
-    expect(screen.getByRole("button", { name: /Copy code/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Copy code/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Invite link", { selector: "summary" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Copy invite link")).toBeInTheDocument();
   });
 
   it("navigates to the meeting with host token when join meeting is clicked", async () => {
@@ -58,7 +64,7 @@ describe("WelcomeHostPanel", () => {
 
     await waitFor(() => {
       expect(
-         screen.getByRole("button", { name: "Join meeting" }),
+        screen.getByRole("button", { name: "Join meeting" }),
       ).toBeEnabled();
     });
 

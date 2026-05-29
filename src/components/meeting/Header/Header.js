@@ -54,14 +54,17 @@ export const Header = memo(function Header({
     }
   }, [editedTitle, sessionTitle, onSessionTitleChange]);
 
-  const handleTitleKeyDown = useCallback((e) => {
-    if (e.key === "Enter") {
-      handleTitleSubmit();
-    } else if (e.key === "Escape") {
-      setIsEditingTitle(false);
-      setEditedTitle(sessionTitle || "");
-    }
-  }, [handleTitleSubmit, sessionTitle]);
+  const handleTitleKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        handleTitleSubmit();
+      } else if (e.key === "Escape") {
+        setIsEditingTitle(false);
+        setEditedTitle(sessionTitle || "");
+      }
+    },
+    [handleTitleSubmit, sessionTitle],
+  );
 
   useEffect(
     () => () => {
@@ -158,7 +161,7 @@ export const Header = memo(function Header({
                   }}
                   title="Click to rename meeting"
                 >
-                  {meetingName}
+                  <span className={styles.logoTextLabel}>{meetingName}</span>
                   <span className={styles.editIconWrapper}>
                     <Edit size={14} className={styles.editIcon} />
                   </span>

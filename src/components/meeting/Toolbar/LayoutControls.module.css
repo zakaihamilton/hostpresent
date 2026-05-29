@@ -4,6 +4,7 @@
 }
 
 .btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,6 +41,19 @@
 
 .btnActive:hover {
   background: var(--primary-hover);
+}
+
+.unreadBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--bg-hover);
+  border-radius: 999px;
+  background: var(--danger, #ef4444);
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--danger, #ef4444) 35%, transparent);
 }
 
 /* Dynamic styling for buttons within the tooltip wrappers in the cluster */

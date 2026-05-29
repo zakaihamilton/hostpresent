@@ -233,7 +233,10 @@ export function useRoomDataChannel({
     if (openCountRef.current <= 0) {
       setConnectionError((previous) => {
         if (isWaitingForHostMessage(previous)) return previous;
-        return peerErrorMessage({ type: "peer-unavailable" }, { isHost: false });
+        return peerErrorMessage(
+          { type: "peer-unavailable" },
+          { isHost: false },
+        );
       });
     }
 
@@ -425,7 +428,10 @@ export function useRoomDataChannel({
         }
         if (isHost) {
           if (!relayFrom) {
-            onRemoteParticipantRef.current?.({ id: participantId, stream: null });
+            onRemoteParticipantRef.current?.({
+              id: participantId,
+              stream: null,
+            });
             syncRelayForSource(participantId, null);
           }
           return;
@@ -486,10 +492,7 @@ export function useRoomDataChannel({
         const existing = mediaCallsRef.current.get(remoteId);
         if (existing) {
           const peerConnection = existing.peerConnection;
-          if (
-            peerConnection &&
-            peerConnection.connectionState !== "closed"
-          ) {
+          if (peerConnection && peerConnection.connectionState !== "closed") {
             await syncOutboundTracks(
               existing,
               localStreamRef.current,
@@ -536,7 +539,6 @@ export function useRoomDataChannel({
   }, [isHost, ensureMediaCall]);
 
   useEffect(() => {
-    if (!localStream && !screenStream) return undefined;
     enqueueSync().catch((error) => {
       console.warn("[peer] syncAllOutboundTracks failed", error);
     });
@@ -925,7 +927,10 @@ export function useRoomDataChannel({
 
         for (const remoteId of connectionsRef.current.keys()) {
           ensureMediaCall(remoteId).catch((error) => {
-            console.warn("[peer] resync host media after signaling open failed", error);
+            console.warn(
+              "[peer] resync host media after signaling open failed",
+              error,
+            );
           });
         }
       });

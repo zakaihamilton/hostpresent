@@ -11,6 +11,7 @@ export function LayoutControls({
   isSidebarVisible,
   isPipVisible,
   isChatVisible,
+  hasUnreadChat = false,
   onToggleGallery,
   onToggleSidebar,
   onTogglePip,
@@ -56,6 +57,9 @@ export function LayoutControls({
           aria-label={isChatVisible ? "Hide chat" : "Show chat"}
         >
           <Chat />
+          {hasUnreadChat && !isChatVisible
+            ? <span className={styles.unreadBadge} aria-hidden="true" />
+            : null}
         </button>
       </Tooltip>
 

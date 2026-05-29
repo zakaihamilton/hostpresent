@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DisplayNameField } from "@/components/ui/DisplayNameField";
+import { Copy as CopyIcon } from "@/components/ui/Icons";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -22,8 +24,6 @@ import {
 } from "@/lib/settings/roomSettings";
 import { JoinCodeBoxes } from "./JoinCodeBoxes";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
-import { Copy as CopyIcon } from "@/components/ui/Icons";
-import { Tooltip } from "@/components/ui/Tooltip";
 import hs from "./WelcomeHostPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
@@ -311,33 +311,29 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
         />
       </div>
 
-      <details className={hs.details}>
-        <summary className={hs.summary}>Invite link</summary>
-        <div className={hs.detailsContent}>
-          <div className={shared.fieldGroup}>
-            <div className={shared.linkRow}>
-              <input
-                id="invite-link"
-                className={shared.linkInput}
-                readOnly
-                value={inviteLink}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-              <Tooltip text={copyMessage || "Copy invite link"} placement="top">
-                <button
-                  type="button"
-                  className={`${shared.button} ${shared.iconButton}`}
-                  onClick={handleCopyLink}
-                  disabled={!inviteLink}
-                  aria-label="Copy invite link"
-                >
-                  <CopyIcon size={16} />
-                </button>
-              </Tooltip>
-            </div>
-          </div>
+      <div className={hs.inviteLinkSection}>
+        <span className={hs.inviteLinkLabel}>Invite link</span>
+        <div className={shared.linkRow}>
+          <input
+            id="invite-link"
+            className={shared.linkInput}
+            readOnly
+            value={inviteLink}
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <Tooltip text={copyMessage || "Copy invite link"} placement="top">
+            <button
+              type="button"
+              className={`${shared.button} ${shared.iconButton}`}
+              onClick={handleCopyLink}
+              disabled={!inviteLink}
+              aria-label="Copy invite link"
+            >
+              <CopyIcon size={16} />
+            </button>
+          </Tooltip>
         </div>
-      </details>
+      </div>
 
       <div className={shared.statusArea} aria-live="polite">
         {error ? <p className={shared.statusError}>{error}</p> : null}

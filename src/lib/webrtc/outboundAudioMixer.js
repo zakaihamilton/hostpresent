@@ -1,8 +1,11 @@
-function getLiveAudioTrack(stream) {
+function getLiveAudioTrack(stream, { requireEnabled = true } = {}) {
   return (
     stream
       ?.getAudioTracks()
-      .find((track) => track.readyState === "live" && track.enabled) ?? null
+      .find(
+        (track) =>
+          track.readyState === "live" && (!requireEnabled || track.enabled),
+      ) ?? null
   );
 }
 
@@ -43,7 +46,7 @@ export class OutboundAudioMixer {
     const screenTrack = getLiveAudioTrack(screenStream);
 
     if (!micTrack && !screenTrack) {
-      return null;
+      return getLiveAudioTrack(localStream, { requireEnabled: false });
     }
 
     if (!micTrack && screenTrack) {

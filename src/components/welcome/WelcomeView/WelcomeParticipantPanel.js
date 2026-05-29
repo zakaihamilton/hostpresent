@@ -283,12 +283,12 @@ export function WelcomeParticipantPanel({
         </p>
       </div>
 
-      <details className={ps.details}>
-        <summary className={ps.summary}>Paste invite link instead</summary>
-        <div className={shared.fieldGroup}>
+      <div className={ps.inviteLinkSection}>
+        <span className={ps.inviteLinkLabel}>Or paste invite link</span>
+        <div className={ps.inviteLinkRow}>
           <input
             id="participant-invite-link"
-            className={shared.tokenInput}
+            className={shared.linkInput}
             value={inviteLinkInput}
             onChange={(event) => setInviteLinkInput(event.target.value)}
             onKeyDown={(event) => {
@@ -296,18 +296,16 @@ export function WelcomeParticipantPanel({
             }}
             placeholder="https://…/#/j/…"
           />
-        </div>
-        <div className={shared.actions}>
           <button
             type="button"
-            className={`${shared.button} ${shared.buttonSecondary}`}
+            className={`${shared.button} ${shared.buttonSecondary} ${ps.inviteLinkButton}`}
             onClick={handleJoinInviteLink}
             disabled={!inviteLinkInput.trim()}
           >
             Join with link
           </button>
         </div>
-      </details>
+      </div>
 
       <div className={shared.statusArea}>
         {resolveError

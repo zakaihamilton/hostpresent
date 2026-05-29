@@ -22,6 +22,29 @@ describe("ProfileControls", () => {
     expect(tooltip).toHaveTextContent("Click to edit name");
   });
 
+  it("mentions participation mode in the tooltip when mode controls are available", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        participantMode={PARTICIPANT_MODE.LISTENING}
+        onParticipantModeChange={() => {}}
+      />,
+    );
+
+    await user.hover(getProfileButton());
+
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent(
+      "Click to edit name and participation mode",
+    );
+    expect(getProfileButton()).toHaveAccessibleName(
+      "Display name: Alex. Participation mode: Listening only",
+    );
+  });
+
   it("opens a popup to edit the display name", async () => {
     const user = userEvent.setup();
 
@@ -84,5 +107,20 @@ describe("ProfileControls", () => {
     expect(
       screen.getByRole("group", { name: "Participation mode" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the listening-only state on the profile button", () => {
+    const { container } = render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        participantMode={PARTICIPANT_MODE.LISTENING}
+        onParticipantModeChange={() => {}}
+      />,
+    );
+
+    expect(container.querySelector(".modeBadgeListening")).toHaveTextContent(
+      "L",
+    );
   });
 });

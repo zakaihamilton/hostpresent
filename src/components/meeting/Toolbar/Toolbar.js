@@ -21,6 +21,7 @@ export const Toolbar = memo(function Toolbar({
   isSidebarVisible,
   isPipVisible,
   isChatVisible,
+  hasUnreadChat = false,
   isRecording,
   isRecordingPaused,
   displayName = "",
@@ -97,6 +98,7 @@ export const Toolbar = memo(function Toolbar({
             isSidebarVisible={isSidebarVisible}
             isPipVisible={isPipVisible}
             isChatVisible={isChatVisible}
+            hasUnreadChat={hasUnreadChat}
             onToggleGallery={onToggleGallery}
             onToggleSidebar={onToggleSidebar}
             onTogglePip={onTogglePip}
