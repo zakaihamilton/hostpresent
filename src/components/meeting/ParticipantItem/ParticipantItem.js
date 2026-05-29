@@ -115,7 +115,9 @@ export const ParticipantItem = memo(function ParticipantItem({
           {initial}
         </div>
         <div>
-          <div className={styles.name}>{name}</div>
+          <Tooltip text={name} placement="left">
+            <div className={styles.name}>{name}</div>
+          </Tooltip>
           {modeLabel
             ? <div className={styles.modeLabel}>{modeLabel}</div>
             : null}
