@@ -35,6 +35,14 @@ import {
   saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
 import {
+  loadGalleryVisible,
+  loadSidebarVisible,
+  loadChatVisible,
+  saveGalleryVisible,
+  saveSidebarVisible,
+  saveChatVisible,
+} from "@/lib/settings/layoutSettings";
+import {
   getRoomTitleByHostToken,
   updateRoomTitle,
 } from "@/lib/settings/roomSettings";
@@ -92,10 +100,14 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const [inviteBarVisible, setInviteBarVisible] = useState(false);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
-  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(() =>
+    loadGalleryVisible(),
+  );
+  const [isSidebarVisible, setIsSidebarVisible] = useState(() =>
+    loadSidebarVisible(),
+  );
   const [isPipVisible, setIsPipVisible] = useState(false);
-  const [isChatVisible, setIsChatVisible] = useState(false);
+  const [isChatVisible, setIsChatVisible] = useState(() => loadChatVisible());
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -116,6 +128,15 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+  useEffect(() => {
+    saveGalleryVisible(isGalleryVisible);
+  }, [isGalleryVisible]);
+  useEffect(() => {
+    saveSidebarVisible(isSidebarVisible);
+  }, [isSidebarVisible]);
+  useEffect(() => {
+    saveChatVisible(isChatVisible);
+  }, [isChatVisible]);
   const [chatMessages, setChatMessages] = useState([]);
   const chatIdCounterRef = useRef(0);
   const [timersEnabled, setTimersEnabled] = useState(false);
