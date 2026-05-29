@@ -363,6 +363,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     pauseRecording,
     resumeRecording,
     stopRecording,
+    stopRecordingAsync,
   } = Recording({
     isHost,
     roomConnection,
@@ -480,11 +481,15 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       variant: "danger",
     });
     if (!confirmed) return;
-    if (isRecording) stopRecording();
+    if (isRecording) {
+      await stopRecordingAsync();
+    }
     roomConnectionRef.current?.send(createMeetingEndedMessage());
     roomConnectionRef.current?.disconnect();
+    window.open("", "_self");
     window.close();
-  }, [confirm, isHost, isRecording, stopRecording]);
+    handleBack();
+  }, [confirm, isHost, isRecording, stopRecordingAsync, handleBack]);
 
   const handleKickParticipant = useCallback(
     async (participantId) => {

@@ -387,6 +387,40 @@ export function Recording({
     updateDownloadProgress,
   ]);
 
+  const stopRecordingAsync = useCallback(async () => {
+    if (
+      !mediaRecorderRef.current ||
+      mediaRecorderRef.current.state === "inactive"
+    ) {
+      return;
+    }
+    updateDownloadProgress("preparing", 5);
+    switchingFocusRef.current = false;
+    const recorder = mediaRecorderRef.current;
+    if (
+      audioRecorderRef.current &&
+      audioRecorderRef.current.state !== "inactive"
+    ) {
+      audioRecorderRef.current.stop();
+    }
+    await new Promise((resolve) => {
+      recorder.onstop = async () => {
+        await finalizeRecordingDownload();
+        resolve();
+      };
+      recorder.stop();
+    });
+    setIsRecording(false);
+    setIsRecordingPaused(false);
+    resetRecordingTimer();
+    publishRecordingState(false, false);
+  }, [
+    finalizeRecordingDownload,
+    resetRecordingTimer,
+    publishRecordingState,
+    updateDownloadProgress,
+  ]);
+
   useEffect(() => {
     if (
       !isHost ||
@@ -495,6 +529,7 @@ export function Recording({
     pauseRecording,
     resumeRecording,
     stopRecording,
+    stopRecordingAsync,
     publishRecordingState,
   };
 }
