@@ -130,7 +130,7 @@ describe("MediaControls", () => {
 
     await user.click(getDeviceMenuChevron());
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("Device settings")).toBeInTheDocument();
+    expect(screen.getByText("Audio & video")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Microphone" }),
     ).toBeInTheDocument();

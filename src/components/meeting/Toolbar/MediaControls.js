@@ -295,146 +295,187 @@ export function MediaControls({
                 visibility: menuPositioned ? "visible" : "hidden",
               }}
             >
-              <p id={headingId} className={styles.menuHeading}>
-                Device settings
-              </p>
+              <header className={styles.menuHeader}>
+                <p id={headingId} className={styles.menuHeading}>
+                  Audio & video
+                </p>
+                <p className={styles.menuSubheading}>
+                  Choose the devices for this meeting.
+                </p>
+              </header>
 
-              <section
-                className={styles.menuSection}
-                aria-labelledby={microphoneSectionId}
-              >
-                <h3
-                  id={microphoneSectionId}
-                  className={styles.menuSectionTitle}
+              <div className={styles.menuContent}>
+                <section
+                  className={styles.menuSection}
+                  aria-labelledby={microphoneSectionId}
                 >
-                  Microphone
-                </h3>
-
-                {availableMicrophones.length === 0
-                  ? <p className={styles.menuEmpty}>No microphones detected</p>
-                  : <fieldset className={styles.menuFieldset}>
-                      <legend className={styles.menuLegend}>Microphone</legend>
-                      {availableMicrophones.map((microphone, index) => (
-                        <label
-                          key={microphone.deviceId}
-                          className={`${styles.menuOption} ${selectedMicrophone === microphone.deviceId ? styles.menuOptionSelected : ""}`}
-                        >
-                          <input
-                            type="radio"
-                            name="microphone"
-                            checked={selectedMicrophone === microphone.deviceId}
-                            onChange={() =>
-                              onMicrophoneChange?.(microphone.deviceId)
-                            }
-                            className={styles.menuOptionInput}
-                          />
-                          <span className={styles.menuOptionContent}>
-                            <span className={styles.menuOptionTitle}>
-                              {microphone.label || `Microphone ${index + 1}`}
-                            </span>
-                          </span>
-                        </label>
-                      ))}
-                    </fieldset>}
-                <div className={styles.micTest}>
-                  <button
-                    type="button"
-                    className={styles.testButton}
-                    onClick={handleTestMicrophone}
-                    disabled={
-                      availableMicrophones.length === 0 ||
-                      micTestState === "testing"
-                    }
-                  >
-                    {micTestState === "testing"
-                      ? "Testing..."
-                      : "Test microphone"}
-                  </button>
-                  <div className={styles.micMeter} aria-hidden>
-                    <span
-                      className={styles.micMeterBar}
-                      style={{
-                        transform: `scaleX(${Math.max(0.04, micTestLevel)})`,
-                      }}
-                    />
+                  <div className={styles.menuSectionHeader}>
+                    <h3
+                      id={microphoneSectionId}
+                      className={styles.menuSectionTitle}
+                    >
+                      Microphone
+                    </h3>
+                    <span className={styles.menuSectionMeta}>
+                      {availableMicrophones.length > 0
+                        ? `${availableMicrophones.length} available`
+                        : "Unavailable"}
+                    </span>
                   </div>
-                  <p className={styles.micTestStatus} aria-live="polite">
-                    {micTestStatus}
-                  </p>
-                </div>
-              </section>
 
-              <section
-                className={`${styles.menuSection} ${styles.menuSectionDivider}`}
-                aria-labelledby={outputSectionId}
-              >
-                <h3 id={outputSectionId} className={styles.menuSectionTitle}>
-                  Audio output
-                </h3>
-
-                {availableSpeakers.length === 0
-                  ? <p className={styles.menuEmpty}>
-                      Output selection is not available in this browser
-                    </p>
-                  : <fieldset className={styles.menuFieldset}>
-                      <legend className={styles.menuLegend}>
-                        Audio output
-                      </legend>
-                      {availableSpeakers.map((speaker, index) => (
-                        <label
-                          key={speaker.deviceId}
-                          className={`${styles.menuOption} ${selectedSpeaker === speaker.deviceId ? styles.menuOptionSelected : ""}`}
-                        >
-                          <input
-                            type="radio"
-                            name="speaker"
-                            checked={selectedSpeaker === speaker.deviceId}
-                            onChange={() => onSpeakerChange?.(speaker.deviceId)}
-                            className={styles.menuOptionInput}
-                          />
-                          <span className={styles.menuOptionContent}>
-                            <span className={styles.menuOptionTitle}>
-                              {speaker.label || `Speaker ${index + 1}`}
+                  {availableMicrophones.length === 0
+                    ? <p className={styles.menuEmpty}>
+                        No microphones detected
+                      </p>
+                    : <fieldset className={styles.menuFieldset}>
+                        <legend className={styles.menuLegend}>
+                          Microphone
+                        </legend>
+                        {availableMicrophones.map((microphone, index) => (
+                          <label
+                            key={microphone.deviceId}
+                            className={`${styles.menuOption} ${selectedMicrophone === microphone.deviceId ? styles.menuOptionSelected : ""}`}
+                          >
+                            <input
+                              type="radio"
+                              name="microphone"
+                              checked={
+                                selectedMicrophone === microphone.deviceId
+                              }
+                              onChange={() =>
+                                onMicrophoneChange?.(microphone.deviceId)
+                              }
+                              className={styles.menuOptionInput}
+                            />
+                            <span className={styles.menuOptionContent}>
+                              <span className={styles.menuOptionTitle}>
+                                {microphone.label || `Microphone ${index + 1}`}
+                              </span>
                             </span>
-                          </span>
-                        </label>
-                      ))}
-                    </fieldset>}
-              </section>
+                          </label>
+                        ))}
+                      </fieldset>}
+                  <div className={styles.micTest}>
+                    <div className={styles.micTestControls}>
+                      <button
+                        type="button"
+                        className={styles.testButton}
+                        onClick={handleTestMicrophone}
+                        disabled={
+                          availableMicrophones.length === 0 ||
+                          micTestState === "testing"
+                        }
+                      >
+                        {micTestState === "testing"
+                          ? "Testing..."
+                          : "Test microphone"}
+                      </button>
+                      <p className={styles.micTestStatus} aria-live="polite">
+                        {micTestStatus}
+                      </p>
+                    </div>
+                    <div className={styles.micMeter} aria-hidden>
+                      <span
+                        className={styles.micMeterBar}
+                        style={{
+                          transform: `scaleX(${Math.max(0.04, micTestLevel)})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </section>
 
-              <section
-                className={`${styles.menuSection} ${styles.menuSectionDivider}`}
-                aria-labelledby={videoSectionId}
-              >
-                <h3 id={videoSectionId} className={styles.menuSectionTitle}>
-                  Video
-                </h3>
+                <section
+                  className={styles.menuSection}
+                  aria-labelledby={outputSectionId}
+                >
+                  <div className={styles.menuSectionHeader}>
+                    <h3
+                      id={outputSectionId}
+                      className={styles.menuSectionTitle}
+                    >
+                      Audio output
+                    </h3>
+                    <span className={styles.menuSectionMeta}>
+                      {availableSpeakers.length > 0
+                        ? `${availableSpeakers.length} available`
+                        : "Browser limited"}
+                    </span>
+                  </div>
 
-                {availableCameras.length === 0
-                  ? <p className={styles.menuEmpty}>No cameras detected</p>
-                  : <fieldset className={styles.menuFieldset}>
-                      <legend className={styles.menuLegend}>Camera</legend>
-                      {availableCameras.map((camera, index) => (
-                        <label
-                          key={camera.deviceId}
-                          className={`${styles.menuOption} ${selectedCamera === camera.deviceId ? styles.menuOptionSelected : ""}`}
-                        >
-                          <input
-                            type="radio"
-                            name="camera"
-                            checked={selectedCamera === camera.deviceId}
-                            onChange={() => onCameraChange?.(camera.deviceId)}
-                            className={styles.menuOptionInput}
-                          />
-                          <span className={styles.menuOptionContent}>
-                            <span className={styles.menuOptionTitle}>
-                              {camera.label || `Camera ${index + 1}`}
+                  {availableSpeakers.length === 0
+                    ? <p className={styles.menuEmpty}>
+                        Output selection is not available in this browser
+                      </p>
+                    : <fieldset className={styles.menuFieldset}>
+                        <legend className={styles.menuLegend}>
+                          Audio output
+                        </legend>
+                        {availableSpeakers.map((speaker, index) => (
+                          <label
+                            key={speaker.deviceId}
+                            className={`${styles.menuOption} ${selectedSpeaker === speaker.deviceId ? styles.menuOptionSelected : ""}`}
+                          >
+                            <input
+                              type="radio"
+                              name="speaker"
+                              checked={selectedSpeaker === speaker.deviceId}
+                              onChange={() =>
+                                onSpeakerChange?.(speaker.deviceId)
+                              }
+                              className={styles.menuOptionInput}
+                            />
+                            <span className={styles.menuOptionContent}>
+                              <span className={styles.menuOptionTitle}>
+                                {speaker.label || `Speaker ${index + 1}`}
+                              </span>
                             </span>
-                          </span>
-                        </label>
-                      ))}
-                    </fieldset>}
-              </section>
+                          </label>
+                        ))}
+                      </fieldset>}
+                </section>
+
+                <section
+                  className={styles.menuSection}
+                  aria-labelledby={videoSectionId}
+                >
+                  <div className={styles.menuSectionHeader}>
+                    <h3 id={videoSectionId} className={styles.menuSectionTitle}>
+                      Video
+                    </h3>
+                    <span className={styles.menuSectionMeta}>
+                      {availableCameras.length > 0
+                        ? `${availableCameras.length} available`
+                        : "Unavailable"}
+                    </span>
+                  </div>
+
+                  {availableCameras.length === 0
+                    ? <p className={styles.menuEmpty}>No cameras detected</p>
+                    : <fieldset className={styles.menuFieldset}>
+                        <legend className={styles.menuLegend}>Camera</legend>
+                        {availableCameras.map((camera, index) => (
+                          <label
+                            key={camera.deviceId}
+                            className={`${styles.menuOption} ${selectedCamera === camera.deviceId ? styles.menuOptionSelected : ""}`}
+                          >
+                            <input
+                              type="radio"
+                              name="camera"
+                              checked={selectedCamera === camera.deviceId}
+                              onChange={() => onCameraChange?.(camera.deviceId)}
+                              className={styles.menuOptionInput}
+                            />
+                            <span className={styles.menuOptionContent}>
+                              <span className={styles.menuOptionTitle}>
+                                {camera.label || `Camera ${index + 1}`}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </fieldset>}
+                </section>
+              </div>
             </div>,
             document.body,
           )
