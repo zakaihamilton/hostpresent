@@ -30,16 +30,16 @@ html[data-theme="light"] {
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg-main: #07070a;
-  --bg-panel: #141419;
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --btn-hover: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.07);
+  --bg-main: #0b0f17;
+  --bg-panel: #161e2e;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --btn-hover: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.12); /* Perfect visibility between invisible and boxy */
   --primary: #6366f1;
   --primary-hover: #4f46e5;
   --primary-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
   --text-main: #f9fafb;
-  --text-muted: #94a3b8;
+  --text-muted: #a6b9cd; /* Premium zinc/silver mid-tone passing WCAG readability specs */
   --tooltip-bg: rgba(255, 255, 255, 0.98);
   --tooltip-text: #07070a;
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -51,16 +51,16 @@ html[data-theme="dark"] {
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]):not([data-theme="dark"]) {
     color-scheme: dark;
-    --bg-main: #07070a;
-    --bg-panel: #141419;
-    --bg-hover: rgba(255, 255, 255, 0.06);
-    --btn-hover: rgba(255, 255, 255, 0.08);
-    --border: rgba(255, 255, 255, 0.07);
+    --bg-main: #0b0f17;
+    --bg-panel: #161e2e;
+    --bg-hover: rgba(255, 255, 255, 0.05);
+    --btn-hover: rgba(255, 255, 255, 0.07);
+    --border: rgba(255, 255, 255, 0.12);
     --primary: #6366f1;
     --primary-hover: #4f46e5;
     --primary-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
     --text-main: #f9fafb;
-    --text-muted: #94a3b8;
+    --text-muted: #a6b9cd;
     --tooltip-bg: rgba(255, 255, 255, 0.98);
     --tooltip-text: #07070a;
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);

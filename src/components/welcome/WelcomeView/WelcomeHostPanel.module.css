@@ -1,19 +1,19 @@
 .titleField {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .titleInput {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg-main);
+  background: var(--bg-hover);
   color: var(--text-main);
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  padding: 0.625rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .titleInput::placeholder {
@@ -21,46 +21,21 @@
   color: var(--text-muted);
 }
 
+.titleInput:hover {
+  border-color: var(--text-muted);
+}
+
 .titleInput:focus {
+  background-color: var(--bg-panel);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
-.codeSection {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 0 0.5rem;
-}
-
-.codeLabel {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.copyRow {
-  display: flex;
-  justify-content: center;
-}
-
-.copyRow .button {
-  min-width: 8rem;
-}
-
-.inviteLinkSection {
+/* Share section */
+.shareSection {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  width: 100%;
-}
-
-.inviteLinkLabel {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-align: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }

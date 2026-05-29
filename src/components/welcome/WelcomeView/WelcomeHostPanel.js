@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DisplayNameField } from "@/components/ui/DisplayNameField";
-import { Copy as CopyIcon } from "@/components/ui/Icons";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -47,6 +45,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const [recentRooms, setRecentRooms] = useState([]);
   const [displayName, setDisplayName] = useState(() => loadDisplayName());
   const [sessionTitle, setSessionTitle] = useState("");
+  const [activeShareTab, setActiveShareTab] = useState("link");
   const initRef = useRef(false);
 
   const refreshRecentRooms = useCallback(() => {
@@ -156,7 +155,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     if (!formattedJoinCode) return;
     const copied = await copyTextToClipboard(formattedJoinCode);
     setCopyMessage(
-      copied ? "Join code copied" : "Could not copy participant join code",
+      copied ? "Copied!" : "Could not copy",
     );
     setTimeout(() => setCopyMessage(""), 2500);
   };
@@ -164,7 +163,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const handleCopyLink = async () => {
     if (!inviteLink) return;
     const copied = await copyTextToClipboard(inviteLink);
-    setCopyMessage(copied ? "Link copied" : "Could not copy link");
+    setCopyMessage(copied ? "Copied!" : "Could not copy");
     setTimeout(() => setCopyMessage(""), 2500);
   };
 
@@ -238,18 +237,69 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
 
   return (
     <div className={shared.welcomePanel}>
-      <div className={hs.codeSection}>
-        <span className={hs.codeLabel}>Share this code</span>
-        <JoinCodeBoxes value={formattedJoinCode} readOnly />
-        <div className={hs.copyRow}>
+      {/* Sharing section with segmented tabs */}
+      <div className={hs.shareSection}>
+        <div className={shared.shareTabs} role="tablist" aria-label="Sharing options">
           <button
             type="button"
-            className={shared.button}
-            onClick={handleCopyJoinCode}
-            disabled={!formattedJoinCode}
+            role="tab"
+            aria-selected={activeShareTab === "link"}
+            className={`${shared.shareTab} ${activeShareTab === "link" ? shared.shareTabActive : ""}`}
+            onClick={() => setActiveShareTab("link")}
           >
-            {copyMessage || "Copy code"}
+            Invite Link
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeShareTab === "code"}
+            className={`${shared.shareTab} ${activeShareTab === "code" ? shared.shareTabActive : ""}`}
+            onClick={() => setActiveShareTab("code")}
+          >
+            Room Code
+          </button>
+          <div
+            className={shared.shareTabPill}
+            style={{
+              transform: `translateX(${activeShareTab === "link" ? "0%" : "100%"})`
+            }}
+          />
+        </div>
+
+        <div className={shared.shareContentArea} key={activeShareTab}>
+          <div className={shared.sharePane}>
+            {activeShareTab === "link" ? (
+              <>
+                <input
+                  id="invite-link"
+                  className={shared.linkInput}
+                  readOnly
+                  value={inviteLink}
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+                <button
+                  type="button"
+                  className={shared.button}
+                  onClick={handleCopyLink}
+                  disabled={!inviteLink}
+                >
+                  {copyMessage || "Copy invite link"}
+                </button>
+              </>
+            ) : (
+              <>
+                <JoinCodeBoxes value={formattedJoinCode} readOnly />
+                <button
+                  type="button"
+                  className={shared.button}
+                  onClick={handleCopyJoinCode}
+                  disabled={!formattedJoinCode}
+                >
+                  {copyMessage || "Copy room code"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -285,53 +335,31 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
           onClick={handleJoinMeeting}
           disabled={!hostToken || isActionPending}
         >
-          Join meeting
+          Start meeting
         </button>
-        <button
-          type="button"
-          className={`${shared.button} ${shared.buttonSecondary}`}
-          onClick={handleGenerateRoom}
-          disabled={isActionPending}
-        >
-          Generate new room
-        </button>
-        <RecentRoomsTrigger
-          rooms={recentRooms}
-          activeToken={hostToken}
-          tokenKey="hostToken"
-          formatLabel={(room) =>
-            room.joinCode
-              ? `${formatRoomLabel(room)} · ${formatJoinCode(room.joinCode)}`
-              : formatRoomLabel(room)
-          }
-          onSelect={handleSelectRoom}
-          onClear={handleClearRecentRooms}
-          onRemove={handleRemoveRoom}
-          emptyMessage="Rooms you create will appear here for quick reuse."
-        />
-      </div>
-
-      <div className={hs.inviteLinkSection}>
-        <span className={hs.inviteLinkLabel}>Invite link</span>
-        <div className={shared.linkRow}>
-          <input
-            id="invite-link"
-            className={shared.linkInput}
-            readOnly
-            value={inviteLink}
-            onFocus={(event) => event.currentTarget.select()}
+        <div className={shared.actionsRowSecondary}>
+          <button
+            type="button"
+            className={`${shared.button} ${shared.buttonSecondary}`}
+            onClick={handleGenerateRoom}
+            disabled={isActionPending}
+          >
+            Generate new room
+          </button>
+          <RecentRoomsTrigger
+            rooms={recentRooms}
+            activeToken={hostToken}
+            tokenKey="hostToken"
+            formatLabel={(room) =>
+              room.joinCode
+                ? `${formatRoomLabel(room)} · ${formatJoinCode(room.joinCode)}`
+                : formatRoomLabel(room)
+            }
+            onSelect={handleSelectRoom}
+            onClear={handleClearRecentRooms}
+            onRemove={handleRemoveRoom}
+            emptyMessage="Rooms you create will appear here for quick reuse."
           />
-          <Tooltip text={copyMessage || "Copy invite link"} placement="top">
-            <button
-              type="button"
-              className={`${shared.button} ${shared.iconButton}`}
-              onClick={handleCopyLink}
-              disabled={!inviteLink}
-              aria-label="Copy invite link"
-            >
-              <CopyIcon size={16} />
-            </button>
-          </Tooltip>
         </div>
       </div>
 

@@ -979,6 +979,17 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     }
                   />
                 </div>
+                <div className={styles.combinedDivider} />
+                <div className={styles.combinedSection}>
+                  <ChatPanel
+                    visible
+                    messages={chatMessages}
+                    participants={chatParticipants}
+                    onClose={handleCloseChat}
+                    onSendMessage={handleSendChatMessage}
+                    sessionName={sessionTitle}
+                  />
+                </div>
               </aside>
             </div>
           : <>

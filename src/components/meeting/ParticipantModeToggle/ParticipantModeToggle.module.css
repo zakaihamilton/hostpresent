@@ -12,15 +12,12 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-hover);
-  color: var(--text-main);
+  color: var(--text-muted);
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   padding: 0.45rem 0.75rem;
   cursor: pointer;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .groupCompact .option {
@@ -30,16 +27,24 @@
 
 .option:hover {
   background: var(--btn-hover);
+  color: var(--text-main);
+  border-color: var(--text-muted);
 }
 
 .optionActive {
-  background: rgba(37, 99, 235, 0.12);
-  border-color: rgba(37, 99, 235, 0.45);
-  color: var(--primary);
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: var(--bg-panel);
+}
+
+.optionActive:hover {
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: var(--bg-panel);
 }
 
 .option:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--text-main);
   outline-offset: 2px;
 }
 

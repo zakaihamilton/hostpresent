@@ -66,6 +66,7 @@ export function WelcomeParticipantPanel({
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
+  const [activeJoinTab, setActiveJoinTab] = useState("link");
   const resolvedJoinCodeRef = useRef(null);
 
   const refreshRecentRooms = useCallback(() => {
@@ -249,18 +250,67 @@ export function WelcomeParticipantPanel({
 
   return (
     <div className={shared.welcomePanel}>
-      <div className={ps.codeSection}>
-        <label className={ps.codeLabel} htmlFor="join-code-box-0">
-          Enter meeting code
-        </label>
-        <JoinCodeBoxes
-          value={roomIdInput}
-          onChange={setRoomIdInput}
-          autoFocus
-        />
-        <p className={ps.codeHint}>
-          Enter the 8-character code shared by the host
-        </p>
+      {/* Join method — segmented tabs matching host panel design */}
+      <div className={ps.joinSection}>
+        <div className={shared.shareTabs} role="tablist" aria-label="Join method">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeJoinTab === "link"}
+            className={`${shared.shareTab} ${activeJoinTab === "link" ? shared.shareTabActive : ""}`}
+            onClick={() => setActiveJoinTab("link")}
+          >
+            Invite Link
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeJoinTab === "code"}
+            className={`${shared.shareTab} ${activeJoinTab === "code" ? shared.shareTabActive : ""}`}
+            onClick={() => setActiveJoinTab("code")}
+          >
+            Room Code
+          </button>
+          <div
+            className={shared.shareTabPill}
+            style={{
+              transform: `translateX(${activeJoinTab === "link" ? "0%" : "100%"})`
+            }}
+          />
+        </div>
+
+        <div className={shared.shareContentArea} key={activeJoinTab}>
+          <div className={shared.sharePane}>
+            {activeJoinTab === "link" ? (
+              <>
+                <input
+                  id="participant-invite-link"
+                  className={shared.linkInput}
+                  value={inviteLinkInput}
+                  onChange={(event) => setInviteLinkInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void handleJoinInviteLink();
+                  }}
+                  placeholder="Paste invite link here…"
+                />
+                <p className={ps.joinHint}>
+                  Paste the full URL shared by the host
+                </p>
+              </>
+            ) : (
+              <>
+                <JoinCodeBoxes
+                  value={roomIdInput}
+                  onChange={setRoomIdInput}
+                  autoFocus
+                />
+                <p className={ps.joinHint}>
+                  Enter the 8-character code shared by the host
+                </p>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <DisplayNameField
@@ -283,30 +333,6 @@ export function WelcomeParticipantPanel({
         </p>
       </div>
 
-      <div className={ps.inviteLinkSection}>
-        <span className={ps.inviteLinkLabel}>Or paste invite link</span>
-        <div className={ps.inviteLinkRow}>
-          <input
-            id="participant-invite-link"
-            className={shared.linkInput}
-            value={inviteLinkInput}
-            onChange={(event) => setInviteLinkInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void handleJoinInviteLink();
-            }}
-            placeholder="https://…/#/j/…"
-          />
-          <button
-            type="button"
-            className={`${shared.button} ${shared.buttonSecondary} ${ps.inviteLinkButton}`}
-            onClick={handleJoinInviteLink}
-            disabled={!inviteLinkInput.trim()}
-          >
-            Join with link
-          </button>
-        </div>
-      </div>
-
       <div className={shared.statusArea}>
         {resolveError
           ? <p className={shared.statusError}>{resolveError}</p>
@@ -317,8 +343,8 @@ export function WelcomeParticipantPanel({
         <button
           type="button"
           className={shared.button}
-          onClick={handleJoinRoomId}
-          disabled={!allFilled}
+          onClick={activeJoinTab === "code" ? handleJoinRoomId : handleJoinInviteLink}
+          disabled={activeJoinTab === "code" ? !allFilled : !inviteLinkInput.trim()}
         >
           Join meeting
         </button>
