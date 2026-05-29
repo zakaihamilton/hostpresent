@@ -23,7 +23,7 @@ function participantColor(id) {
 const SPEAKING_SAMPLE_MS = 140;
 const SPEAKING_THRESHOLD = 0.055;
 
-function attachSpeakingDetector(stream, onSpeakingChange) {
+export function attachSpeakingDetector(stream, onSpeakingChange) {
   if (
     typeof window === "undefined" ||
     !stream?.getAudioTracks?.().some((track) => track.readyState === "live") ||

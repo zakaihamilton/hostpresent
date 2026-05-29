@@ -42,6 +42,7 @@ import {
   createHostFocusChangedMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
+import { attachSpeakingDetector } from "./hooks/RemoteParticipants";
 import {
   getSignalingConfigHint,
   getSignalingErrorHint,
@@ -146,6 +147,26 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
+  const [localIsSpeaking, setLocalIsSpeaking] = useState(false);
+  const localSpeakingCleanupRef = useRef(null);
+
+  useEffect(() => {
+    localSpeakingCleanupRef.current?.();
+    localSpeakingCleanupRef.current = null;
+    setLocalIsSpeaking(false);
+
+    if (localStream) {
+      localSpeakingCleanupRef.current = attachSpeakingDetector(
+        localStream,
+        setLocalIsSpeaking,
+      );
+    }
+
+    return () => {
+      localSpeakingCleanupRef.current?.();
+      localSpeakingCleanupRef.current = null;
+    };
+  }, [localStream]);
 
   const onRemoteParticipant = useCallback(
     (arg) => onRemoteParticipantRef.current?.(arg),
@@ -304,6 +325,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     roomConnection,
     localStream,
     screenStream,
+    videoParticipants,
+    focusedParticipantId,
     resetRecordingTimer,
     videoParticipantsLength: videoParticipants.length,
     isRecording,
@@ -542,6 +565,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isSelf: true,
         isAudioMuted,
         isVideoMuted,
+        isSpeaking: localIsSpeaking,
         isScreenSharing: Boolean(screenStream),
         avatarColor: "#3b82f6",
       });
@@ -558,6 +582,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     isAudioMuted,
     isHost,
     isVideoMuted,
+    localIsSpeaking,
     localStream,
     peerParticipants,
     resolvedDisplayName,
@@ -749,6 +774,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               isVideoMuted={isVideoMuted}
               isScreenSharing={Boolean(screenStream)}
               localDisplayName={resolvedDisplayName}
+              localIsSpeaking={localIsSpeaking}
               audioOutputDeviceId={selectedSpeaker}
               focusedParticipantId={focusedParticipantId}
               allowFocus={isHost}
@@ -799,6 +825,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     localDisplayName={displayNameInput}
                     localParticipantMode={participantMode}
                     focusedParticipantId={focusedParticipantId}
+                    localIsSpeaking={localIsSpeaking}
                     localIsScreenSharing={Boolean(screenStream)}
                     hostIsScreenSharing={hostScreenSharing}
                     onFocusParticipant={handleFocusParticipant}
@@ -841,6 +868,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 localDisplayName={displayNameInput}
                 localParticipantMode={participantMode}
                 focusedParticipantId={focusedParticipantId}
+                localIsSpeaking={localIsSpeaking}
                 localIsScreenSharing={Boolean(screenStream)}
                 hostIsScreenSharing={hostScreenSharing}
                 onFocusParticipant={handleFocusParticipant}

@@ -51,10 +51,20 @@ function RecipientDropdown({ participants, recipientId, onChange }) {
 
     const triggerRect = trigger.getBoundingClientRect();
     const menuRect = menu.getBoundingClientRect();
-    setCoords({
-      top: triggerRect.bottom + 4,
-      left: Math.max(8, triggerRect.left + triggerRect.width - menuRect.width),
-    });
+    const left = Math.max(
+      8,
+      Math.min(
+        triggerRect.left + triggerRect.width - menuRect.width,
+        window.innerWidth - menuRect.width - 8,
+      ),
+    );
+    const spaceBelow = window.innerHeight - triggerRect.bottom - 4;
+    const spaceAbove = triggerRect.top - 4;
+    const top =
+      spaceBelow >= menuRect.height || spaceBelow >= spaceAbove
+        ? triggerRect.bottom + 4
+        : Math.max(8, triggerRect.top - menuRect.height - 4);
+    setCoords({ top, left });
     setPositioned(true);
   }, [open]);
 

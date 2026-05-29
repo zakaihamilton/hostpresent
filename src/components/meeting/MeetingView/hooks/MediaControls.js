@@ -64,10 +64,40 @@ export function MediaControls({
 
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
+  const screenAudioRef = useRef(null);
 
   const isScreenAudioShared = Boolean(
     screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
   );
+
+  useEffect(() => {
+    if (screenAudioRef.current) {
+      screenAudioRef.current.pause();
+      screenAudioRef.current.srcObject = null;
+      screenAudioRef.current = null;
+    }
+
+    if (screenStream) {
+      const audioTrack = screenStream.getAudioTracks()[0];
+      if (audioTrack && audioTrack.readyState === "live") {
+        const audioEl = new Audio();
+        audioEl.srcObject = screenStream;
+        if (selectedSpeaker && typeof audioEl.setSinkId === "function") {
+          audioEl.setSinkId(selectedSpeaker).catch(() => {});
+        }
+        audioEl.play().catch(() => {});
+        screenAudioRef.current = audioEl;
+      }
+    }
+
+    return () => {
+      if (screenAudioRef.current) {
+        screenAudioRef.current.pause();
+        screenAudioRef.current.srcObject = null;
+        screenAudioRef.current = null;
+      }
+    };
+  }, [screenStream, selectedSpeaker]);
 
   useEffect(() => {
     localStreamRef.current = localStream;

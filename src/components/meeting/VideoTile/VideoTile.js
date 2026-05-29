@@ -30,7 +30,7 @@ export const VideoTile = memo(function VideoTile({
 
   return (
     <Wrapper
-      className={`${styles.tile} ${isSpeaking ? styles.speaking : ""} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
+      className={`${styles.tile} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
       {...wrapperProps}
     >
       {stream

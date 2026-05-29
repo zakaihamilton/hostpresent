@@ -11,6 +11,8 @@ export function Recording({
   roomConnection,
   localStream,
   screenStream,
+  videoParticipants = [],
+  focusedParticipantId = "host",
   resetRecordingTimer,
   videoParticipantsLength,
   isRecording,
@@ -157,13 +159,34 @@ export function Recording({
   }, [updateDownloadProgress]);
 
   const startRecording = useCallback(async () => {
-    if (!localStream || !isHost) return;
+    if (!isHost) return;
 
-    const activeVideoTrack = pickOutboundVideoTrack(localStream, screenStream);
-    const audioTrack = await resolveOutboundAudioTrack(
-      localStream,
-      screenStream,
-    );
+    const focusedParticipant =
+      focusedParticipantId && focusedParticipantId !== "host"
+        ? videoParticipants.find(
+            (p) => p.id === focusedParticipantId,
+          )
+        : null;
+
+    let activeVideoTrack;
+    let audioTrack;
+
+    if (focusedParticipant?.stream) {
+      activeVideoTrack =
+        focusedParticipant.stream.getVideoTracks().find(
+          (t) => t.readyState === "live",
+        ) ?? null;
+      audioTrack =
+        focusedParticipant.stream.getAudioTracks().find(
+          (t) => t.readyState === "live",
+        ) ?? null;
+    } else {
+      activeVideoTrack = pickOutboundVideoTrack(localStream, screenStream);
+      audioTrack = await resolveOutboundAudioTrack(
+        localStream,
+        screenStream,
+      );
+    }
 
     const tracksToRecord = [activeVideoTrack, audioTrack].filter(Boolean);
     const compositeStream = new MediaStream(tracksToRecord);
@@ -235,12 +258,14 @@ export function Recording({
     publishRecordingState(true, false);
   }, [
     finalizeRecordingDownload,
+    focusedParticipantId,
     isHost,
     localStream,
     publishRecordingState,
     resetRecordingTimer,
     screenStream,
     sessionName,
+    videoParticipants,
   ]);
 
   const pauseRecording = useCallback(() => {
