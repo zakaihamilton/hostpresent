@@ -95,6 +95,9 @@ export function Recording({
   const audioChunksRef = useRef([]);
   const downloadDismissTimerRef = useRef(null);
   const switchingFocusRef = useRef(false);
+  const prevFocusedIdRef = useRef(focusedParticipantId);
+  const focusedIdRef = useRef(focusedParticipantId);
+  focusedIdRef.current = focusedParticipantId;
   const chunkIndexRef = useRef(0);
   const unloadHandlerRef = useRef(null);
 
@@ -303,6 +306,7 @@ export function Recording({
     audioChunksRef.current = [];
     chunkIndexRef.current = 0;
     switchingFocusRef.current = false;
+    prevFocusedIdRef.current = focusedIdRef.current;
     setSavedRecording(null);
     clearSavedRecording().catch(() => {});
 
@@ -392,6 +396,9 @@ export function Recording({
     ) {
       return;
     }
+
+    if (focusedParticipantId === prevFocusedIdRef.current) return;
+    prevFocusedIdRef.current = focusedParticipantId;
 
     const prevRecorder = mediaRecorderRef.current;
     if (!prevRecorder || prevRecorder.state === "inactive") return;

@@ -58,6 +58,21 @@
   outline-offset: 2px;
 }
 
+.endMeetingButton {
+  border-color: rgba(239, 68, 68, 0.35);
+  color: var(--danger);
+}
+
+.endMeetingButton:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.endMeetingButton:active {
+  transform: scale(0.97);
+}
+
 .logo {
   display: flex;
   align-items: center;

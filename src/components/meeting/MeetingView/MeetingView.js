@@ -48,6 +48,8 @@ import {
 } from "@/lib/settings/roomSettings";
 import {
   createHostFocusChangedMessage,
+  createKickParticipantMessage,
+  createMeetingEndedMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
 import { attachSpeakingDetector } from "./hooks/RemoteParticipants";
@@ -150,6 +152,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   );
   const [sessionTitle, setSessionTitle] = useState("");
   const [focusedParticipantId, setFocusedParticipantId] = useState("host");
+  const [meetingDisconnectReason, setMeetingDisconnectReason] = useState(null);
 
   const resolvedDisplayName = useMemo(
     () => resolveDisplayName(displayNameInput),
@@ -206,7 +209,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     role,
     token,
     roomId: roomState?.roomId ?? null,
-    enabled: Boolean(token && roomState?.roomId),
+    enabled: Boolean(token && roomState?.roomId && !meetingDisconnectReason),
     displayName: resolvedDisplayName,
     hostAudioMuted: false,
     hostVideoMuted: false,
@@ -428,6 +431,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     onBack();
   }, [onBack, roomConnection?.disconnect]);
 
+  const handleDisconnectBack = useCallback(() => {
+    onBack();
+  }, [onBack]);
+
   const handleDisplayNameChange = useCallback((value) => {
     const normalized = normalizeDisplayNameInput(value);
     setDisplayNameInput(normalized);
@@ -462,6 +469,47 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     [isHost, focusedParticipantId],
   );
 
+  const handleEndMeeting = useCallback(async () => {
+    if (!isHost) return;
+    const confirmed = await confirm({
+      title: "End meeting",
+      message:
+        "All participants will be disconnected. This cannot be undone.",
+      confirmLabel: "End meeting",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+    if (isRecording) stopRecording();
+    roomConnectionRef.current?.send(createMeetingEndedMessage());
+    roomConnectionRef.current?.disconnect();
+    window.close();
+  }, [confirm, isHost, isRecording, stopRecording]);
+
+  const handleKickParticipant = useCallback(
+    async (participantId) => {
+      if (!isHost) return;
+      const participant = videoParticipants.find(
+        (p) => p.id === participantId,
+      );
+      const name = participant?.name ?? "this participant";
+      const confirmed = await confirm({
+        title: "Remove participant",
+        message: `Remove ${name} from the meeting? They will not be able to rejoin.`,
+        confirmLabel: "Remove",
+        cancelLabel: "Cancel",
+        variant: "danger",
+      });
+      if (!confirmed) return;
+      roomConnectionRef.current?.sendToParticipant(
+        participantId,
+        createKickParticipantMessage(),
+      );
+      onRemoteParticipantRef.current?.({ id: participantId, stream: null });
+    },
+    [confirm, isHost, videoParticipants],
+  );
+
   useEffect(() => {
     if (isHost) return undefined;
     return roomConnectionRef.current?.subscribe((message) => {
@@ -470,6 +518,21 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       }
     });
   }, [isHost]);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+    if (meetingDisconnectReason) return undefined;
+    return roomConnectionRef.current?.subscribe((message) => {
+      if (message.type === SIGNALING_MESSAGE.MEETING_ENDED) {
+        setMeetingDisconnectReason("ended");
+        roomConnectionRef.current?.disconnect();
+      }
+      if (message.type === SIGNALING_MESSAGE.KICK_PARTICIPANT) {
+        setMeetingDisconnectReason("kicked");
+        roomConnectionRef.current?.disconnect();
+      }
+    });
+  }, [isHost, meetingDisconnectReason]);
 
   useEffect(() => {
     if (!isHost || !focusedParticipantId || focusedParticipantId === "host") return;
@@ -598,20 +661,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       });
     }
 
-    if (localStream) {
-      tiles.push({
-        id: localId || "self",
-        name: resolvedDisplayName,
-        stream: localStream,
-        isSelf: true,
-        isAudioMuted,
-        isVideoMuted,
-        isSpeaking: localIsSpeaking,
-        isScreenSharing: Boolean(screenStream),
-        avatarColor: "#3b82f6",
-      });
-    }
-
     return tiles;
   }, [
     hostAudioMuted,
@@ -729,6 +778,26 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     );
   }
 
+  if (meetingDisconnectReason === "ended") {
+    return (
+      <MeetingJoinError
+        title="Meeting ended"
+        message="The host has ended this meeting."
+        onBack={handleDisconnectBack}
+      />
+    );
+  }
+
+  if (meetingDisconnectReason === "kicked") {
+    return (
+      <MeetingJoinError
+        title="You were removed"
+        message="You were removed from the meeting by the host."
+        onBack={handleDisconnectBack}
+      />
+    );
+  }
+
   if (fatalConnectionError) {
     return (
       <MeetingJoinError
@@ -757,12 +826,13 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
         onBack={handleBack}
-        backLabel={isHost ? "Back to welcome" : "Back to join screen"}
+        backLabel="Leave meeting"
         onShowInviteLink={
           isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
         revealTitleOnLogoClick={!isHost}
+        onEndMeeting={isHost ? handleEndMeeting : null}
       />
 
       <ConnectionBanner
@@ -887,7 +957,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     isHost={isHost}
                     localDisplayName={displayNameInput}
                     localParticipantMode={participantMode}
-                    focusedParticipantId={effectiveFocusedId}
+                    focusedParticipantId={focusedParticipantId}
                     localIsSpeaking={localIsSpeaking}
                     localIsScreenSharing={Boolean(screenStream)}
                     hostIsScreenSharing={hostScreenSharing}
@@ -899,6 +969,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     onMuteAllAudio={muteAllAudio}
                     canMuteAllVideo={canMuteAllVideo}
                     canMuteAllAudio={canMuteAllAudio}
+                    onRemoveParticipant={
+                      isHost ? handleKickParticipant : undefined
+                    }
                   />
                 </div>
               </aside>
@@ -919,7 +992,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 isHost={isHost}
                 localDisplayName={displayNameInput}
                 localParticipantMode={participantMode}
-                focusedParticipantId={effectiveFocusedId}
+                focusedParticipantId={focusedParticipantId}
                 localIsSpeaking={localIsSpeaking}
                 localIsScreenSharing={Boolean(screenStream)}
                 hostIsScreenSharing={hostScreenSharing}
@@ -931,6 +1004,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 onMuteAllAudio={muteAllAudio}
                 canMuteAllVideo={canMuteAllVideo}
                 canMuteAllAudio={canMuteAllAudio}
+                onRemoveParticipant={
+                  isHost ? handleKickParticipant : undefined
+                }
               />
 
               <ChatPanel

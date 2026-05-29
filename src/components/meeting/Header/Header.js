@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/routing/BackButton";
-import { Link, Logo, Edit } from "@/components/ui/Icons";
+import { Link, Logo, Edit, Stop } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -21,6 +21,7 @@ export const Header = memo(function Header({
   onShowInviteLink = null,
   onSessionTitleChange = null,
   revealTitleOnLogoClick = false,
+  onEndMeeting = null,
 }) {
   const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");
   const roomIdCopyTimerRef = useRef(null);
@@ -228,6 +229,19 @@ export const Header = memo(function Header({
             </span>
           </output>
         )}
+
+        {onEndMeeting
+          ? <Tooltip text="End meeting for everyone" placement="left">
+              <button
+                type="button"
+                className={`${styles.iconButton} ${styles.endMeetingButton}`}
+                onClick={onEndMeeting}
+                aria-label="End meeting"
+              >
+                <Stop size={18} />
+              </button>
+            </Tooltip>
+          : null}
 
         <ThemeToggle className={styles.iconButton} />
       </div>

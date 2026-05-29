@@ -10,6 +10,8 @@ export const SIGNALING_MESSAGE = {
   HOST_MUTE_ALL_VIDEO: "host_mute_all_video",
   HOST_FOCUS_CHANGED: "host_focus_changed",
   RECORDING_STATE: "recording_state",
+  MEETING_ENDED: "meeting_ended",
+  KICK_PARTICIPANT: "kick_participant",
   PARTICIPANT_AUDIO_MUTED: "participant_audio_muted",
   PARTICIPANT_VIDEO_MUTED: "participant_video_muted",
   PARTICIPANT_AUDIO_UNMUTED: "participant_audio_unmuted",
@@ -115,6 +117,20 @@ export function createRecordingStateMessage({ active, paused = false }) {
     type: SIGNALING_MESSAGE.RECORDING_STATE,
     active: Boolean(active),
     paused: Boolean(paused),
+    timestamp: Date.now(),
+  };
+}
+
+export function createMeetingEndedMessage() {
+  return {
+    type: SIGNALING_MESSAGE.MEETING_ENDED,
+    timestamp: Date.now(),
+  };
+}
+
+export function createKickParticipantMessage() {
+  return {
+    type: SIGNALING_MESSAGE.KICK_PARTICIPANT,
     timestamp: Date.now(),
   };
 }

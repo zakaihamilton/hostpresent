@@ -159,6 +159,7 @@ const ParticipantRow = memo(function ParticipantRow({
   onMuteParticipantAudio,
   focusedParticipantId,
   onFocusParticipant,
+  onRemoveParticipant,
 }) {
   if (item.type === "section") {
     return <div className={styles.sectionLabel}>{item.label}</div>;
@@ -169,6 +170,7 @@ const ParticipantRow = memo(function ParticipantRow({
   const isRemotePeer = item.type === "peer" || item.type === "host-remote";
   const canMute = isHost && !isHostItem && !isSelfItem && !isRemotePeer;
   const canFocus = isHost && item.hasVideo && !isRemotePeer;
+  const canRemove = isHost && !isHostItem && !isSelfItem && !isRemotePeer;
 
   return (
     <ParticipantItem
@@ -188,6 +190,7 @@ const ParticipantRow = memo(function ParticipantRow({
         canMute ? () => onMuteParticipantAudio(item.id, item.type) : undefined
       }
       onFocus={canFocus ? () => onFocusParticipant?.(item.id) : undefined}
+      onRemove={canRemove ? () => onRemoveParticipant?.(item.id) : undefined}
     />
   );
 });
@@ -225,6 +228,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   onFocusParticipant,
   onMuteParticipantVideo,
   onMuteParticipantAudio,
+  onRemoveParticipant,
   onMuteAllVideo,
   onMuteAllAudio,
   canMuteAllVideo,
@@ -286,6 +290,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
         onMuteParticipantAudio={onMuteParticipantAudio}
         focusedParticipantId={focusedParticipantId}
         onFocusParticipant={onFocusParticipant}
+        onRemoveParticipant={onRemoveParticipant}
       />
     ),
     [
@@ -294,6 +299,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
       onFocusParticipant,
       onMuteParticipantAudio,
       onMuteParticipantVideo,
+      onRemoveParticipant,
     ],
   );
 

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { VideoTile } from "@/components/meeting/VideoTile";
 import {
   Mic,
   MicOff,
@@ -6,7 +7,6 @@ import {
   Video,
   VideoOff,
 } from "@/components/ui/Icons";
-import { VideoTile } from "@/components/meeting/VideoTile";
 import { hasPlayableRemoteAudio } from "@/lib/webrtc/remoteParticipantMedia";
 import styles from "./VideoGallery.module.css";
 
@@ -32,7 +32,7 @@ export const VideoGallery = memo(function VideoGallery({
     >
       <div className={styles.galleryInner}>
         <div className={styles.gallery}>
-          {(allowFocus || screenStream) && localStream && (
+          {localStream && (
             <VideoTile
               stream={screenStream || localStream}
               name={localDisplayName}

@@ -78,7 +78,7 @@ export const VideoTile = memo(function VideoTile({
   if (onFocus) {
     return (
       <Tooltip
-        text={isFocused ? `${name} is focused` : `Focus ${name}`}
+        text={isFocused ? "Auto-Focus" : `Focus on ${name}`}
         placement="top"
       >
         {tile}

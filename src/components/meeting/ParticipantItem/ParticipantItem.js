@@ -5,6 +5,7 @@ import {
   ScreenShare,
   Video,
   VideoOff,
+  X,
 } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./ParticipantItem.module.css";
@@ -101,23 +102,24 @@ export const ParticipantItem = memo(function ParticipantItem({
   onMuteVideo,
   onMuteAudio,
   onFocus,
+  onRemove,
 }) {
   return (
     <div className={`${styles.item} ${isFocused ? styles.itemFocused : ""}`}>
       <div className={styles.info}>
-        <div
-          className={styles.avatar}
-          style={{
-            background: avatarColor,
-            fontSize: avatarFontSize,
-          }}
-        >
-          {initial}
-        </div>
+        <Tooltip text={name} placement="left">
+          <div
+            className={styles.avatar}
+            style={{
+              background: avatarColor,
+              fontSize: avatarFontSize,
+            }}
+          >
+            {initial}
+          </div>
+        </Tooltip>
         <div>
-          <Tooltip text={name} placement="left">
-            <div className={styles.name}>{name}</div>
-          </Tooltip>
+          <div className={styles.name}>{name}</div>
           {modeLabel
             ? <div className={styles.modeLabel}>{modeLabel}</div>
             : null}
@@ -132,14 +134,14 @@ export const ParticipantItem = memo(function ParticipantItem({
         )}
         {onFocus
           ? <Tooltip
-              text={isFocused ? "Currently focused" : "Focus for everyone"}
+              text={isFocused ? "Auto-Focus" : `Focus on ${name}`}
               placement="left"
             >
               <button
                 type="button"
                 className={`${styles.focusBtn} ${isFocused ? styles.focusBtnActive : ""}`}
                 onClick={onFocus}
-                aria-label={isFocused ? `${name} is focused` : `Focus ${name}`}
+                aria-label={isFocused ? "Auto-Focus" : `Focus on ${name}`}
               >
                 Focus
               </button>
@@ -153,6 +155,18 @@ export const ParticipantItem = memo(function ParticipantItem({
           isSpeaking={isSpeaking}
           onMuteAudio={onMuteAudio}
         />
+        {onRemove
+          ? <Tooltip text="Remove from meeting" placement="left">
+              <button
+                type="button"
+                className={`${styles.statusBtn} ${styles.removeBtn}`}
+                onClick={onRemove}
+                aria-label={`Remove ${name} from meeting`}
+              >
+                <X size={16} />
+              </button>
+            </Tooltip>
+          : null}
       </div>
     </div>
   );

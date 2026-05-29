@@ -25,11 +25,13 @@
 
 .info > div:last-child {
   min-width: 0;
+  overflow: hidden;
 }
 
 .avatar {
   width: 32px;
   height: 32px;
+  border-radius: var(--radius-sm);
   background: var(--primary);
   color: #ffffff;
   display: flex;
@@ -162,4 +164,13 @@
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
+}
+
+.removeBtn {
+  color: var(--text-muted);
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
 }
