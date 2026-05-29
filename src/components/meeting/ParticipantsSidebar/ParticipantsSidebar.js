@@ -36,6 +36,8 @@ function buildParticipantItems({
   hostMode,
   localDisplayName,
   localParticipantMode,
+  localIsScreenSharing,
+  hostIsScreenSharing,
   hostDisplayName,
   peerParticipants,
   videoParticipants,
@@ -56,6 +58,7 @@ function buildParticipantItems({
         isVideoMuted: hostIsVideoMuted,
         isAudioMuted: hostIsAudioMuted,
         isSpeaking: hostIsSpeaking,
+        isScreenSharing: hostIsScreenSharing,
         hasVideo: true,
         modeLabel: getModeLabel(hostMode),
       },
@@ -68,6 +71,7 @@ function buildParticipantItems({
         isVideoMuted,
         isAudioMuted,
         isSpeaking: false,
+        isScreenSharing: localIsScreenSharing,
         hasVideo: true,
         modeLabel: selfModeLabel,
       },
@@ -101,6 +105,7 @@ function buildParticipantItems({
       isVideoMuted,
       isAudioMuted,
       isSpeaking: false,
+      isScreenSharing: localIsScreenSharing,
       hasVideo: true,
       modeLabel: selfModeLabel,
     },
@@ -116,6 +121,7 @@ function buildParticipantItems({
       isVideoMuted: participant.isVideoMuted,
       isAudioMuted: participant.isAudioMuted,
       isSpeaking: participant.isSpeaking,
+      isScreenSharing: participant.isScreenSharing,
       hasVideo: true,
       modeLabel: getModeLabel(participant.mode),
     });
@@ -151,6 +157,8 @@ const ParticipantRow = memo(function ParticipantRow({
   isHost,
   onMuteParticipantVideo,
   onMuteParticipantAudio,
+  focusedParticipantId,
+  onFocusParticipant,
 }) {
   if (item.type === "section") {
     return <div className={styles.sectionLabel}>{item.label}</div>;
@@ -160,6 +168,7 @@ const ParticipantRow = memo(function ParticipantRow({
   const isSelfItem = item.id === "self";
   const isRemotePeer = item.type === "peer" || item.type === "host-remote";
   const canMute = isHost && !isHostItem && !isSelfItem && !isRemotePeer;
+  const canFocus = isHost && item.hasVideo && !isRemotePeer;
 
   return (
     <ParticipantItem
@@ -170,12 +179,15 @@ const ParticipantRow = memo(function ParticipantRow({
       isVideoMuted={item.isVideoMuted}
       isAudioMuted={item.isAudioMuted}
       isSpeaking={item.isSpeaking}
+      isFocused={focusedParticipantId === item.id}
+      isScreenSharing={item.isScreenSharing}
       hasVideo={item.hasVideo}
       modeLabel={item.modeLabel}
       onMuteVideo={canMute ? () => onMuteParticipantVideo(item.id) : undefined}
       onMuteAudio={
         canMute ? () => onMuteParticipantAudio(item.id, item.type) : undefined
       }
+      onFocus={canFocus ? () => onFocusParticipant?.(item.id) : undefined}
     />
   );
 });
@@ -205,7 +217,11 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   isHost = true,
   localDisplayName = "",
   localParticipantMode = PARTICIPANT_MODE.AVAILABLE,
+  localIsScreenSharing = false,
+  hostIsScreenSharing = false,
+  focusedParticipantId = "host",
   onClose,
+  onFocusParticipant,
   onMuteParticipantVideo,
   onMuteParticipantAudio,
   onMuteAllVideo,
@@ -232,6 +248,8 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
         hostMode,
         localDisplayName,
         localParticipantMode,
+        localIsScreenSharing,
+        hostIsScreenSharing,
         hostDisplayName,
         peerParticipants,
         videoParticipants,
@@ -243,12 +261,14 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
       hostIsAudioMuted,
       hostIsVideoMuted,
       hostIsSpeaking,
+      hostIsScreenSharing,
       hostMode,
       isAudioMuted,
       isHost,
       isVideoMuted,
       localDisplayName,
       localParticipantMode,
+      localIsScreenSharing,
       peerParticipants,
       videoParticipants,
     ],
@@ -261,9 +281,17 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
         isHost={isHost}
         onMuteParticipantVideo={onMuteParticipantVideo}
         onMuteParticipantAudio={onMuteParticipantAudio}
+        focusedParticipantId={focusedParticipantId}
+        onFocusParticipant={onFocusParticipant}
       />
     ),
-    [isHost, onMuteParticipantAudio, onMuteParticipantVideo],
+    [
+      focusedParticipantId,
+      isHost,
+      onFocusParticipant,
+      onMuteParticipantAudio,
+      onMuteParticipantVideo,
+    ],
   );
 
   return (

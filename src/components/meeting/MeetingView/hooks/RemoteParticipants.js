@@ -100,6 +100,7 @@ export function RemoteParticipants({
   const [hostDisplayName, setHostDisplayName] = useState("Host");
   const [hostAudioMuted, setHostAudioMuted] = useState(false);
   const [hostVideoMuted, setHostVideoMuted] = useState(false);
+  const [hostScreenSharing, setHostScreenSharing] = useState(false);
   const [hostMode, setHostMode] = useState("available");
   const [hostPresent, setHostPresent] = useState(isHost);
   const [hostIsSpeaking, setHostIsSpeaking] = useState(false);
@@ -146,10 +147,13 @@ export function RemoteParticipants({
           displayName,
           mode,
           present: true,
+          screenSharing:
+            videoParticipants.find((entry) => entry.id === participantId)
+              ?.isScreenSharing ?? false,
         }),
       );
     },
-    [isHost, roomConnectionRef],
+    [isHost, roomConnectionRef, videoParticipants],
   );
 
   const broadcastPeerLeft = useCallback(
@@ -177,12 +181,15 @@ export function RemoteParticipants({
             participantId: id,
             displayName: profile.displayName,
             mode: profile.mode,
+            screenSharing:
+              videoParticipants.find((entry) => entry.id === id)
+                ?.isScreenSharing ?? false,
             present: true,
           }),
         );
       }
     },
-    [isHost, roomConnectionRef],
+    [isHost, roomConnectionRef, videoParticipants],
   );
 
   const applyRemoteStreamMediaState = useCallback(
@@ -275,6 +282,7 @@ export function RemoteParticipants({
             avatarColor: participantColor(participant.id),
             isAudioMuted: false,
             isVideoMuted: false,
+            isScreenSharing: false,
             stream: participant.stream ?? null,
             mode: nextMode ?? PARTICIPANT_MODE.AVAILABLE,
           },
@@ -340,6 +348,7 @@ export function RemoteParticipants({
           id: message.participantId,
           name: nextName,
           mode: nextMode,
+          isScreenSharing: Boolean(message.screenSharing),
           avatarColor: participantColor(message.participantId),
         },
       ];
@@ -348,11 +357,32 @@ export function RemoteParticipants({
     setVideoParticipants((previous) =>
       previous.map((entry) =>
         entry.id === message.participantId
-          ? { ...entry, name: nextName, mode: nextMode }
+          ? {
+              ...entry,
+              name: nextName,
+              mode: nextMode,
+              isScreenSharing: Boolean(message.screenSharing),
+            }
           : entry,
       ),
     );
   }, []);
+
+  const setParticipantScreenSharing = useCallback(
+    (participantId, isScreenSharing) => {
+      setVideoParticipants((previous) =>
+        previous.map((entry) =>
+          entry.id === participantId ? { ...entry, isScreenSharing } : entry,
+        ),
+      );
+      setPeerParticipants((previous) =>
+        previous.map((entry) =>
+          entry.id === participantId ? { ...entry, isScreenSharing } : entry,
+        ),
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     if (isHost) {
@@ -387,6 +417,9 @@ export function RemoteParticipants({
       }
       if (typeof message.videoMuted === "boolean") {
         setHostVideoMuted(message.videoMuted);
+      }
+      if (typeof message.screenSharing === "boolean") {
+        setHostScreenSharing(message.screenSharing);
       }
       if (message.mode === "listening" || message.mode === "available") {
         setHostMode(message.mode);
@@ -479,6 +512,14 @@ export function RemoteParticipants({
           if (message.participantId === localId) return;
           handlePeerProfileBroadcast(message);
           break;
+        case SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED:
+          if (message.participantId === localId) return;
+          setParticipantScreenSharing(message.participantId, true);
+          break;
+        case SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED:
+          if (message.participantId === localId) return;
+          setParticipantScreenSharing(message.participantId, false);
+          break;
         default:
           break;
       }
@@ -490,6 +531,7 @@ export function RemoteParticipants({
     publishParticipantMediaStatus,
     resetRecordingTimer,
     roomConnectionRef,
+    setParticipantScreenSharing,
     setIsAudioMuted,
     setIsVideoMuted,
     setIsRecording,
@@ -544,6 +586,23 @@ export function RemoteParticipants({
     roomConnectionRef,
   ]);
 
+  useEffect(() => {
+    if (!isHost) return undefined;
+
+    return roomConnectionRef.current?.subscribe((message) => {
+      switch (message.type) {
+        case SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED:
+          setParticipantScreenSharing(message.participantId, true);
+          break;
+        case SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED:
+          setParticipantScreenSharing(message.participantId, false);
+          break;
+        default:
+          break;
+      }
+    });
+  }, [isHost, roomConnectionRef, setParticipantScreenSharing]);
+
   return {
     hostStream,
     hostStreamPlaybackMuted,
@@ -553,6 +612,7 @@ export function RemoteParticipants({
     hostDisplayName,
     hostAudioMuted,
     hostVideoMuted,
+    hostScreenSharing,
     hostIsSpeaking,
     hostMode,
     hostPresent,

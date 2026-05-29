@@ -6,6 +6,8 @@ import {
   createHostVideoUnmutedMessage,
   createParticipantAudioMutedMessage,
   createParticipantAudioUnmutedMessage,
+  createParticipantScreenShareStartedMessage,
+  createParticipantScreenShareStoppedMessage,
   createParticipantVideoMutedMessage,
   createParticipantVideoUnmutedMessage,
 } from "@/lib/signaling/messages";
@@ -275,6 +277,21 @@ export function MediaControls({
     [roomConnection],
   );
 
+  const publishScreenShareStatus = useCallback(
+    (screenSharing) => {
+      if (isHost) return;
+
+      const participantId = roomConnection?.localParticipantId;
+      if (!participantId) return;
+      roomConnection.send(
+        screenSharing
+          ? createParticipantScreenShareStartedMessage({ participantId })
+          : createParticipantScreenShareStoppedMessage({ participantId }),
+      );
+    },
+    [isHost, roomConnection],
+  );
+
   const toggleAudio = useCallback(() => {
     if (!localStream) return;
 
@@ -362,6 +379,7 @@ export function MediaControls({
         track.stop();
       }
       setScreenStream(null);
+      publishScreenShareStatus(false);
       void roomConnection.syncOutboundMedia?.();
     } else {
       try {
@@ -379,10 +397,12 @@ export function MediaControls({
 
         stream.getVideoTracks()[0].onended = () => {
           setScreenStream(null);
+          publishScreenShareStatus(false);
           void roomConnection.syncOutboundMedia?.();
         };
 
         setScreenStream(stream);
+        publishScreenShareStatus(true);
         setErrorMsg("");
 
         if (shareScreenAudio && stream.getAudioTracks().length === 0) {
@@ -403,7 +423,12 @@ export function MediaControls({
         }
       }
     }
-  }, [screenStream, shareScreenAudio]);
+  }, [
+    publishScreenShareStatus,
+    roomConnection,
+    screenStream,
+    shareScreenAudio,
+  ]);
 
   const setShareScreenAudioPreference = useCallback((includeAudio) => {
     setShareScreenAudio(includeAudio);

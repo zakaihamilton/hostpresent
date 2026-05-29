@@ -8,6 +8,7 @@ export const SIGNALING_MESSAGE = {
   HOST_MUTE_VIDEO: "host_mute_video",
   HOST_MUTE_ALL_AUDIO: "host_mute_all_audio",
   HOST_MUTE_ALL_VIDEO: "host_mute_all_video",
+  HOST_FOCUS_CHANGED: "host_focus_changed",
   RECORDING_STATE: "recording_state",
   PARTICIPANT_AUDIO_MUTED: "participant_audio_muted",
   PARTICIPANT_VIDEO_MUTED: "participant_video_muted",
@@ -15,6 +16,8 @@ export const SIGNALING_MESSAGE = {
   PARTICIPANT_VIDEO_UNMUTED: "participant_video_unmuted",
   PARTICIPANT_PROFILE: "participant_profile",
   PARTICIPANT_PROFILE_BROADCAST: "participant_profile_broadcast",
+  PARTICIPANT_SCREEN_SHARE_STARTED: "participant_screen_share_started",
+  PARTICIPANT_SCREEN_SHARE_STOPPED: "participant_screen_share_stopped",
   CHAT_MESSAGE: "chat_message",
   CHAT_PRIVATE_MESSAGE: "chat_private_message",
 };
@@ -25,6 +28,7 @@ export function createHostPresentMessage({
   videoMuted = false,
   mode = "available",
   sessionTitle = "",
+  screenSharing = false,
 } = {}) {
   return {
     type: SIGNALING_MESSAGE.HOST_PRESENT,
@@ -33,6 +37,16 @@ export function createHostPresentMessage({
     videoMuted: Boolean(videoMuted),
     mode: mode === "listening" ? "listening" : "available",
     sessionTitle: typeof sessionTitle === "string" ? sessionTitle.trim() : "",
+    screenSharing: Boolean(screenSharing),
+    timestamp: Date.now(),
+  };
+}
+
+export function createHostFocusChangedMessage({ focusedId = "host" } = {}) {
+  const id = typeof focusedId === "string" && focusedId ? focusedId : "host";
+  return {
+    type: SIGNALING_MESSAGE.HOST_FOCUS_CHANGED,
+    focusedId: id,
     timestamp: Date.now(),
   };
 }
@@ -165,6 +179,7 @@ export function createParticipantProfileBroadcastMessage({
   displayName = "",
   mode = "available",
   present = true,
+  screenSharing = false,
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST,
@@ -173,6 +188,23 @@ export function createParticipantProfileBroadcastMessage({
     displayName:
       typeof displayName === "string" ? displayName.trim().slice(0, 32) : "",
     mode: mode === "listening" ? "listening" : "available",
+    screenSharing: Boolean(screenSharing),
+    timestamp: Date.now(),
+  };
+}
+
+export function createParticipantScreenShareStartedMessage({ participantId }) {
+  return {
+    type: SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED,
+    participantId,
+    timestamp: Date.now(),
+  };
+}
+
+export function createParticipantScreenShareStoppedMessage({ participantId }) {
+  return {
+    type: SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
+    participantId,
     timestamp: Date.now(),
   };
 }

@@ -11,10 +11,20 @@
   background: var(--bg-hover);
 }
 
+.itemFocused {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
 .info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.info > div:last-child {
+  min-width: 0;
 }
 
 .avatar {
@@ -34,6 +44,9 @@
 .name {
   font-size: 0.875rem;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modeLabel {
@@ -47,7 +60,9 @@
 .status {
   color: var(--text-muted);
   display: flex;
+  align-items: center;
   gap: 0.15rem;
+  flex-shrink: 0;
 }
 
 .statusIcon,
@@ -103,4 +118,49 @@
 .statusBtn svg {
   width: 16px;
   height: 16px;
+}
+
+.mediaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 28px;
+  padding: 0 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.mediaBadge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.focusBtn {
+  height: 28px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.focusBtn:hover {
+  border-color: var(--primary);
+}
+
+.focusBtn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.focusBtnActive {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
 }

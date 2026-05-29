@@ -1,5 +1,11 @@
 import { memo } from "react";
-import { Mic, MicOff, Video, VideoOff } from "@/components/ui/Icons";
+import {
+  Mic,
+  MicOff,
+  ScreenShare,
+  Video,
+  VideoOff,
+} from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./ParticipantItem.module.css";
 
@@ -88,13 +94,16 @@ export const ParticipantItem = memo(function ParticipantItem({
   isVideoMuted = false,
   isAudioMuted = false,
   isSpeaking = false,
+  isFocused = false,
+  isScreenSharing = false,
   hasVideo = true,
   modeLabel = null,
   onMuteVideo,
   onMuteAudio,
+  onFocus,
 }) {
   return (
-    <div className={styles.item}>
+    <div className={`${styles.item} ${isFocused ? styles.itemFocused : ""}`}>
       <div className={styles.info}>
         <div
           className={styles.avatar}
@@ -113,6 +122,27 @@ export const ParticipantItem = memo(function ParticipantItem({
         </div>
       </div>
       <div className={styles.status}>
+        {hasVideo && (
+          <span className={styles.mediaBadge}>
+            {isScreenSharing ? <ScreenShare /> : <Video />}
+            <span>{isScreenSharing ? "Screen" : "Video"}</span>
+          </span>
+        )}
+        {onFocus
+          ? <Tooltip
+              text={isFocused ? "Currently focused" : "Focus for everyone"}
+              placement="left"
+            >
+              <button
+                type="button"
+                className={`${styles.focusBtn} ${isFocused ? styles.focusBtnActive : ""}`}
+                onClick={onFocus}
+                aria-label={isFocused ? `${name} is focused` : `Focus ${name}`}
+              >
+                Focus
+              </button>
+            </Tooltip>
+          : null}
         {hasVideo && (
           <VideoControl isVideoMuted={isVideoMuted} onMuteVideo={onMuteVideo} />
         )}

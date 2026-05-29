@@ -38,7 +38,10 @@ import {
   getRoomTitleByHostToken,
   updateRoomTitle,
 } from "@/lib/settings/roomSettings";
-import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
+import {
+  createHostFocusChangedMessage,
+  SIGNALING_MESSAGE,
+} from "@/lib/signaling/messages";
 import {
   getSignalingConfigHint,
   getSignalingErrorHint,
@@ -124,6 +127,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     loadParticipantMode(),
   );
   const [sessionTitle, setSessionTitle] = useState("");
+  const [focusedParticipantId, setFocusedParticipantId] = useState("host");
 
   const resolvedDisplayName = useMemo(
     () => resolveDisplayName(displayNameInput),
@@ -258,6 +262,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostDisplayName,
     hostAudioMuted,
     hostVideoMuted,
+    hostScreenSharing,
     hostIsSpeaking,
     hostMode,
     hostPresent,
@@ -381,6 +386,38 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     saveParticipantMode(mode);
   }, []);
 
+  const handleFocusParticipant = useCallback(
+    (participantId) => {
+      if (!isHost) return;
+      const nextFocusedId = participantId || "host";
+      setFocusedParticipantId(nextFocusedId);
+      roomConnectionRef.current?.send(
+        createHostFocusChangedMessage({ focusedId: nextFocusedId }),
+      );
+    },
+    [isHost],
+  );
+
+  useEffect(() => {
+    if (isHost) return undefined;
+    return roomConnectionRef.current?.subscribe((message) => {
+      if (message.type === SIGNALING_MESSAGE.HOST_FOCUS_CHANGED) {
+        setFocusedParticipantId(message.focusedId || "host");
+      }
+    });
+  }, [isHost]);
+
+  useEffect(() => {
+    if (!isHost || focusedParticipantId === "host") return;
+    if (
+      !videoParticipants.some(
+        (participant) => participant.id === focusedParticipantId,
+      )
+    ) {
+      handleFocusParticipant("host");
+    }
+  }, [focusedParticipantId, handleFocusParticipant, isHost, videoParticipants]);
+
   const handleToggleGallery = useCallback(() => {
     setIsGalleryVisible((v) => !v);
   }, []);
@@ -483,6 +520,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         stream: hostStream,
         isAudioMuted: hostAudioMuted,
         isVideoMuted: hostVideoMuted,
+        isScreenSharing: hostScreenSharing,
         isSpeaking: hostIsSpeaking,
         avatarColor: "#6366f1",
       });
@@ -504,6 +542,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isSelf: true,
         isAudioMuted,
         isVideoMuted,
+        isScreenSharing: Boolean(screenStream),
         avatarColor: "#3b82f6",
       });
     }
@@ -515,6 +554,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostIsSpeaking,
     hostStream,
     hostVideoMuted,
+    hostScreenSharing,
     isAudioMuted,
     isHost,
     isVideoMuted,
@@ -522,36 +562,80 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     peerParticipants,
     resolvedDisplayName,
     roomConnection?.localParticipantId,
+    screenStream,
     videoParticipants,
   ]);
 
   const primaryViewProps = useMemo(() => {
-    const viewingHostStream = !isHost && Boolean(hostStream) && !screenStream;
-    const activeMain = screenStream || localStream;
+    const focusedParticipant =
+      focusedParticipantId && focusedParticipantId !== "host"
+        ? videoParticipants.find(
+            (participant) => participant.id === focusedParticipantId,
+          )
+        : null;
+    const focusedIsSelf =
+      !isHost &&
+      focusedParticipantId &&
+      focusedParticipantId === roomConnection?.localParticipantId;
+    const viewingFocusedParticipant = Boolean(
+      focusedParticipant || focusedIsSelf,
+    );
+    const viewingHostStream =
+      !viewingFocusedParticipant && !isHost && Boolean(hostStream);
+    const activeMain = focusedIsSelf
+      ? screenStream || localStream
+      : focusedParticipant?.stream || screenStream || localStream;
     return {
       stream: viewingHostStream ? hostStream : activeMain,
-      label: viewingHostStream
-        ? hostDisplayName
-        : screenStream
-          ? isScreenAudioShared
-            ? "You are sharing your screen with audio"
-            : "You are sharing your screen"
-          : resolvedDisplayName,
-      isMuted: viewingHostStream ? hostStreamPlaybackMuted : true,
-      isAudioMuted: viewingHostStream ? hostAudioMuted : isAudioMuted,
-      isVideoMuted: viewingHostStream ? hostVideoMuted : false,
+      label: viewingFocusedParticipant
+        ? focusedIsSelf
+          ? screenStream
+            ? "You are sharing your screen"
+            : resolvedDisplayName
+          : focusedParticipant.isScreenSharing
+            ? `${focusedParticipant.name} is sharing a screen`
+            : focusedParticipant.name
+        : viewingHostStream
+          ? hostScreenSharing
+            ? `${hostDisplayName} is sharing a screen`
+            : hostDisplayName
+          : screenStream
+            ? isScreenAudioShared
+              ? "You are sharing your screen with audio"
+              : "You are sharing your screen"
+            : resolvedDisplayName,
+      isMuted: viewingHostStream
+        ? hostStreamPlaybackMuted
+        : focusedParticipant
+          ? focusedParticipant.isSelf || !focusedParticipant.stream
+          : true,
+      isAudioMuted: viewingHostStream
+        ? hostAudioMuted
+        : focusedParticipant
+          ? focusedParticipant.isAudioMuted
+          : isAudioMuted,
+      isVideoMuted: viewingHostStream
+        ? hostVideoMuted && !hostScreenSharing
+        : focusedParticipant
+          ? focusedParticipant.isVideoMuted &&
+            !focusedParticipant.isScreenSharing
+          : false,
     };
   }, [
+    focusedParticipantId,
     hostStream,
     isHost,
     screenStream,
     localStream,
     hostDisplayName,
+    hostScreenSharing,
     isScreenAudioShared,
     resolvedDisplayName,
     hostAudioMuted,
     hostStreamPlaybackMuted,
     hostVideoMuted,
+    roomConnection?.localParticipantId,
+    videoParticipants,
   ]);
 
   if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
@@ -662,8 +746,13 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               localStream={localStream}
               participants={galleryParticipants}
               isAudioMuted={isAudioMuted}
+              isVideoMuted={isVideoMuted}
+              isScreenSharing={Boolean(screenStream)}
               localDisplayName={resolvedDisplayName}
               audioOutputDeviceId={selectedSpeaker}
+              focusedParticipantId={focusedParticipantId}
+              allowFocus={isHost}
+              onFocusParticipant={handleFocusParticipant}
             />
           </div>
 
@@ -709,6 +798,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     isHost={isHost}
                     localDisplayName={displayNameInput}
                     localParticipantMode={participantMode}
+                    focusedParticipantId={focusedParticipantId}
+                    localIsScreenSharing={Boolean(screenStream)}
+                    hostIsScreenSharing={hostScreenSharing}
+                    onFocusParticipant={handleFocusParticipant}
                     onClose={handleCloseSidebar}
                     onMuteParticipantVideo={muteParticipantVideo}
                     onMuteParticipantAudio={muteParticipantAudio}
@@ -747,6 +840,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 isHost={isHost}
                 localDisplayName={displayNameInput}
                 localParticipantMode={participantMode}
+                focusedParticipantId={focusedParticipantId}
+                localIsScreenSharing={Boolean(screenStream)}
+                hostIsScreenSharing={hostScreenSharing}
+                onFocusParticipant={handleFocusParticipant}
                 onClose={handleCloseSidebar}
                 onMuteParticipantVideo={muteParticipantVideo}
                 onMuteParticipantAudio={muteParticipantAudio}

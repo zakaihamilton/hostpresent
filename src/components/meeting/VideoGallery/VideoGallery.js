@@ -1,5 +1,11 @@
 import { memo } from "react";
-import { Mic, MicOff, VideoOff } from "@/components/ui/Icons";
+import {
+  Mic,
+  MicOff,
+  ScreenShare,
+  Video,
+  VideoOff,
+} from "@/components/ui/Icons";
 import { VideoTile } from "@/components/meeting/VideoTile";
 import { hasPlayableRemoteAudio } from "@/lib/webrtc/remoteParticipantMedia";
 import styles from "./VideoGallery.module.css";
@@ -10,8 +16,13 @@ export const VideoGallery = memo(function VideoGallery({
   localStream,
   participants,
   isAudioMuted,
+  isVideoMuted = false,
+  isScreenSharing = false,
   localDisplayName = "You",
   audioOutputDeviceId = "",
+  focusedParticipantId = "host",
+  allowFocus = false,
+  onFocusParticipant,
 }) {
   return (
     <div
@@ -20,13 +31,21 @@ export const VideoGallery = memo(function VideoGallery({
     >
       <div className={styles.galleryInner}>
         <div className={styles.gallery}>
-          {screenStream && localStream && (
+          {(allowFocus || screenStream) && localStream && (
             <VideoTile
-              stream={localStream}
+              stream={screenStream || localStream}
               name={localDisplayName}
               overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
               isMuted
+              isFocused={focusedParticipantId === "host"}
               isSpeaking
+              isVideoOff={isVideoMuted && !isScreenSharing}
+              videoOffIcon={<VideoOff />}
+              mediaBadgeIcon={isScreenSharing ? <ScreenShare /> : <Video />}
+              mediaBadgeLabel={isScreenSharing ? "Screen" : "Video"}
+              onFocus={
+                allowFocus ? () => onFocusParticipant?.("host") : undefined
+              }
             />
           )}
           {participants.map((participant) => (
@@ -42,8 +61,20 @@ export const VideoGallery = memo(function VideoGallery({
                 !hasPlayableRemoteAudio(participant.stream)
               }
               isSpeaking={participant.isSpeaking}
-              isVideoOff={participant.isVideoMuted}
+              isVideoOff={
+                participant.isVideoMuted && !participant.isScreenSharing
+              }
               videoOffIcon={<VideoOff />}
+              isFocused={focusedParticipantId === participant.id}
+              mediaBadgeIcon={
+                participant.isScreenSharing ? <ScreenShare /> : <Video />
+              }
+              mediaBadgeLabel={participant.isScreenSharing ? "Screen" : "Video"}
+              onFocus={
+                allowFocus
+                  ? () => onFocusParticipant?.(participant.id)
+                  : undefined
+              }
               audioOutputDeviceId={audioOutputDeviceId}
             />
           ))}

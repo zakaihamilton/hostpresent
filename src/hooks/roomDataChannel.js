@@ -173,6 +173,7 @@ export function useRoomDataChannel({
       videoMuted: videoTrack ? !videoTrack.enabled : hostVideoMutedRef.current,
       mode: hostModeRef.current,
       sessionTitle: sessionTitleRef.current,
+      screenSharing: Boolean(screenStreamRef.current),
     });
   }, []);
 
@@ -627,6 +628,19 @@ export function useRoomDataChannel({
             return;
           }
           notifyHandlers(resolvedMessage);
+          if (
+            isHost &&
+            (resolvedMessage.type ===
+              SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED ||
+              resolvedMessage.type ===
+                SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED)
+          ) {
+            for (const [id, c] of connectionsRef.current) {
+              if (id !== remoteId) {
+                sendOnConnection(c, resolvedMessage);
+              }
+            }
+          }
           if (!isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
             setHostPresent(true);
             setConnectionError(null);

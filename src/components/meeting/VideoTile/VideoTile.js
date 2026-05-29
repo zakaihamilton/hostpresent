@@ -10,14 +10,29 @@ export const VideoTile = memo(function VideoTile({
   overlayIcon,
   isMuted = true,
   isSpeaking = false,
+  isFocused = false,
   isVideoOff = false,
   videoOffIcon = null,
+  mediaBadgeIcon = null,
+  mediaBadgeLabel = "",
+  onFocus,
   audioOutputDeviceId = "",
 }) {
   const showVideo = Boolean(stream) && !isVideoOff;
+  const Wrapper = onFocus ? "button" : "div";
+  const wrapperProps = onFocus
+    ? {
+        type: "button",
+        onClick: onFocus,
+        "aria-label": `Focus ${name}`,
+      }
+    : {};
 
   return (
-    <div className={`${styles.tile} ${isSpeaking ? styles.speaking : ""}`}>
+    <Wrapper
+      className={`${styles.tile} ${isSpeaking ? styles.speaking : ""} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
+      {...wrapperProps}
+    >
       {stream
         ? <VideoPlayer
             stream={stream}
@@ -40,6 +55,12 @@ export const VideoTile = memo(function VideoTile({
           {videoOffIcon}
         </div>
       )}
+      {mediaBadgeIcon
+        ? <div className={styles.mediaBadge} aria-label={mediaBadgeLabel}>
+            {mediaBadgeIcon}
+            <span>{mediaBadgeLabel}</span>
+          </div>
+        : null}
       <div className={styles.overlay}>
         {overlayIcon
           ? <span
@@ -50,6 +71,6 @@ export const VideoTile = memo(function VideoTile({
           : null}
         {name}
       </div>
-    </div>
+    </Wrapper>
   );
 });
