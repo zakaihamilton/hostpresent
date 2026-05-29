@@ -3,6 +3,7 @@ export {
   Chat,
   ChevronDown,
   Copy,
+  Download,
   Edit,
   Gallery,
   GitHub,

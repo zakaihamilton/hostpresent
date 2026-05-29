@@ -848,6 +848,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     participants={chatParticipants}
                     onClose={handleCloseChat}
                     onSendMessage={handleSendChatMessage}
+                    sessionName={sessionTitle}
                   />
                 </div>
               </aside>
@@ -888,6 +889,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 participants={chatParticipants}
                 onClose={handleCloseChat}
                 onSendMessage={handleSendChatMessage}
+                sessionName={sessionTitle}
               />
             </>}
       </main>

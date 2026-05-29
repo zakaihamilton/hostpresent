@@ -8,8 +8,9 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Chat as ChatIcon, ChevronDown, Send, X } from "@/components/ui/Icons";
+import { Chat as ChatIcon, ChevronDown, Download, Send, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { buildRecordingFilename } from "@/lib/recordingFilename";
 import styles from "./ChatPanel.module.css";
 
 function formatTime(ts) {
@@ -189,6 +190,7 @@ export const ChatPanel = memo(function ChatPanel({
   onClose,
   onSendMessage,
   flex,
+  sessionName,
 }) {
   const [text, setText] = useState("");
   const [recipientId, setRecipientId] = useState("");
@@ -236,6 +238,25 @@ export const ChatPanel = memo(function ChatPanel({
     [handleSend],
   );
 
+  const handleDownloadChat = useCallback(() => {
+    if (messages.length === 0) return;
+    const lines = messages.map((msg) => {
+      const sender = msg.isSelf ? "You" : msg.senderName || "Guest";
+      const time = formatTime(msg.timestamp);
+      const label = msg.isPrivate ? " (private)" : "";
+      return `[${time}] ${sender}${label}: ${msg.text}`;
+    });
+    const content = lines.join("\n");
+    const blob = new Blob([content], { type: "text/plain" });
+    const filename = buildRecordingFilename({ sessionName, extension: "txt" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [messages, sessionName]);
+
   return (
     <div
       className={`${styles.slot} ${visible ? "" : styles.slotClosed} ${flex ? styles.slotFlex : ""}`}
@@ -247,18 +268,32 @@ export const ChatPanel = memo(function ChatPanel({
             <ChatIcon size={18} />
             <span>Chat</span>
           </div>
-          {onClose
-            ? <Tooltip text="Close chat" placement="left">
-                <button
-                  type="button"
-                  className={styles.closeButton}
-                  onClick={onClose}
-                  aria-label="Close chat"
-                >
-                  <X size={18} />
-                </button>
-              </Tooltip>
-            : null}
+          <div className={styles.headerActions}>
+            {messages.length > 0
+              ? <Tooltip text="Save chat" placement="left">
+                  <button
+                    type="button"
+                    className={styles.downloadButton}
+                    onClick={handleDownloadChat}
+                    aria-label="Save chat"
+                  >
+                    <Download size={18} />
+                  </button>
+                </Tooltip>
+              : null}
+            {onClose
+              ? <Tooltip text="Close chat" placement="left">
+                  <button
+                    type="button"
+                    className={styles.closeButton}
+                    onClick={onClose}
+                    aria-label="Close chat"
+                  >
+                    <X size={18} />
+                  </button>
+                </Tooltip>
+              : null}
+          </div>
         </div>
 
         <div className={styles.messages}>
