@@ -331,7 +331,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const {
     downloadState,
+    savedRecording,
     dismissDownloadBanner,
+    downloadSavedRecording,
+    discardSavedRecording,
     startRecording,
     pauseRecording,
     resumeRecording,
@@ -780,6 +783,28 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
             downloadState={downloadState}
             onDismiss={dismissDownloadBanner}
           />
+
+          {savedRecording
+            ? <div className={styles.savedRecordingBanner}>
+                <span>Recording was interrupted. Save the partial recording?</span>
+                <div className={styles.savedRecordingActions}>
+                  <button
+                    type="button"
+                    className={styles.savedRecordingDownload}
+                    onClick={downloadSavedRecording}
+                  >
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.savedRecordingDiscard}
+                    onClick={discardSavedRecording}
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            : null}
 
           <div className={styles.gallerySlot}>
             <VideoGallery

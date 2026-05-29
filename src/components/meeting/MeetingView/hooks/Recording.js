@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buildRecordingFilename } from "@/lib/recordingFilename";
 import { createRecordingStateMessage } from "@/lib/signaling/messages";
 import {
+  loadSavedRecording,
+  clearSavedRecording,
+  saveRecordingChunk,
+  saveRecordingMeta,
+} from "@/lib/recordingStorage";
+import {
   pickOutboundVideoTrack,
   resolveOutboundAudioTrack,
 } from "@/lib/webrtc/outboundMedia";
@@ -80,6 +86,7 @@ export function Recording({
   sessionName = "",
 }) {
   const [downloadState, setDownloadState] = useState(null);
+  const [savedRecording, setSavedRecording] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
@@ -88,6 +95,8 @@ export function Recording({
   const audioChunksRef = useRef([]);
   const downloadDismissTimerRef = useRef(null);
   const switchingFocusRef = useRef(false);
+  const chunkIndexRef = useRef(0);
+  const unloadHandlerRef = useRef(null);
 
   const publishRecordingState = useCallback(
     (active, paused = false) => {
@@ -209,7 +218,9 @@ export function Recording({
 
     recordingChunksRef.current = [];
     audioChunksRef.current = [];
+    chunkIndexRef.current = 0;
     updateDownloadProgress("complete", 100, filename);
+    clearSavedRecording().catch(() => {});
 
     downloadDismissTimerRef.current = setTimeout(() => {
       setDownloadState(null);
@@ -252,6 +263,15 @@ export function Recording({
     recorder.ondataavailable = (event) => {
       if (event.data?.size > 0) {
         recordingChunksRef.current.push(event.data);
+        const idx = chunkIndexRef.current;
+        chunkIndexRef.current = idx + 1;
+        saveRecordingChunk(idx, event.data).catch(() => {});
+        saveRecordingMeta({
+          chunkCount: idx + 1,
+          sessionName: sessionNameRef.current,
+          mimeType: "video/mp4",
+          timestamp: Date.now(),
+        }).catch(() => {});
       }
     };
 
@@ -281,7 +301,10 @@ export function Recording({
 
     recordingChunksRef.current = [];
     audioChunksRef.current = [];
+    chunkIndexRef.current = 0;
     switchingFocusRef.current = false;
+    setSavedRecording(null);
+    clearSavedRecording().catch(() => {});
 
     await rebuildRecorder();
 
@@ -397,9 +420,70 @@ export function Recording({
     };
   }, [focusedParticipantId, isHost, isRecording, rebuildRecorder]);
 
+  useEffect(() => {
+    if (!isHost || !isRecording) return;
+
+    const handleUnload = () => {
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") {
+        recorder.stop();
+      }
+      const audioRecorder = audioRecorderRef.current;
+      if (audioRecorder && audioRecorder.state !== "inactive") {
+        audioRecorder.stop();
+      }
+      const meta = {
+        chunkCount: chunkIndexRef.current,
+        sessionName: sessionNameRef.current,
+        mimeType: "video/mp4",
+        timestamp: Date.now(),
+      };
+      saveRecordingMeta(meta).catch(() => {});
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [isHost, isRecording]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadSavedRecording().then((saved) => {
+      if (cancelled || !saved) return;
+      setSavedRecording(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleDownloadSavedRecording = useCallback(() => {
+    const saved = savedRecording;
+    if (!saved) return;
+    const blob = new Blob(saved.chunks, { type: saved.meta.mimeType });
+    const filename = buildRecordingFilename({
+      sessionName: saved.meta.sessionName,
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    clearSavedRecording().catch(() => {});
+    setSavedRecording(null);
+  }, [savedRecording]);
+
+  const handleDiscardSavedRecording = useCallback(() => {
+    clearSavedRecording().catch(() => {});
+    setSavedRecording(null);
+  }, []);
+
   return {
     downloadState,
+    savedRecording,
     dismissDownloadBanner,
+    downloadSavedRecording: handleDownloadSavedRecording,
+    discardSavedRecording: handleDiscardSavedRecording,
     startRecording,
     pauseRecording,
     resumeRecording,
