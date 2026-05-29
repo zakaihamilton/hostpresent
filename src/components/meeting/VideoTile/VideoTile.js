@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { VideoPlayer } from "@/components/meeting/VideoPlayer";
+import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./VideoTile.module.css";
 
 export const VideoTile = memo(function VideoTile({
@@ -28,7 +29,7 @@ export const VideoTile = memo(function VideoTile({
       }
     : {};
 
-  return (
+  const tile = (
     <Wrapper
       className={`${styles.tile} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
       {...wrapperProps}
@@ -73,4 +74,17 @@ export const VideoTile = memo(function VideoTile({
       </div>
     </Wrapper>
   );
+
+  if (onFocus) {
+    return (
+      <Tooltip
+        text={isFocused ? `${name} is focused` : `Focus ${name}`}
+        placement="top"
+      >
+        {tile}
+      </Tooltip>
+    );
+  }
+
+  return tile;
 });
