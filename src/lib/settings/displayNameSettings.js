@@ -11,12 +11,13 @@ export const DEFAULT_DISPLAY_NAME = "Guest";
 
 export function normalizeDisplayNameInput(value) {
   if (typeof value !== "string") return "";
-  return value.trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
+  return value.slice(0, MAX_DISPLAY_NAME_LENGTH);
 }
 
 export function resolveDisplayName(value) {
-  const normalized = normalizeDisplayNameInput(value);
-  return normalized || DEFAULT_DISPLAY_NAME;
+  if (typeof value !== "string") return DEFAULT_DISPLAY_NAME;
+  const trimmed = value.trim();
+  return trimmed.slice(0, MAX_DISPLAY_NAME_LENGTH) || DEFAULT_DISPLAY_NAME;
 }
 
 export function displayNameInitial(value) {

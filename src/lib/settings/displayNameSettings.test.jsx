@@ -15,7 +15,8 @@ describe("displayNameSettings", () => {
   });
 
   it("normalizes and resolves display names", () => {
-    expect(normalizeDisplayNameInput("  Alex  ")).toBe("Alex");
+    expect(normalizeDisplayNameInput("  Alex  ")).toBe("  Alex  ");
+    expect(resolveDisplayName("  Alex  ")).toBe("Alex");
     expect(resolveDisplayName("")).toBe(DEFAULT_DISPLAY_NAME);
     expect(resolveDisplayName("Sam")).toBe("Sam");
   });
