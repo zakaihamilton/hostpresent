@@ -1,5 +1,6 @@
 import { memo } from "react";
 import {
+  Focus,
   Mic,
   MicOff,
   ScreenShare,
@@ -144,7 +145,7 @@ export const ParticipantItem = memo(function ParticipantItem({
                 onClick={onFocus}
                 aria-label={isFocused ? "Auto-Focus" : `Focus on ${name}`}
               >
-                Focus
+                <Focus />
               </button>
             </Tooltip>
           : null}

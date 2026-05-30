@@ -5,6 +5,7 @@ export {
   Copy,
   Download,
   Edit,
+  Focus,
   Gallery,
   GitHub,
   Link,
