@@ -105,11 +105,15 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const [isGalleryVisible, setIsGalleryVisible] = useState(() =>
     loadGalleryVisible(),
   );
-  const [isSidebarVisible, setIsSidebarVisible] = useState(() =>
-    loadSidebarVisible(),
-  );
+  const [isSidebarVisible, setIsSidebarVisible] = useState(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900) return false;
+    return loadSidebarVisible();
+  });
   const [isPipVisible, setIsPipVisible] = useState(false);
-  const [isChatVisible, setIsChatVisible] = useState(() => loadChatVisible());
+  const [isChatVisible, setIsChatVisible] = useState(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900) return false;
+    return loadChatVisible();
+  });
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 

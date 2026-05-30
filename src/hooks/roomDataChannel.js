@@ -914,6 +914,7 @@ export function useRoomDataChannel({
       connectionsRef.current.clear();
       hostConnectionRef.current?.close();
       hostConnectionRef.current = null;
+      peerRef.current?.disconnect();
       peerRef.current?.destroy();
       peerRef.current = null;
       openCountRef.current = 0;
