@@ -124,14 +124,12 @@
 .mediaBadge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: center;
+  width: 28px;
   height: 28px;
-  padding: 0 0.45rem;
   border-radius: var(--radius-sm);
   background: var(--bg-hover);
   color: var(--text-muted);
-  font-size: 0.6875rem;
-  font-weight: 700;
 }
 
 .mediaBadge svg {

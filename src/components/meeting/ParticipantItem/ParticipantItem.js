@@ -127,10 +127,11 @@ export const ParticipantItem = memo(function ParticipantItem({
       </div>
       <div className={styles.status}>
         {hasVideo && (
-          <span className={styles.mediaBadge}>
-            {isScreenSharing ? <ScreenShare /> : <Video />}
-            <span>{isScreenSharing ? "Screen" : "Video"}</span>
-          </span>
+          <Tooltip text={isScreenSharing ? "Screen Share" : "Video"} placement="left">
+            <span className={styles.mediaBadge}>
+              {isScreenSharing ? <ScreenShare /> : <Video />}
+            </span>
+          </Tooltip>
         )}
         {onFocus
           ? <Tooltip
