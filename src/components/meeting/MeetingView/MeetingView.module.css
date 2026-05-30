@@ -44,6 +44,7 @@
   min-height: 0;
   overflow: hidden;
   background: var(--bg-main);
+  position: relative;
 }
 
 .stage {
@@ -124,8 +125,8 @@
   }
 
   .combinedSlot {
-    position: fixed;
-    top: 60px;
+    position: absolute;
+    top: 0;
     right: 0;
     bottom: 0;
     z-index: 25;
@@ -162,7 +163,7 @@
 
   .sidebarBackdrop {
     display: block;
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 24;
     border: 0;

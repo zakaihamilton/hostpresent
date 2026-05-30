@@ -14,6 +14,22 @@ export const metadata = {
   formatDetection: {
     telephone: false,
   },
+  openGraph: {
+    title: "Host Present",
+    description: "Host presentation and meeting controls",
+    url: "https://hostpresent.app",
+    siteName: "Host Present",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/welcome-preview.png",
+        width: 1200,
+        height: 630,
+        alt: "Host Present",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({ children }) {
