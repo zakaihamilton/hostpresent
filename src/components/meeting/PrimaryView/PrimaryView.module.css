@@ -25,7 +25,7 @@
   object-position: center;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .primaryView {
     flex: 1 1 auto;
     align-self: stretch;
@@ -40,7 +40,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .overlay {
     bottom: 0.5rem;
     left: max(0.75rem, env(safe-area-inset-left, 0px));
@@ -74,8 +74,9 @@
 
   .overlay {
     bottom: 0.35rem;
-    left: 0.35rem;
+    left: max(0.5rem, env(safe-area-inset-left, 0px));
     font-size: 0.6875rem;
+    max-width: calc(100% - max(1rem, env(safe-area-inset-left, 0px) * 2));
   }
 }
 

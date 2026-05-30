@@ -162,7 +162,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .slot {
     position: absolute;
     top: 0;
@@ -186,6 +186,46 @@
     width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
     padding-top: env(safe-area-inset-top, 0);
     padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
+  .header {
+    padding-top: max(1rem, env(safe-area-inset-top, 0));
+  }
+
+  .closeButton {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-height: 550px) and (orientation: landscape) {
+  .slot {
+    position: absolute;
+    top: 0;
+    right: 0 !important;
+    left: auto !important;
+    margin-left: auto;
+    bottom: 0;
+    z-index: 25;
+    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .slotClosed {
+    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
+    pointer-events: none;
+    transform: translateX(100%);
+    transition: none !important;
+  }
+
+  .sidebar {
+    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
   }
 
   .header {

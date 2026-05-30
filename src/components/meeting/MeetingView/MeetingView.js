@@ -74,6 +74,14 @@ export function MeetingView({ token, ...props }) {
   );
 }
 
+function isTouchOrMobileDevice() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isSmallScreen = window.innerWidth <= 1024 || window.innerHeight <= 700;
+  return hasTouch || isMobileUA || isSmallScreen;
+}
+
 function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const isHost = role === "host";
   const roomConnectionRef = useRef(null);
@@ -102,39 +110,46 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const [inviteBarVisible, setInviteBarVisible] = useState(false);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
-  const [isGalleryVisible, setIsGalleryVisible] = useState(() =>
-    loadGalleryVisible(),
-  );
-  const [isSidebarVisible, setIsSidebarVisible] = useState(() => {
-    if (typeof window !== "undefined" && window.innerWidth <= 900) return false;
-    return loadSidebarVisible();
-  });
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isPipVisible, setIsPipVisible] = useState(false);
-  const [isChatVisible, setIsChatVisible] = useState(() => {
-    if (typeof window !== "undefined" && window.innerWidth <= 900) return false;
-    return loadChatVisible();
-  });
+  const [isChatVisible, setIsChatVisible] = useState(false);
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const checkIsMobile = () => {
+      if (typeof window === "undefined") return false;
+      return window.innerWidth <= 1024 || window.innerHeight <= 550;
+    };
+
     const handleResize = () => {
-      const mobile = window.innerWidth <= 900;
+      const mobile = checkIsMobile();
       setIsMobile(mobile);
       if (mobile) {
-        setIsSidebarVisible((sideOpen) => {
-          if (sideOpen) {
-            setIsChatVisible(false);
-          }
-          return sideOpen;
-        });
+        // Always clear panels on mobile resize — never persist open state
+        saveChatVisible(false);
+        saveSidebarVisible(false);
+        setIsSidebarVisible(false);
+        setIsChatVisible(false);
       }
     };
-    handleResize();
-    if (window.innerWidth <= 900) {
+
+    // Hydration-safe: read from localStorage strictly on client mount
+    setIsGalleryVisible(loadGalleryVisible());
+    const isMobileDevice = checkIsMobile();
+    setIsMobile(isMobileDevice);
+    if (isMobileDevice) {
+      // Mobile: always start with panels closed and wipe any stale persisted state
+      saveChatVisible(false);
+      saveSidebarVisible(false);
       setIsSidebarVisible(false);
       setIsChatVisible(false);
+    } else {
+      setIsSidebarVisible(loadSidebarVisible());
+      setIsChatVisible(loadChatVisible());
     }
+
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -142,11 +157,11 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     saveGalleryVisible(isGalleryVisible);
   }, [isGalleryVisible]);
   useEffect(() => {
-    saveSidebarVisible(isSidebarVisible);
-  }, [isSidebarVisible]);
+    if (!isMobile) saveSidebarVisible(isSidebarVisible);
+  }, [isMobile, isSidebarVisible]);
   useEffect(() => {
-    saveChatVisible(isChatVisible);
-  }, [isChatVisible]);
+    if (!isMobile) saveChatVisible(isChatVisible);
+  }, [isMobile, isChatVisible]);
   const [chatMessages, setChatMessages] = useState([]);
   const chatIdCounterRef = useRef(0);
   const [timersEnabled, setTimersEnabled] = useState(false);
@@ -583,12 +598,12 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const handleToggleSidebar = useCallback(() => {
     setIsSidebarVisible((v) => {
       const next = !v;
-      if (next && typeof window !== "undefined" && window.innerWidth <= 900) {
+      if (next && isMobile) {
         setIsChatVisible(false);
       }
       return next;
     });
-  }, []);
+  }, [isMobile]);
 
   const handleTogglePip = useCallback(() => {
     setIsPipVisible((v) => !v);
@@ -597,12 +612,12 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const handleToggleChat = useCallback(() => {
     setIsChatVisible((v) => {
       const next = !v;
-      if (next && typeof window !== "undefined" && window.innerWidth <= 900) {
+      if (next && isMobile) {
         setIsSidebarVisible(false);
       }
       return next;
     });
-  }, []);
+  }, [isMobile]);
 
   const handleShowInviteBar = useCallback(() => {
     setInviteBarVisible(true);
@@ -892,6 +907,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
             inviteCopyMessage={inviteCopyMessage}
             onCopyInviteLink={handleCopyInviteLink}
             onDismiss={handleDismissInviteBar}
+            roomId={formattedRoomId}
           />
         : null}
 
@@ -1031,44 +1047,48 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               </aside>
             </div>
           : <>
-              <ParticipantsSidebar
-                visible={isSidebarVisible}
-                audioList={audioList}
-                videoParticipants={videoParticipants}
-                peerParticipants={peerParticipants}
-                hostDisplayName={hostDisplayName}
-                hostIsAudioMuted={hostAudioMuted}
-                hostIsVideoMuted={hostVideoMuted}
-                hostIsSpeaking={hostIsSpeaking}
-                hostMode={hostMode}
-                isVideoMuted={isVideoMuted}
-                isAudioMuted={isAudioMuted}
-                isHost={isHost}
-                localDisplayName={displayNameInput}
-                localParticipantMode={participantMode}
-                focusedParticipantId={focusedParticipantId}
-                localIsSpeaking={localIsSpeaking}
-                localIsScreenSharing={Boolean(screenStream)}
-                hostIsScreenSharing={hostScreenSharing}
-                onFocusParticipant={handleFocusParticipant}
-                onClose={handleCloseSidebar}
-                onMuteParticipantVideo={muteParticipantVideo}
-                onMuteParticipantAudio={muteParticipantAudio}
-                onMuteAllVideo={muteAllVideo}
-                onMuteAllAudio={muteAllAudio}
-                canMuteAllVideo={canMuteAllVideo}
-                canMuteAllAudio={canMuteAllAudio}
-                onRemoveParticipant={isHost ? handleKickParticipant : undefined}
-              />
+              {(!isMobile || isSidebarVisible) && (
+                <ParticipantsSidebar
+                  visible={isSidebarVisible}
+                  audioList={audioList}
+                  videoParticipants={videoParticipants}
+                  peerParticipants={peerParticipants}
+                  hostDisplayName={hostDisplayName}
+                  hostIsAudioMuted={hostAudioMuted}
+                  hostIsVideoMuted={hostVideoMuted}
+                  hostIsSpeaking={hostIsSpeaking}
+                  hostMode={hostMode}
+                  isVideoMuted={isVideoMuted}
+                  isAudioMuted={isAudioMuted}
+                  isHost={isHost}
+                  localDisplayName={displayNameInput}
+                  localParticipantMode={participantMode}
+                  focusedParticipantId={focusedParticipantId}
+                  localIsSpeaking={localIsSpeaking}
+                  localIsScreenSharing={Boolean(screenStream)}
+                  hostIsScreenSharing={hostScreenSharing}
+                  onFocusParticipant={handleFocusParticipant}
+                  onClose={handleCloseSidebar}
+                  onMuteParticipantVideo={muteParticipantVideo}
+                  onMuteParticipantAudio={muteParticipantAudio}
+                  onMuteAllVideo={muteAllVideo}
+                  onMuteAllAudio={muteAllAudio}
+                  canMuteAllVideo={canMuteAllVideo}
+                  canMuteAllAudio={canMuteAllAudio}
+                  onRemoveParticipant={isHost ? handleKickParticipant : undefined}
+                />
+              )}
 
-              <ChatPanel
-                visible={isChatVisible}
-                messages={chatMessages}
-                participants={chatParticipants}
-                onClose={handleCloseChat}
-                onSendMessage={handleSendChatMessage}
-                sessionName={sessionTitle}
-              />
+              {(!isMobile || isChatVisible) && (
+                <ChatPanel
+                  visible={isChatVisible}
+                  messages={chatMessages}
+                  participants={chatParticipants}
+                  onClose={handleCloseChat}
+                  onSendMessage={handleSendChatMessage}
+                  sessionName={sessionTitle}
+                />
+              )}
             </>}
       </main>
 

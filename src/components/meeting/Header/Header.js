@@ -173,12 +173,12 @@ export const Header = memo(function Header({
 
       <div className={styles.meta}>
         {onShowInviteLink
-          ? <Tooltip text="Show invite link" placement="left">
+          ? <Tooltip text={roomId ? "Show invite link & room code" : "Show invite link"} placement="left">
               <button
                 type="button"
                 className={styles.iconButton}
                 onClick={onShowInviteLink}
-                aria-label="Show invite link"
+                aria-label={roomId ? "Show invite link and room code" : "Show invite link"}
               >
                 <Link size={18} />
               </button>

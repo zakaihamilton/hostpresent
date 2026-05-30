@@ -189,3 +189,93 @@
     min-height: 44px;
   }
 }
+
+/* Room code section */
+.codeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.codeLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+}
+
+.codeValue {
+  flex: 1;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.18em;
+  color: var(--text-main);
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+}
+
+.codeButton {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 36px;
+  transition: all 0.2s ease;
+}
+
+.codeButton:hover {
+  background: var(--btn-hover);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.codeButton:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.codeButtonSuccess {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.codeButtonError {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+@media (max-width: 480px) {
+  .codeRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .codeButton {
+    width: 100%;
+    min-height: 44px;
+    text-align: center;
+  }
+}
+

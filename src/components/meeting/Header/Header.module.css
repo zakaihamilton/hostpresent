@@ -458,14 +458,7 @@
 
 @media (max-width: 480px) {
   .statRoom {
-    max-width: min(14ch, 48vw);
-    padding: 0.35rem 0.5rem;
-  }
-
-  .statRoom .statValue,
-  .statRoom .roomIdValue {
-    font-size: 0.8125rem;
-    letter-spacing: 0.01em;
+    display: none;
   }
 
   .recordingLabel {

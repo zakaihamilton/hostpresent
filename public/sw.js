@@ -1,4 +1,4 @@
-const CACHE_NAME = "hostpresent-v2";
+const CACHE_NAME = "hostpresent-v4";
 const SHELL_URLS = ["/", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {

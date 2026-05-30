@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useEffect, useId } from "react";
+import { memo, useCallback, useEffect, useId, useRef, useState } from "react";
 import { X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import styles from "./InviteBar.module.css";
 
 export const InviteBar = memo(function InviteBar({
@@ -10,6 +11,7 @@ export const InviteBar = memo(function InviteBar({
   inviteCopyMessage,
   onCopyInviteLink,
   onDismiss,
+  roomId,
 }) {
   const dialogId = useId();
   const inviteCopyButtonLabel = inviteCopyMessage || "Copy link";
@@ -21,6 +23,26 @@ export const InviteBar = memo(function InviteBar({
     .filter(Boolean)
     .join(" ");
 
+  const [codeCopyMessage, setCodeCopyMessage] = useState("");
+  const codeCopyTimerRef = useRef(null);
+
+  const handleCopyRoomId = useCallback(async () => {
+    if (!roomId) return;
+    if (codeCopyTimerRef.current) clearTimeout(codeCopyTimerRef.current);
+    const copied = await copyTextToClipboard(roomId);
+    setCodeCopyMessage(copied ? "Copied!" : "Copy failed");
+    codeCopyTimerRef.current = setTimeout(() => {
+      setCodeCopyMessage("");
+      codeCopyTimerRef.current = null;
+    }, 2500);
+  }, [roomId]);
+
+  useEffect(() => {
+    return () => {
+      if (codeCopyTimerRef.current) clearTimeout(codeCopyTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -30,6 +52,14 @@ export const InviteBar = memo(function InviteBar({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onDismiss]);
+
+  const codeButtonClassName = [
+    styles.codeButton,
+    codeCopyMessage === "Copied!" && styles.codeButtonSuccess,
+    codeCopyMessage === "Copy failed" && styles.codeButtonError,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={styles.backdrop} onClick={onDismiss}>
@@ -77,6 +107,24 @@ export const InviteBar = memo(function InviteBar({
             {inviteCopyButtonLabel}
           </button>
         </div>
+
+        {roomId && (
+          <div className={styles.codeSection}>
+            <span className={styles.codeLabel}>Room code</span>
+            <div className={styles.codeRow}>
+              <span className={styles.codeValue}>{roomId}</span>
+              <button
+                type="button"
+                className={codeButtonClassName}
+                onClick={handleCopyRoomId}
+                aria-live="polite"
+                aria-label="Copy room code"
+              >
+                {codeCopyMessage || "Copy code"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
