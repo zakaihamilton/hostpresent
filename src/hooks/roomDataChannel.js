@@ -938,7 +938,7 @@ export function useRoomDataChannel({
       peerRef.current = peer;
 
       peer.on("open", () => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         signalingOpenRef.current = true;
         clearConnectTimeout();
         setConnectionError(null);
@@ -955,7 +955,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("disconnected", () => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current) return;
         console.warn(
           "[peer] host disconnected from signaling server, reconnecting...",
         );
@@ -963,7 +963,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("connection", (conn) => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         const remoteId = conn.peer;
         connectionsRef.current.set(remoteId, conn);
         bindConnection(conn, { remoteId, remoteName: "Guest" });
@@ -977,12 +977,12 @@ export function useRoomDataChannel({
       });
 
       peer.on("call", (call) => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         answerIncomingCall(call, call.peer);
       });
 
       peer.on("error", (error) => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         console.warn("[peer] host error", error);
 
         if (error?.type === "unavailable-id") {
@@ -1051,7 +1051,7 @@ export function useRoomDataChannel({
       connectToHostRef.current = connectToHost;
 
       peer.on("call", (call) => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         const relayFrom =
           typeof call.metadata?.relayFrom === "string"
             ? call.metadata.relayFrom
@@ -1064,7 +1064,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("open", (id) => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         signalingOpenRef.current = true;
         clearConnectTimeout();
         localParticipantIdRef.current = id;
@@ -1075,7 +1075,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("disconnected", () => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current) return;
         console.warn(
           "[peer] participant disconnected from signaling server, reconnecting...",
         );
@@ -1083,7 +1083,7 @@ export function useRoomDataChannel({
       });
 
       peer.on("error", (error) => {
-        if (destroyedRef.current) return;
+        if (destroyedRef.current || peer !== peerRef.current) return;
         console.warn("[peer] participant error", error);
 
         if (error?.type === "peer-unavailable") {
