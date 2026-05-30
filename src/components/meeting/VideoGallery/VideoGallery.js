@@ -22,6 +22,7 @@ export const VideoGallery = memo(function VideoGallery({
   localIsSpeaking = false,
   audioOutputDeviceId = "",
   focusedParticipantId = "host",
+  manualFocusedId = "",
   allowFocus = false,
   onFocusParticipant,
   connectionStatus = null,
@@ -40,6 +41,7 @@ export const VideoGallery = memo(function VideoGallery({
               overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
               isMuted
               isFocused={focusedParticipantId === "host"}
+              isManualFocused={manualFocusedId === "host"}
               isSpeaking={localIsSpeaking}
               isVideoOff={isVideoMuted && !isScreenSharing}
               videoOffIcon={<VideoOff />}
@@ -69,6 +71,7 @@ export const VideoGallery = memo(function VideoGallery({
               }
               videoOffIcon={<VideoOff />}
               isFocused={focusedParticipantId === participant.id}
+              isManualFocused={manualFocusedId === participant.id}
               mediaBadgeIcon={
                 participant.isScreenSharing ? <ScreenShare /> : <Video />
               }

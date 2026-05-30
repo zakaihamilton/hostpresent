@@ -969,6 +969,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               localIsSpeaking={localIsSpeaking}
               audioOutputDeviceId={selectedSpeaker}
               focusedParticipantId={effectiveFocusedId}
+              manualFocusedId={focusedParticipantId}
               allowFocus={isHost}
               onFocusParticipant={handleFocusParticipant}
               connectionStatus={roomConnection?.status}

@@ -195,3 +195,27 @@
   background-color: var(--danger, #ef4444);
   box-shadow: 0 0 6px var(--danger, #ef4444);
 }
+
+.focusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  border-radius: 50%;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.focusBadge svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.focusBadgeManual {
+  background-color: var(--primary, #3b82f6);
+}
+
+.focusBadgeAuto {
+  background-color: var(--success, #10b981);
+}

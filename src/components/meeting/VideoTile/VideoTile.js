@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { VideoPlayer } from "@/components/meeting/VideoPlayer";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Focus } from "@/components/ui/Icons";
 import styles from "./VideoTile.module.css";
 
 export const VideoTile = memo(function VideoTile({
@@ -12,6 +13,7 @@ export const VideoTile = memo(function VideoTile({
   isMuted = true,
   isSpeaking = false,
   isFocused = false,
+  isManualFocused = false,
   isVideoOff = false,
   videoOffIcon = null,
   mediaBadgeIcon = null,
@@ -70,6 +72,14 @@ export const VideoTile = memo(function VideoTile({
             title={`Connection status: ${connectionStatus}`}
           />
         )}
+        {isFocused && (
+          <span
+            className={`${styles.focusBadge} ${isManualFocused ? styles.focusBadgeManual : styles.focusBadgeAuto}`}
+            title={isManualFocused ? "Focused (Pinned)" : "Auto-Focused (Active Speaker)"}
+          >
+            <Focus size={10} />
+          </span>
+        )}
         {overlayIcon
           ? <span
               className={`${styles.overlayIcon} ${isSpeaking ? styles.overlayIconSpeaking : ""}`}
@@ -83,9 +93,14 @@ export const VideoTile = memo(function VideoTile({
   );
 
   if (onFocus) {
+    const tooltipText = isFocused
+      ? isManualFocused
+        ? "Focused (Pinned)"
+        : "Auto-Focused (Active Speaker)"
+      : `Focus on ${name}`;
     return (
       <Tooltip
-        text={isFocused ? "Auto-Focus" : `Focus on ${name}`}
+        text={tooltipText}
         placement="top"
       >
         {tile}
