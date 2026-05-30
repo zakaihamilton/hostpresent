@@ -43,9 +43,9 @@
 @media (max-width: 900px) {
   .overlay {
     bottom: 0.5rem;
-    left: 0.5rem;
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
     font-size: 0.75rem;
-    max-width: calc(100% - 1rem);
+    max-width: calc(100% - max(1.5rem, env(safe-area-inset-left, 0px) * 2));
     padding: 0.35rem 0.55rem;
   }
 

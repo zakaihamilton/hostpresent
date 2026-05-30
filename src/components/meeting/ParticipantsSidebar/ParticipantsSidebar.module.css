@@ -168,6 +168,7 @@
     top: 0;
     right: 0 !important;
     left: auto !important;
+    margin-left: auto;
     bottom: 0;
     z-index: 25;
     width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);

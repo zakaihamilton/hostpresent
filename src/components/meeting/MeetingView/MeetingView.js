@@ -131,6 +131,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       }
     };
     handleResize();
+    if (window.innerWidth <= 900) {
+      setIsSidebarVisible(false);
+      setIsChatVisible(false);
+    }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
