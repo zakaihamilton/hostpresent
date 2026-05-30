@@ -131,20 +131,31 @@ export const MAX_SIGNALING_RETRIES = 5;
 export const SIGNALING_CONNECT_TIMEOUT_MS = 45000;
 export const HOST_ID_RETRY_DELAY_MS = 1000;
 
-function readSignalingPortFromEnv() {
-  return Number(process.env.SIGNALING_SERVER_PORT ?? DEFAULT_SIGNALING_PORT);
+function readSignalingPortFromEnv(host) {
+  if (process.env.SIGNALING_SERVER_PORT) {
+    return Number(process.env.SIGNALING_SERVER_PORT);
+  }
+  if (host === "localhost" || host === "127.0.0.1") {
+    return 9000;
+  }
+  return DEFAULT_SIGNALING_PORT;
 }
 
-function readSignalingSecureFromEnv() {
-  return process.env.SIGNALING_SECURE !== "false";
+function readSignalingSecureFromEnv(host) {
+  if (process.env.SIGNALING_SECURE === "false") return false;
+  if (process.env.SIGNALING_SECURE === "true") return true;
+  if (host === "localhost" || host === "127.0.0.1") return false;
+  return true;
 }
 
 export function buildPeerJsConfig(host = getSignalingServerHost()) {
+  const resolvedHost = host ?? "localhost";
   return {
-    host: host ?? "localhost",
-    port: readSignalingPortFromEnv(),
+    host: resolvedHost,
+    port: readSignalingPortFromEnv(resolvedHost),
     path: getSignalingServerPath(),
-    secure: readSignalingSecureFromEnv(),
+    secure: readSignalingSecureFromEnv(resolvedHost),
+    debug: 3,
     config: {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -160,11 +171,13 @@ export function buildPeerJsConfig(host = getSignalingServerHost()) {
 export function getPeerJsConfigFromApi(payload) {
   const host = normalizeSignalingHost(payload?.host);
   if (!host) return null;
+  const isLocal = host === "localhost" || host === "127.0.0.1";
   return {
     host,
-    port: Number(payload?.port ?? DEFAULT_SIGNALING_PORT),
+    port: Number(payload?.port ?? (isLocal ? 9000 : DEFAULT_SIGNALING_PORT)),
     path: normalizeSignalingPath(payload?.path),
-    secure: payload?.secure !== false,
+    secure: payload?.secure !== undefined ? payload.secure !== false : !isLocal,
+    debug: 3,
     config: payload?.config ?? undefined,
   };
 }

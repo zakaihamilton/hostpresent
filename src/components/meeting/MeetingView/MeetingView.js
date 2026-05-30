@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatPanel } from "@/components/meeting/ChatPanel";
 import { ConnectionBanner } from "@/components/meeting/ConnectionBanner/ConnectionBanner";
+import { DiagnosticsPopup } from "@/components/meeting/DiagnosticsPopup";
 import { Header } from "@/components/meeting/Header";
 import { InviteBar } from "@/components/meeting/InviteBar/InviteBar";
 import { ParticipantsSidebar } from "@/components/meeting/ParticipantsSidebar";
@@ -176,6 +177,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const [sessionTitle, setSessionTitle] = useState("");
   const [focusedParticipantId, setFocusedParticipantId] = useState("host");
   const [meetingDisconnectReason, setMeetingDisconnectReason] = useState(null);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
   const resolvedDisplayName = useMemo(
     () => resolveDisplayName(displayNameInput),
@@ -989,6 +991,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                   ? roomConnection?.status
                   : null
               }
+              onShowDiagnostics={() => setIsDiagnosticsOpen(true)}
             />
           </div>
 
@@ -1103,6 +1106,21 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       </main>
 
       <ConfirmDialog {...dialogProps} />
+
+      <DiagnosticsPopup
+        isOpen={isDiagnosticsOpen}
+        onClose={() => setIsDiagnosticsOpen(false)}
+        role={role}
+        roomId={formattedRoomId || roomState?.joinCode}
+        connectionStatus={roomConnection?.status}
+        localParticipantId={roomConnection?.localParticipantId}
+        peerConfig={roomConnection?.peerConfig}
+        iceServers={roomConnection?.iceServers}
+        activeConnectionsCount={roomConnection?.activeConnectionsCount}
+        connectionError={roomConnection?.connectionError}
+        onReconnect={roomConnection?.reconnect}
+        isTurnActive={roomConnection?.isTurnActive}
+      />
 
       <Toolbar
         isAudioMuted={isAudioMuted}

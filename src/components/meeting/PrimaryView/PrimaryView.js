@@ -16,6 +16,7 @@ export const PrimaryView = memo(function PrimaryView({
   isVideoMuted = false,
   audioOutputDeviceId = "",
   connectionStatus = null,
+  onShowDiagnostics = null,
 }) {
   return (
     <div
@@ -51,10 +52,17 @@ export const PrimaryView = memo(function PrimaryView({
       )}
       <div className={styles.overlay}>
         {connectionStatus && (
-          <Tooltip text={`Connection status: ${connectionStatus}`} placement="top">
-            <span
-              className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
-            />
+          <Tooltip text="Connection status (Click for Diagnostics)" placement="top">
+            <button
+              type="button"
+              className={styles.connectionDotButton}
+              onClick={onShowDiagnostics}
+              aria-label="View connection diagnostics"
+            >
+              <span
+                className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+              />
+            </button>
           </Tooltip>
         )}
         {isAudioMuted ? <MicOff aria-hidden /> : null}

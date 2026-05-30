@@ -81,6 +81,7 @@ export function useRoomDataChannel({
   const [connectionError, setConnectionError] = useState(null);
   const [peerConfig, setPeerConfig] = useState(null);
   const [configReady, setConfigReady] = useState(false);
+  const [reconnectTrigger, setReconnectTrigger] = useState(0);
   const iceServers = useIceServers();
 
   const peerRef = useRef(null);
@@ -298,6 +299,10 @@ export function useRoomDataChannel({
     setHostPresent(isHost);
     setLocalParticipantId("");
   }, [clearConnectRetryTimer, clearConnectTimeout, clearRetryTimer, isHost]);
+
+  const reconnect = useCallback(() => {
+    setReconnectTrigger((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -940,6 +945,7 @@ export function useRoomDataChannel({
       peer.on("open", () => {
         if (destroyedRef.current || peer !== peerRef.current) return;
         signalingOpenRef.current = true;
+        setLocalParticipantId(hostPeerId(roomId));
         clearConnectTimeout();
         setConnectionError(null);
         retryAttemptRef.current = 0;
@@ -1139,6 +1145,7 @@ export function useRoomDataChannel({
     schedulePeerRetry,
     scheduleReconnectToHost,
     token,
+    reconnectTrigger,
   ]);
 
   useEffect(() => {
@@ -1175,12 +1182,70 @@ export function useRoomDataChannel({
     };
   }, [createHostPresencePayload, enabled, isHost, send, token]);
 
+  const [isTurnActive, setIsTurnActive] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isConnected) {
+      setIsTurnActive(false);
+      return undefined;
+    }
+
+    const interval = setInterval(async () => {
+      let turnUsed = false;
+      for (const conn of connectionsRef.current.values()) {
+        const pc = conn.peerConnection;
+        if (!pc) continue;
+        try {
+          const stats = await pc.getStats();
+          for (const report of stats.values()) {
+            if (report.type === "candidate-pair" && report.state === "succeeded") {
+              const localCandidate = stats.get(report.localCandidateId);
+              if (localCandidate && localCandidate.candidateType === "relay") {
+                turnUsed = true;
+                break;
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+        if (turnUsed) break;
+      }
+
+      if (!turnUsed) {
+        for (const call of mediaCallsRef.current.values()) {
+          const pc = call.peerConnection;
+          if (!pc) continue;
+          try {
+            const stats = await pc.getStats();
+            for (const report of stats.values()) {
+              if (report.type === "candidate-pair" && report.state === "succeeded") {
+                const localCandidate = stats.get(report.localCandidateId);
+                if (localCandidate && localCandidate.candidateType === "relay") {
+                  turnUsed = true;
+                  break;
+                }
+              }
+            }
+          } catch {
+            // ignore
+          }
+          if (turnUsed) break;
+        }
+      }
+
+      setIsTurnActive(turnUsed);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isConnected]);
+
   const visibleConnectionError = isConnected ? null : connectionError;
 
   const status =
     connectionError && !isConnected
       ? "error"
-      : isConnected
+      : (isHost ? Boolean(localParticipantId) : isConnected)
         ? "connected"
         : "connecting";
 
@@ -1198,5 +1263,10 @@ export function useRoomDataChannel({
     connectionError: visibleConnectionError,
     signalingConfigured: Boolean(peerConfig),
     status,
+    peerConfig,
+    iceServers: iceServersRef.current,
+    activeConnectionsCount: isHost ? connectionsRef.current.size : (hostConnectionRef.current?.open ? 1 : 0),
+    reconnect,
+    isTurnActive,
   };
 }

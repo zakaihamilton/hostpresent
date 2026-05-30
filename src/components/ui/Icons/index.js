@@ -18,6 +18,7 @@ export {
   Pip,
   Play,
   Record,
+  Refresh,
   ScreenShare,
   Send,
   ShareAudio,
