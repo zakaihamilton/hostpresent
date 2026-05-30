@@ -101,6 +101,14 @@
   transition: background-color 0.2s ease;
 }
 
+.logoIconContainer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
 .logoButton:hover {
   background: var(--bg-hover);
 }
@@ -201,6 +209,39 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* Hidden on desktop; shown only on small screens when meeting name is hidden */
+.mobileEditButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.mobileEditButton:hover {
+  background: var(--btn-hover);
+  color: var(--primary);
+}
+
+.mobileEditButton:active {
+  transform: scale(0.95);
+}
+
+.mobileEditButton:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .stat {
@@ -447,9 +488,10 @@
     flex-shrink: 1;
   }
 
-  .iconButton {
-    width: 42px;
-    height: 42px;
+  .iconButton,
+  .logoIconContainer {
+    width: 38px;
+    height: 38px;
   }
 
   .recordingBadge {
@@ -463,12 +505,27 @@
 }
 
 @media (max-width: 480px) {
+  .iconButton,
+  .mobileEditButton,
+  .logoIconContainer {
+    width: 34px;
+    height: 34px;
+  }
+
+  .stat {
+    padding: 0.25rem 0.45rem;
+  }
+
+  .statValue {
+    font-size: 0.8125rem;
+  }
+
   .recordingLabel {
     display: none;
   }
 
   .recordingBadge {
-    padding: 0.35rem;
+    padding: 0.3rem;
     gap: 0;
   }
 }
@@ -483,12 +540,170 @@
   }
 }
 
+/* ── Small-screen: hide meeting name, show mobile edit button ──────────── */
+@media (max-width: 520px) {
+  /* Override the 900px rule that keeps .logoTextVisible visible */
+  .logoText.logoTextVisible {
+    display: none;
+  }
+
+  .mobileEditButton {
+    display: inline-flex;
+  }
+}
+
+/* ── Rename popup ──────────────────────────────────────────────────────── */
+.renamePopupOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.renamePopup {
+  position: fixed;
+  top: 66px;
+  left: 0.75rem;
+  z-index: 100;
+  width: min(100%, 290px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  padding: 1.25rem;
+  gap: 0.875rem;
+  animation: popupScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popupScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.renamePopupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+
+.renamePopupTitle {
+  font-family: "Outfit", var(--font-sans), sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.renamePopupClose {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.renamePopupClose:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.renamePopupInput {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.625rem 0.75rem;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.renamePopupInput:focus {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 4%, var(--bg-panel));
+}
+
+.renamePopupActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.renamePopupCancel,
+.renamePopupSave {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.renamePopupCancel {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
+
+.renamePopupCancel:hover {
+  background: var(--btn-hover);
+  border-color: var(--text-muted);
+}
+
+.renamePopupSave {
+  background: var(--primary);
+  border: 1px solid transparent;
+  color: #fff;
+}
+
+.renamePopupSave:hover {
+  filter: brightness(1.08);
+}
+
+.renamePopupCancel:active,
+.renamePopupSave:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .renamePopup {
+    animation: none;
+  }
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
   .header {
     height: 48px;
   }
 
-  .iconButton {
+  .iconButton,
+  .logoIconContainer {
     width: 38px;
     height: 38px;
   }

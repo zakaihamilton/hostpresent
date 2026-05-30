@@ -10,7 +10,7 @@ export function ThemeToggle({ className = "" }) {
   const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   return (
-    <Tooltip text={label} placement="left">
+    <Tooltip text={label} placement="bottom">
       <button
         type="button"
         className={`${styles.button} ${className}`.trim()}
