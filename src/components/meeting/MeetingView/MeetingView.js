@@ -971,6 +971,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               focusedParticipantId={effectiveFocusedId}
               allowFocus={isHost}
               onFocusParticipant={handleFocusParticipant}
+              connectionStatus={roomConnection?.status}
             />
           </div>
 
@@ -981,6 +982,12 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               isRecordingPaused={isRecordingPaused}
               recordingDurationSeconds={recordingSeconds}
               audioOutputDeviceId={selectedSpeaker}
+              connectionStatus={
+                effectiveFocusedId === "host" ||
+                (!isHost && effectiveFocusedId === roomConnection?.localParticipantId)
+                  ? roomConnection?.status
+                  : null
+              }
             />
           </div>
 
@@ -1020,6 +1027,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                     localIsSpeaking={localIsSpeaking}
                     localIsScreenSharing={Boolean(screenStream)}
                     hostIsScreenSharing={hostScreenSharing}
+                    connectionStatus={roomConnection?.status}
                     onFocusParticipant={handleFocusParticipant}
                     onClose={handleCloseSidebar}
                     onMuteParticipantVideo={muteParticipantVideo}
@@ -1067,6 +1075,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                   localIsSpeaking={localIsSpeaking}
                   localIsScreenSharing={Boolean(screenStream)}
                   hostIsScreenSharing={hostScreenSharing}
+                  connectionStatus={roomConnection?.status}
                   onFocusParticipant={handleFocusParticipant}
                   onClose={handleCloseSidebar}
                   onMuteParticipantVideo={muteParticipantVideo}

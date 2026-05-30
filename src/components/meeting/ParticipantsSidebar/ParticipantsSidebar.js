@@ -43,6 +43,7 @@ function buildParticipantItems({
   peerParticipants,
   videoParticipants,
   audioList,
+  connectionStatus,
 }) {
   const selfName = resolveDisplayName(localDisplayName);
   const selfInitial = displayNameInitial(localDisplayName);
@@ -75,6 +76,7 @@ function buildParticipantItems({
         isScreenSharing: localIsScreenSharing,
         hasVideo: true,
         modeLabel: selfModeLabel,
+        connectionStatus,
       },
     ];
 
@@ -109,6 +111,7 @@ function buildParticipantItems({
       isScreenSharing: localIsScreenSharing,
       hasVideo: true,
       modeLabel: selfModeLabel,
+      connectionStatus,
     },
   ];
 
@@ -185,6 +188,7 @@ const ParticipantRow = memo(function ParticipantRow({
       isScreenSharing={item.isScreenSharing}
       hasVideo={item.hasVideo}
       modeLabel={item.modeLabel}
+      connectionStatus={item.connectionStatus}
       onMuteVideo={canMute ? () => onMuteParticipantVideo(item.id) : undefined}
       onMuteAudio={
         canMute ? () => onMuteParticipantAudio(item.id, item.type) : undefined
@@ -224,6 +228,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   localIsScreenSharing = false,
   hostIsScreenSharing = false,
   focusedParticipantId = "host",
+  connectionStatus = null,
   onClose,
   onFocusParticipant,
   onMuteParticipantVideo,
@@ -260,6 +265,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
         peerParticipants,
         videoParticipants,
         audioList,
+        connectionStatus,
       }),
     [
       audioList,
@@ -278,6 +284,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
       localIsScreenSharing,
       peerParticipants,
       videoParticipants,
+      connectionStatus,
     ],
   );
 

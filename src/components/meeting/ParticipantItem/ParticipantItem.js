@@ -100,6 +100,7 @@ export const ParticipantItem = memo(function ParticipantItem({
   isScreenSharing = false,
   hasVideo = true,
   modeLabel = null,
+  connectionStatus = null,
   onMuteVideo,
   onMuteAudio,
   onFocus,
@@ -117,6 +118,12 @@ export const ParticipantItem = memo(function ParticipantItem({
             }}
           >
             {initial}
+            {connectionStatus && (
+              <span
+                className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+                title={`Connection status: ${connectionStatus}`}
+              />
+            )}
           </div>
         </Tooltip>
         <div>

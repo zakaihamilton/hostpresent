@@ -29,6 +29,7 @@
 }
 
 .avatar {
+  position: relative;
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
@@ -181,4 +182,27 @@
 .removeBtn:hover {
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
+}
+
+.connectionDot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card, #1e293b);
+  box-sizing: content-box;
+}
+
+.connectionDot_connected {
+  background-color: var(--success, #10b981);
+}
+
+.connectionDot_connecting {
+  background-color: var(--warning, #f59e0b);
+}
+
+.connectionDot_error {
+  background-color: var(--danger, #ef4444);
 }

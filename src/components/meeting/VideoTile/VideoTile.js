@@ -18,6 +18,7 @@ export const VideoTile = memo(function VideoTile({
   mediaBadgeLabel = "",
   onFocus,
   audioOutputDeviceId = "",
+  connectionStatus = null,
 }) {
   const showVideo = Boolean(stream) && !isVideoOff;
   const Wrapper = onFocus ? "button" : "div";
@@ -63,6 +64,12 @@ export const VideoTile = memo(function VideoTile({
           </div>
         : null}
       <div className={styles.overlay}>
+        {connectionStatus && (
+          <span
+            className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+            title={`Connection status: ${connectionStatus}`}
+          />
+        )}
         {overlayIcon
           ? <span
               className={`${styles.overlayIcon} ${isSpeaking ? styles.overlayIconSpeaking : ""}`}

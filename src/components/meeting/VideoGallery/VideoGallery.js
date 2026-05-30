@@ -24,6 +24,7 @@ export const VideoGallery = memo(function VideoGallery({
   focusedParticipantId = "host",
   allowFocus = false,
   onFocusParticipant,
+  connectionStatus = null,
 }) {
   return (
     <div
@@ -47,6 +48,7 @@ export const VideoGallery = memo(function VideoGallery({
               onFocus={
                 allowFocus ? () => onFocusParticipant?.("host") : undefined
               }
+              connectionStatus={connectionStatus}
             />
           )}
           {participants.map((participant) => (

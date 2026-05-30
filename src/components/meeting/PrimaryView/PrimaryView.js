@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { MicOff, VideoOff } from "@/components/ui/Icons";
 import { VideoPlayer } from "@/components/meeting/VideoPlayer";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./PrimaryView.module.css";
 
@@ -14,6 +15,7 @@ export const PrimaryView = memo(function PrimaryView({
   isAudioMuted = false,
   isVideoMuted = false,
   audioOutputDeviceId = "",
+  connectionStatus = null,
 }) {
   return (
     <div
@@ -48,6 +50,13 @@ export const PrimaryView = memo(function PrimaryView({
         </div>
       )}
       <div className={styles.overlay}>
+        {connectionStatus && (
+          <Tooltip text={`Connection status: ${connectionStatus}`} placement="top">
+            <span
+              className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+            />
+          </Tooltip>
+        )}
         {isAudioMuted ? <MicOff aria-hidden /> : null}
         {isVideoMuted ? <VideoOff aria-hidden /> : null}
         {label}
