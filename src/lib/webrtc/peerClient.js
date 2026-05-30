@@ -129,7 +129,7 @@ export function participantSignalingRetryExhaustedError() {
 
 export const MAX_SIGNALING_RETRIES = 5;
 export const SIGNALING_CONNECT_TIMEOUT_MS = 45000;
-export const HOST_ID_RETRY_DELAY_MS = 1500;
+export const HOST_ID_RETRY_DELAY_MS = 1000;
 
 function readSignalingPortFromEnv() {
   return Number(process.env.SIGNALING_SERVER_PORT ?? DEFAULT_SIGNALING_PORT);

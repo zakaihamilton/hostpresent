@@ -3,9 +3,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 12rem;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-main);
   padding: 1.5rem;
   color: var(--text-main);
+  box-sizing: border-box;
 }
 
 .loading {

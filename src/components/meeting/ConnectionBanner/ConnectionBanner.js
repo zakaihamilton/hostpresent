@@ -33,7 +33,7 @@ export const ConnectionBanner = memo(function ConnectionBanner({
           </div>
         : null}
 
-      {isHost && connectionError && !isFatalConnectionError
+      {isHost && connectionError && !isFatalConnectionError && !connectionError.includes("E007")
         ? <div className={styles.signalingErrorBanner} role="alert">
             <p className={styles.signalingErrorText}>{connectionError}</p>
           </div>
