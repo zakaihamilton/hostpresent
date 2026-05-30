@@ -103,14 +103,6 @@
   box-shadow: var(--shadow-md);
   margin-bottom: 1.5rem;
   background-clip: padding-box;
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.previewFrame:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
 }
 
 .previewImage {
