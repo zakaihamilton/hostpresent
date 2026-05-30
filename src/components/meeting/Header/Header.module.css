@@ -402,9 +402,13 @@
     gap: 0.5rem;
   }
 
-  .logoText:not(.logoTextVisible),
-  .logoTitleInput {
+  .logoText:not(.logoTextVisible) {
     display: none;
+  }
+
+  .logoTitleInput {
+    width: min(140px, 38vw);
+    font-size: 1rem;
   }
 
   .logoText.logoTextVisible {
