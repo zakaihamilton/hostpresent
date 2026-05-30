@@ -11,6 +11,8 @@
   transition:
     box-shadow 0.3s ease,
     border-color 0.3s ease;
+  /* Enable container queries so children can respond to actual available width */
+  container-type: inline-size;
 }
 
 .headerRecording {
@@ -461,10 +463,6 @@
 }
 
 @media (max-width: 480px) {
-  .statRoom {
-    display: none;
-  }
-
   .recordingLabel {
     display: none;
   }
@@ -472,6 +470,16 @@
   .recordingBadge {
     padding: 0.35rem;
     gap: 0;
+  }
+}
+
+/* Hide the join code when the header itself is too narrow to fit it comfortably.
+   Using a container query means this responds to actual available width on resize,
+   not just the viewport width. Threshold chosen to match roughly when the code
+   would start crowding other header elements. */
+@container (max-width: 500px) {
+  .statRoom {
+    display: none;
   }
 }
 
