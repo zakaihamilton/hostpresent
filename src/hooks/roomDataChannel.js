@@ -971,6 +971,27 @@ export function useRoomDataChannel({
       peer.on("connection", (conn) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
         const remoteId = conn.peer;
+
+        if (connectionsRef.current.size >= 29) {
+          const rejectConnection = () => {
+            try {
+              conn.send(JSON.stringify({ type: "room_full", timestamp: Date.now() }));
+            } catch (err) {
+              console.warn("[peer] failed to send room_full signal", err);
+            }
+            setTimeout(() => {
+              conn.close();
+            }, 500);
+          };
+
+          if (conn.open) {
+            rejectConnection();
+          } else {
+            conn.on("open", rejectConnection);
+          }
+          return;
+        }
+
         connectionsRef.current.set(remoteId, conn);
         bindConnection(conn, { remoteId, remoteName: "Guest" });
         conn.on("close", () => {

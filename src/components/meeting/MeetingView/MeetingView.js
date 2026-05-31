@@ -578,6 +578,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         setMeetingDisconnectReason("kicked");
         roomConnectionRef.current?.disconnect();
       }
+      if (message.type === SIGNALING_MESSAGE.ROOM_FULL) {
+        setMeetingDisconnectReason("full");
+        roomConnectionRef.current?.disconnect();
+      }
     });
   }, [isHost, meetingDisconnectReason]);
 
@@ -851,6 +855,16 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       <MeetingJoinError
         title="You were removed"
         message="You were removed from the meeting by the host."
+        onBack={handleDisconnectBack}
+      />
+    );
+  }
+
+  if (meetingDisconnectReason === "full") {
+    return (
+      <MeetingJoinError
+        title="Meeting is full"
+        message="This meeting has reached the maximum capacity of 30 participants."
         onBack={handleDisconnectBack}
       />
     );

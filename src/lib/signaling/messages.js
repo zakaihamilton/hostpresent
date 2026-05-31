@@ -22,7 +22,15 @@ export const SIGNALING_MESSAGE = {
   PARTICIPANT_SCREEN_SHARE_STOPPED: "participant_screen_share_stopped",
   CHAT_MESSAGE: "chat_message",
   CHAT_PRIVATE_MESSAGE: "chat_private_message",
+  ROOM_FULL: "room_full",
 };
+
+export function createRoomFullMessage() {
+  return {
+    type: SIGNALING_MESSAGE.ROOM_FULL,
+    timestamp: Date.now(),
+  };
+}
 
 export function createHostPresentMessage({
   displayName = "",

@@ -27,6 +27,9 @@ export const VideoGallery = memo(function VideoGallery({
   onFocusParticipant,
   connectionStatus = null,
 }) {
+  const remoteSlots = Math.max(0, 4 - (localStream ? 1 : 0));
+  const renderedParticipants = participants.slice(0, remoteSlots);
+
   return (
     <div
       className={`${styles.wrapper} ${visible ? "" : styles.wrapperHidden}`}
@@ -53,7 +56,7 @@ export const VideoGallery = memo(function VideoGallery({
               connectionStatus={connectionStatus}
             />
           )}
-          {participants.map((participant) => (
+          {renderedParticipants.map((participant) => (
             <VideoTile
               key={participant.id}
               stream={participant.stream}
