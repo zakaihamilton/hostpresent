@@ -64,22 +64,6 @@ export function WelcomeView({
             />
           </div>
 
-          <div className={styles.featureList}>
-            <div className={styles.featureRow}>
-              <span className={styles.bullet} />
-              <span>
-                <strong>Sub-second latency:</strong> Peer-to-peer WebRTC
-                connections for instant engagement.
-              </span>
-            </div>
-            <div className={styles.featureRow}>
-              <span className={styles.bullet} />
-              <span>
-                <strong>Local recording:</strong> Capture and save high-fidelity
-                recordings directly in your browser.
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Setup Card */}
@@ -129,13 +113,13 @@ export function WelcomeView({
             {role === APP_ROLE.HOST
               ? <WelcomeHostPanel legacyToken={token} navigate={navigate} />
               : <WelcomeParticipantPanel
-                  token={token}
-                  joinCode={joinCode}
-                  autoJoinFromRoute={autoJoinFromRoute}
-                  navigate={navigate}
-                  navigateJoinCode={navigateJoinCode}
-                  navigateParticipantWelcome={navigateParticipantWelcome}
-                />}
+                token={token}
+                joinCode={joinCode}
+                autoJoinFromRoute={autoJoinFromRoute}
+                navigate={navigate}
+                navigateJoinCode={navigateJoinCode}
+                navigateParticipantWelcome={navigateParticipantWelcome}
+              />}
           </div>
         </div>
       </div>
