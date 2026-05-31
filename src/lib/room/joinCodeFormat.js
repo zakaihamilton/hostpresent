@@ -1,4 +1,4 @@
-const GROUP_SIZE = 4;
+const GROUP_SIZE = 3;
 
 export function normalizeJoinCode(code) {
   if (typeof code !== "string") return "";
@@ -16,6 +16,6 @@ export function formatJoinCode(code) {
 
 export function isValidJoinCode(code) {
   const normalized = normalizeJoinCode(code);
-  if (/^[A-Z]{8}$/.test(normalized)) return true;
+  if (/^[A-Z]{6,8}$/.test(normalized)) return true;
   return /^[23456789A-Z]{6,12}$/.test(normalized);
 }

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import styles from "./JoinCodeBoxes.module.css";
 
-const TOTAL = 8;
-const GROUP = 4;
+const TOTAL = 6;
+const GROUP = 3;
 
 function charAt(code, index) {
   const raw = (code ?? "").replace(/-/g, "");

@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-const CODE_LENGTH = 8;
+const CODE_LENGTH = 6;
 
 export function createJoinCode() {
   const bytes = randomBytes(CODE_LENGTH);

@@ -237,7 +237,7 @@ export function WelcomeParticipantPanel({
     />
   );
 
-  const allFilled = (roomIdInput ?? "").replace(/-/g, "").length === 8;
+  const allFilled = (roomIdInput ?? "").replace(/-/g, "").length === 6;
 
   if (isResolving) {
     return (
@@ -310,7 +310,7 @@ export function WelcomeParticipantPanel({
                     autoFocus
                   />
                   <p className={ps.joinHint}>
-                    Enter the 8-character code shared by the host
+                    Enter the 6-character code shared by the host
                   </p>
                 </>}
           </div>

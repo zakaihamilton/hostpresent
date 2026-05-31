@@ -7,7 +7,7 @@ const createdRoom = {
   roomId: "room-1",
   hostToken: "host-token",
   participantToken: "participant-token",
-  joinCode: "ABCDEFGH",
+  joinCode: "ABCDEF",
 };
 
 jest.mock("@/hooks/roomSession", () => ({
@@ -20,7 +20,7 @@ jest.mock("@/hooks/roomSession", () => ({
   },
   useRoomSession: () => ({
     status: "waiting",
-    roomState: { joinCode: "ABCDEFGH" },
+    roomState: { joinCode: "ABCDEF" },
     error: "",
     createRoom: jest.fn().mockResolvedValue(createdRoom),
     refreshState: jest.fn(),
@@ -51,7 +51,7 @@ describe("WelcomeHostPanel", () => {
       expect(screen.getByLabelText("Character 1")).toHaveValue("A");
     });
 
-    expect(screen.getByLabelText("Character 8")).toHaveValue("H");
+    expect(screen.getByLabelText("Character 6")).toHaveValue("F");
     expect(
       screen.getByRole("button", { name: "Copy room code" }),
     ).toBeInTheDocument();

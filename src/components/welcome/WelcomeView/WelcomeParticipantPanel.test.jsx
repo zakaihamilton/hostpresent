@@ -23,7 +23,7 @@ jest.mock("@/lib/room/inviteLink", () => ({
     value
       .replace(/[\s-]+/g, "")
       .toUpperCase()
-      .match(/.{1,4}/g)
+      .match(/.{1,3}/g)
       ?.join("-") ?? "",
   normalizeRoomIdInput: (value) => value.trim().toUpperCase(),
   resolveJoinCode: jest.fn(),
@@ -54,24 +54,24 @@ describe("WelcomeParticipantPanel", () => {
     await user.click(screen.getByRole("tab", { name: "Room Code" }));
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
-    expect(screen.getByLabelText("Character 8")).toBeInTheDocument();
+    expect(screen.getByLabelText("Character 6")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
   });
 
-  it("enables join when all 8 code characters are entered", async () => {
+  it("enables join when all 6 code characters are entered", async () => {
     const user = userEvent.setup();
     const { resolveJoinCode } = await import("@/lib/room/inviteLink");
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEF",
     });
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
 
     await user.click(screen.getByRole("tab", { name: "Room Code" }));
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
       const char = String.fromCharCode(65 + i);
       await user.type(screen.getByLabelText(`Character ${i + 1}`), char);
     }
@@ -84,13 +84,13 @@ describe("WelcomeParticipantPanel", () => {
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEF",
     });
 
     render(
       <WelcomeParticipantPanel
         {...defaultProps}
-        joinCode="ABCDEFGH"
+        joinCode="ABCDEF"
         autoJoinFromRoute={false}
       />,
     );
@@ -107,25 +107,25 @@ describe("WelcomeParticipantPanel", () => {
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEF",
     });
 
     render(
       <WelcomeParticipantPanel
         {...defaultProps}
-        joinCode="ABCDEFGH"
+        joinCode="ABCDEF"
         autoJoinFromRoute
         navigate={navigate}
       />,
     );
 
     await waitFor(() => {
-      expect(resolveJoinCode).toHaveBeenCalledWith("ABCDEFGH");
+      expect(resolveJoinCode).toHaveBeenCalledWith("ABCDEF");
     });
     expect(navigate).toHaveBeenCalledWith({
       view: "meeting",
       role: "participant",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEF",
     });
   });
 
