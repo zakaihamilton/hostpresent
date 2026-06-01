@@ -363,7 +363,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   onRemoteParticipantRef.current = handleRemoteParticipant;
   onRemoteHostStreamRef.current = handleRemoteHostStream;
 
-  const effectiveFocusedId = useMemo(() => {
+  const AUTO_FOCUS_INACTIVITY_MS = 3000;
+
+  const autoFocusTargetId = useMemo(() => {
     if (focusedParticipantId !== "") return focusedParticipantId;
     const speaker = videoParticipants.find((p) => p.isSpeaking);
     if (speaker) return speaker.id;
@@ -377,6 +379,22 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     localIsSpeaking,
     hostIsSpeaking,
   ]);
+
+  const [effectiveFocusedId, setEffectiveFocusedId] =
+    useState(focusedParticipantId);
+
+  useEffect(() => {
+    if (focusedParticipantId !== "") {
+      setEffectiveFocusedId(focusedParticipantId);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setEffectiveFocusedId(autoFocusTargetId);
+    }, AUTO_FOCUS_INACTIVITY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [focusedParticipantId, autoFocusTargetId]);
 
   const {
     downloadState,

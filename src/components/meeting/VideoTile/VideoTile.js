@@ -21,6 +21,7 @@ export const VideoTile = memo(function VideoTile({
   onFocus,
   audioOutputDeviceId = "",
   connectionStatus = null,
+  compactOverlay = false,
 }) {
   const showVideo = Boolean(stream) && !isVideoOff;
   const Wrapper = onFocus ? "button" : "div";
@@ -34,7 +35,7 @@ export const VideoTile = memo(function VideoTile({
 
   const tile = (
     <Wrapper
-      className={`${styles.tile} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
+      className={`${styles.tile} ${compactOverlay ? styles.tileCompact : ""} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
       {...wrapperProps}
     >
       {stream
@@ -87,7 +88,7 @@ export const VideoTile = memo(function VideoTile({
               {overlayIcon}
             </span>
           : null}
-        {name}
+        <span className={styles.name}>{name}</span>
       </div>
     </Wrapper>
   );

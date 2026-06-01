@@ -95,7 +95,16 @@ export function Recording({
   const audioChunksRef = useRef([]);
   const downloadDismissTimerRef = useRef(null);
   const switchingFocusRef = useRef(false);
+  const focusSwitchTimerRef = useRef(null);
   const prevFocusedIdRef = useRef(focusedParticipantId);
+
+  const cancelFocusSwitch = useCallback(() => {
+    if (focusSwitchTimerRef.current) {
+      clearTimeout(focusSwitchTimerRef.current);
+      focusSwitchTimerRef.current = null;
+    }
+    switchingFocusRef.current = false;
+  }, []);
   const focusedIdRef = useRef(focusedParticipantId);
   focusedIdRef.current = focusedParticipantId;
   const chunkIndexRef = useRef(0);
@@ -353,13 +362,19 @@ export function Recording({
   }, [publishRecordingState]);
 
   const stopRecording = useCallback(() => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
+    if (!isHost) return;
+
+    cancelFocusSwitch();
+    setIsRecording(false);
+    setIsRecordingPaused(false);
+    resetRecordingTimer();
+    publishRecordingState(false, false);
+
+    const recorder = mediaRecorderRef.current;
+    const hasActiveRecorder = recorder && recorder.state !== "inactive";
+
+    if (hasActiveRecorder) {
       updateDownloadProgress("preparing", 5);
-      switchingFocusRef.current = false;
-      const recorder = mediaRecorderRef.current;
       recorder.onstop = () => {
         void finalizeRecordingDownload();
       };
@@ -370,28 +385,43 @@ export function Recording({
       ) {
         audioRecorderRef.current.stop();
       }
-      setIsRecording(false);
-      setIsRecordingPaused(false);
-      resetRecordingTimer();
-      publishRecordingState(false, false);
+      return;
+    }
+
+    if (recordingChunksRef.current.length > 0) {
+      updateDownloadProgress("preparing", 5);
+      void finalizeRecordingDownload();
     }
   }, [
+    cancelFocusSwitch,
     finalizeRecordingDownload,
+    isHost,
     resetRecordingTimer,
     publishRecordingState,
     updateDownloadProgress,
   ]);
 
   const stopRecordingAsync = useCallback(async () => {
-    if (
-      !mediaRecorderRef.current ||
-      mediaRecorderRef.current.state === "inactive"
-    ) {
+    if (!isHost) return;
+
+    cancelFocusSwitch();
+    const recorder = mediaRecorderRef.current;
+    const hasActiveRecorder = recorder && recorder.state !== "inactive";
+
+    if (!hasActiveRecorder) {
+      setIsRecording(false);
+      setIsRecordingPaused(false);
+      resetRecordingTimer();
+      publishRecordingState(false, false);
+      if (recordingChunksRef.current.length > 0) {
+        updateDownloadProgress("preparing", 5);
+        await finalizeRecordingDownload();
+      }
       return;
     }
+
     updateDownloadProgress("preparing", 5);
-    switchingFocusRef.current = false;
-    const recorder = mediaRecorderRef.current;
+    const activeRecorder = recorder;
     if (
       audioRecorderRef.current &&
       audioRecorderRef.current.state !== "inactive"
@@ -399,18 +429,20 @@ export function Recording({
       audioRecorderRef.current.stop();
     }
     await new Promise((resolve) => {
-      recorder.onstop = async () => {
+      activeRecorder.onstop = async () => {
         await finalizeRecordingDownload();
         resolve();
       };
-      recorder.stop();
+      activeRecorder.stop();
     });
     setIsRecording(false);
     setIsRecordingPaused(false);
     resetRecordingTimer();
     publishRecordingState(false, false);
   }, [
+    cancelFocusSwitch,
     finalizeRecordingDownload,
+    isHost,
     resetRecordingTimer,
     publishRecordingState,
     updateDownloadProgress,
@@ -433,6 +465,7 @@ export function Recording({
     if (!prevRecorder || prevRecorder.state === "inactive") return;
 
     switchingFocusRef.current = true;
+    prevRecorder.onstop = null;
     prevRecorder.stop();
 
     const audioPrev = audioRecorderRef.current;
@@ -441,7 +474,11 @@ export function Recording({
     }
 
     let cancelled = false;
-    const timer = setTimeout(async () => {
+    if (focusSwitchTimerRef.current) {
+      clearTimeout(focusSwitchTimerRef.current);
+    }
+    focusSwitchTimerRef.current = setTimeout(async () => {
+      focusSwitchTimerRef.current = null;
       if (cancelled || !isRecording) return;
       try {
         await rebuildRecorder();
@@ -452,7 +489,10 @@ export function Recording({
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      if (focusSwitchTimerRef.current) {
+        clearTimeout(focusSwitchTimerRef.current);
+        focusSwitchTimerRef.current = null;
+      }
     };
   }, [focusedParticipantId, isHost, isRecording, rebuildRecorder]);
 

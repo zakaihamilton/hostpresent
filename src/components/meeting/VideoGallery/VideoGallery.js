@@ -39,6 +39,7 @@ export const VideoGallery = memo(function VideoGallery({
         <div className={styles.gallery}>
           {localStream && (
             <VideoTile
+              compactOverlay
               stream={screenStream || localStream}
               name={localDisplayName}
               overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
@@ -59,6 +60,7 @@ export const VideoGallery = memo(function VideoGallery({
           {renderedParticipants.map((participant) => (
             <VideoTile
               key={participant.id}
+              compactOverlay
               stream={participant.stream}
               name={participant.name}
               initial={participant.name.charAt(0)}
