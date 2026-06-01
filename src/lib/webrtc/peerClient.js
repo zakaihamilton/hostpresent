@@ -21,10 +21,10 @@ export const SIGNALING_ERROR = {
 };
 
 export const HOST_SIGNING_REACHABILITY_HINT =
-  "[E013] SIGNALING_SERVER_URL is set, but the browser could not connect to the PeerJS server. Confirm the PeerJS process is running, the host/path/port match your env vars, and that WebSockets are allowed.";
+  "[E013] The browser could not connect to the signaling server. Your connection might be blocked by a strict firewall (like school/campus Wi-Fi), a VPN, or an ad-blocker. Try disabling VPNs/extensions, switching to a mobile hotspot, or opening in an Incognito window.";
 
 export const PARTICIPANT_REACHABILITY_HINT =
-  "[E014] Ask the host to join the meeting first. If they are already in the room, the PeerJS server may be down, restarting, or blocked by your network.";
+  "[E014] Unable to connect to the meeting. Ask the host to join first. If the host is already in the room, your connection might be blocked by a strict firewall (like school/campus Wi-Fi), a VPN, or an ad-blocker. Try disabling VPNs/extensions, switching to a mobile hotspot, or opening in an Incognito window.";
 
 function normalizeSignalingHost(value) {
   if (!value || typeof value !== "string") return null;
