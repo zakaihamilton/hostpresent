@@ -1081,6 +1081,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                 <div className={styles.combinedSection}>
                   <ChatPanel
                     visible
+                    flex
                     messages={chatMessages}
                     participants={chatParticipants}
                     onClose={handleCloseChat}
