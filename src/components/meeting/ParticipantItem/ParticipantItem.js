@@ -120,7 +120,7 @@ export const ParticipantItem = memo(function ParticipantItem({
             {initial}
             {connectionStatus && (
               <span
-                className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+                className={`${styles.connectionDot} ${styles[`connectionDot_${connectionStatus}`]}`}
                 title={`Connection status: ${connectionStatus}`}
               />
             )}
@@ -135,7 +135,10 @@ export const ParticipantItem = memo(function ParticipantItem({
       </div>
       <div className={styles.status}>
         {hasVideo && (
-          <Tooltip text={isScreenSharing ? "Screen Share" : "Video"} placement="left">
+          <Tooltip
+            text={isScreenSharing ? "Screen Share" : "Video"}
+            placement="left"
+          >
             <span className={styles.mediaBadge}>
               {isScreenSharing ? <ScreenShare /> : <Video />}
             </span>

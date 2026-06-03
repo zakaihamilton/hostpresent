@@ -63,7 +63,6 @@ export function WelcomeView({
               loading="eager"
             />
           </div>
-
         </div>
 
         {/* Right Column: Setup Card */}
@@ -113,13 +112,13 @@ export function WelcomeView({
             {role === APP_ROLE.HOST
               ? <WelcomeHostPanel legacyToken={token} navigate={navigate} />
               : <WelcomeParticipantPanel
-                token={token}
-                joinCode={joinCode}
-                autoJoinFromRoute={autoJoinFromRoute}
-                navigate={navigate}
-                navigateJoinCode={navigateJoinCode}
-                navigateParticipantWelcome={navigateParticipantWelcome}
-              />}
+                  token={token}
+                  joinCode={joinCode}
+                  autoJoinFromRoute={autoJoinFromRoute}
+                  navigate={navigate}
+                  navigateJoinCode={navigateJoinCode}
+                  navigateParticipantWelcome={navigateParticipantWelcome}
+                />}
           </div>
         </div>
       </div>

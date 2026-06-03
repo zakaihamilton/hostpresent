@@ -1,13 +1,11 @@
 import {
   enforceRateLimit,
-  guardPostRequest,
   RATE_LIMITS,
   validateJsonPost,
 } from "@/lib/room/apiSecurity";
 import { canRelayMessage } from "@/lib/room/messageAuth";
 import {
   jsonError,
-  jsonOk,
   readJsonBody,
   verifyRequestToken,
 } from "@/lib/room/routeHelpers";

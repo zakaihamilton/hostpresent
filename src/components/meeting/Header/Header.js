@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/routing/BackButton";
-import { Link, Logo, Edit, Stop, X } from "@/components/ui/Icons";
+import { Edit, Link, Logo, Stop, X } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -151,7 +151,11 @@ export const Header = memo(function Header({
           {revealTitleOnLogoClick
             ? <>
                 <span className={styles.logoTooltipNarrow}>
-                  <Tooltip text={meetingName} placement="bottom" trigger="click">
+                  <Tooltip
+                    text={meetingName}
+                    placement="bottom"
+                    trigger="click"
+                  >
                     <button
                       type="button"
                       className={`${styles.logoButton} ${styles.logoIconContainer}`}
@@ -220,12 +224,19 @@ export const Header = memo(function Header({
 
       <div className={styles.meta}>
         {onShowInviteLink
-          ? <Tooltip text={roomId ? "Show invite link & room code" : "Show invite link"} placement="bottom">
+          ? <Tooltip
+              text={
+                roomId ? "Show invite link & room code" : "Show invite link"
+              }
+              placement="bottom"
+            >
               <button
                 type="button"
                 className={styles.iconButton}
                 onClick={onShowInviteLink}
-                aria-label={roomId ? "Show invite link and room code" : "Show invite link"}
+                aria-label={
+                  roomId ? "Show invite link and room code" : "Show invite link"
+                }
               >
                 <Link size={18} />
               </button>

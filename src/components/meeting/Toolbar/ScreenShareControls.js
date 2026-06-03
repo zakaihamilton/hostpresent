@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ScreenShare } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -57,7 +57,7 @@ export function ScreenShareControls({
   const headingId = `${menuId}-heading`;
   const isSharing = Boolean(screenStream);
 
-  const updateMenuPosition = () => {
+  const updateMenuPosition = useCallback(() => {
     const anchor = menuAnchorRef.current;
     const menu = menuRef.current;
     if (!anchor || !menu) return;
@@ -65,7 +65,7 @@ export function ScreenShareControls({
     const anchorRect = anchor.getBoundingClientRect();
     const menuRect = menu.getBoundingClientRect();
     setMenuCoords(computeMenuPosition(anchorRect, menuRect));
-  };
+  }, []);
 
   useLayoutEffect(() => {
     setMounted(true);
@@ -88,7 +88,7 @@ export function ScreenShareControls({
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [menuOpen, isSharing, shareScreenAudio]);
+  }, [menuOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!menuOpen) return;

@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from "react";
-import { MicOff, VideoOff, X } from "@/components/ui/Icons";
 import { ParticipantItem } from "@/components/meeting/ParticipantItem";
+import { MicOff, VideoOff, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { VirtualList } from "@/components/Widgets";
 import {
@@ -22,7 +22,7 @@ function getModeLabel(mode) {
   );
 }
 
-function isListening(modeLabel) {
+function _isListening(modeLabel) {
   return modeLabel === "Listening only";
 }
 

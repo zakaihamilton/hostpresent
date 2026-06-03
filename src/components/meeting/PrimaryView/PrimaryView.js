@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { MicOff, VideoOff } from "@/components/ui/Icons";
 import { VideoPlayer } from "@/components/meeting/VideoPlayer";
+import { MicOff, VideoOff } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDuration } from "@/lib/formatDuration";
 import styles from "./PrimaryView.module.css";
@@ -52,7 +52,10 @@ export const PrimaryView = memo(function PrimaryView({
       )}
       <div className={styles.overlay}>
         {connectionStatus && (
-          <Tooltip text="Connection status (Click for Diagnostics)" placement="top">
+          <Tooltip
+            text="Connection status (Click for Diagnostics)"
+            placement="top"
+          >
             <button
               type="button"
               className={styles.connectionDotButton}
@@ -60,7 +63,7 @@ export const PrimaryView = memo(function PrimaryView({
               aria-label="View connection diagnostics"
             >
               <span
-                className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+                className={`${styles.connectionDot} ${styles[`connectionDot_${connectionStatus}`]}`}
               />
             </button>
           </Tooltip>

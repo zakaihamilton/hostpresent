@@ -23,6 +23,7 @@ export const SIGNALING_MESSAGE = {
   CHAT_MESSAGE: "chat_message",
   CHAT_PRIVATE_MESSAGE: "chat_private_message",
   ROOM_FULL: "room_full",
+  MEDIA_RENEGOTIATE: "media_renegotiate",
 };
 
 export function createRoomFullMessage() {
@@ -232,6 +233,14 @@ export function createParticipantScreenShareStartedMessage({ participantId }) {
 export function createParticipantScreenShareStoppedMessage({ participantId }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
+    participantId,
+    timestamp: Date.now(),
+  };
+}
+
+export function createMediaRenegotiateMessage({ participantId } = {}) {
+  return {
+    type: SIGNALING_MESSAGE.MEDIA_RENEGOTIATE,
     participantId,
     timestamp: Date.now(),
   };

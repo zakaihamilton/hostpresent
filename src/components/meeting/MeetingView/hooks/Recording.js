@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildRecordingFilename } from "@/lib/recordingFilename";
-import { createRecordingStateMessage } from "@/lib/signaling/messages";
 import {
-  loadSavedRecording,
   clearSavedRecording,
+  loadSavedRecording,
   saveRecordingChunk,
   saveRecordingMeta,
 } from "@/lib/recordingStorage";
+import { createRecordingStateMessage } from "@/lib/signaling/messages";
 import {
   pickOutboundVideoTrack,
   resolveOutboundAudioTrack,
@@ -107,8 +107,10 @@ export function Recording({
   }, []);
   const focusedIdRef = useRef(focusedParticipantId);
   focusedIdRef.current = focusedParticipantId;
+  const isRecordingRef = useRef(isRecording);
+  isRecordingRef.current = isRecording;
   const chunkIndexRef = useRef(0);
-  const unloadHandlerRef = useRef(null);
+  const _unloadHandlerRef = useRef(null);
 
   const publishRecordingState = useCallback(
     (active, paused = false) => {
@@ -121,13 +123,7 @@ export function Recording({
   useEffect(() => {
     if (!isHost || !isRecording) return;
     publishRecordingState(true, isRecordingPaused);
-  }, [
-    isHost,
-    isRecording,
-    isRecordingPaused,
-    publishRecordingState,
-    videoParticipantsLength,
-  ]);
+  }, [isHost, isRecording, isRecordingPaused, publishRecordingState]);
 
   const dismissDownloadBanner = useCallback(() => {
     if (downloadDismissTimerRef.current) {
@@ -325,7 +321,14 @@ export function Recording({
     setIsRecording(true);
     setIsRecordingPaused(false);
     publishRecordingState(true, false);
-  }, [isHost, rebuildRecorder, resetRecordingTimer, publishRecordingState]);
+  }, [
+    isHost,
+    rebuildRecorder,
+    resetRecordingTimer,
+    publishRecordingState,
+    setIsRecording,
+    setIsRecordingPaused,
+  ]);
 
   const pauseRecording = useCallback(() => {
     if (
@@ -342,7 +345,7 @@ export function Recording({
       setIsRecordingPaused(true);
       publishRecordingState(true, true);
     }
-  }, [publishRecordingState]);
+  }, [publishRecordingState, setIsRecordingPaused]);
 
   const resumeRecording = useCallback(() => {
     if (
@@ -359,7 +362,7 @@ export function Recording({
       setIsRecordingPaused(false);
       publishRecordingState(true, false);
     }
-  }, [publishRecordingState]);
+  }, [publishRecordingState, setIsRecordingPaused]);
 
   const stopRecording = useCallback(() => {
     if (!isHost) return;
@@ -399,6 +402,8 @@ export function Recording({
     resetRecordingTimer,
     publishRecordingState,
     updateDownloadProgress,
+    setIsRecording,
+    setIsRecordingPaused,
   ]);
 
   const stopRecordingAsync = useCallback(async () => {
@@ -446,54 +451,87 @@ export function Recording({
     resetRecordingTimer,
     publishRecordingState,
     updateDownloadProgress,
+    setIsRecording,
+    setIsRecordingPaused,
   ]);
 
   useEffect(() => {
-    if (
-      !isHost ||
-      !isRecording ||
-      !focusedParticipantId ||
-      switchingFocusRef.current
-    ) {
+    if (!isHost || !isRecording || !focusedParticipantId) {
+      return;
+    }
+
+    if (switchingFocusRef.current) {
       return;
     }
 
     if (focusedParticipantId === prevFocusedIdRef.current) return;
-    prevFocusedIdRef.current = focusedParticipantId;
 
-    const prevRecorder = mediaRecorderRef.current;
-    if (!prevRecorder || prevRecorder.state === "inactive") return;
+    const runSwitch = async () => {
+      switchingFocusRef.current = true;
 
-    switchingFocusRef.current = true;
-    prevRecorder.onstop = null;
-    prevRecorder.stop();
+      while (
+        focusedIdRef.current !== prevFocusedIdRef.current &&
+        isRecordingRef.current
+      ) {
+        const targetId = focusedIdRef.current;
+        prevFocusedIdRef.current = targetId;
 
-    const audioPrev = audioRecorderRef.current;
-    if (audioPrev && audioPrev.state !== "inactive") {
-      audioPrev.stop();
-    }
+        const prevRecorder = mediaRecorderRef.current;
+        const audioPrev = audioRecorderRef.current;
 
-    let cancelled = false;
-    if (focusSwitchTimerRef.current) {
-      clearTimeout(focusSwitchTimerRef.current);
-    }
-    focusSwitchTimerRef.current = setTimeout(async () => {
-      focusSwitchTimerRef.current = null;
-      if (cancelled || !isRecording) return;
-      try {
-        await rebuildRecorder();
-      } finally {
-        switchingFocusRef.current = false;
-      }
-    }, 150);
+        await new Promise((resolve) => {
+          let videoStopped = false;
+          let audioStopped = false;
 
-    return () => {
-      cancelled = true;
-      if (focusSwitchTimerRef.current) {
-        clearTimeout(focusSwitchTimerRef.current);
+          const checkResolve = () => {
+            if (videoStopped && audioStopped) {
+              resolve();
+            }
+          };
+
+          if (prevRecorder && prevRecorder.state !== "inactive") {
+            prevRecorder.onstop = () => {
+              videoStopped = true;
+              checkResolve();
+            };
+            prevRecorder.stop();
+          } else {
+            videoStopped = true;
+          }
+
+          if (audioPrev && audioPrev.state !== "inactive") {
+            audioPrev.onstop = () => {
+              audioStopped = true;
+              checkResolve();
+            };
+            audioPrev.stop();
+          } else {
+            audioStopped = true;
+          }
+
+          checkResolve();
+        });
+
+        if (!isRecordingRef.current) break;
+
+        await new Promise((resolve) => {
+          focusSwitchTimerRef.current = setTimeout(resolve, 150);
+        });
         focusSwitchTimerRef.current = null;
+
+        if (!isRecordingRef.current) break;
+
+        try {
+          await rebuildRecorder();
+        } catch (e) {
+          console.error("Failed to rebuild recorder during focus switch", e);
+        }
       }
+
+      switchingFocusRef.current = false;
     };
+
+    runSwitch();
   }, [focusedParticipantId, isHost, isRecording, rebuildRecorder]);
 
   useEffect(() => {

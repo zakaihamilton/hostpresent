@@ -33,6 +33,7 @@ const PARTICIPANT_STATUS_TYPES = new Set([
   SIGNALING_MESSAGE.PARTICIPANT_PROFILE,
   SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED,
   SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
+  SIGNALING_MESSAGE.MEDIA_RENEGOTIATE,
 ]);
 
 const HOST_MUTE_ALL_TYPES = new Set([
@@ -118,7 +119,8 @@ export function canReceiveSignalingMessage({
   if (PARTICIPANT_STATUS_BROADCAST_TYPES.has(message.type)) {
     return (
       Boolean(message.participantId) &&
-      message.participantId !== localParticipantId
+      message.participantId !== localParticipantId &&
+      senderId !== message.participantId
     );
   }
 

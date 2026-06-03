@@ -115,7 +115,7 @@ export function MediaControls({
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [menuOpen, availableCameras, availableMicrophones]);
+  }, [menuOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!menuOpen) return;

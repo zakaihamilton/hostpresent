@@ -210,8 +210,6 @@ export const ChatPanel = memo(function ChatPanel({
 
   const isPrivate = Boolean(recipientId && recipientId !== "everyone");
 
-
-
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

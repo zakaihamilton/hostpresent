@@ -181,7 +181,7 @@ export function MediaControls({
         }
       }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAudioMuted, isVideoMuted, setLocalStream]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchCamera = useCallback(
     async (deviceId) => {
@@ -214,7 +214,7 @@ export function MediaControls({
         );
       }
     },
-    [localStream, isVideoMuted, roomConnection, setErrorMsg],
+    [localStream, isVideoMuted, roomConnection],
   );
 
   const acquireReplacementVideoTrack = useCallback(async () => {
@@ -274,7 +274,7 @@ export function MediaControls({
         );
       }
     },
-    [localStream, isAudioMuted, roomConnection, setErrorMsg],
+    [localStream, isAudioMuted, roomConnection],
   );
 
   const publishParticipantMediaStatus = useCallback(
@@ -458,6 +458,7 @@ export function MediaControls({
     roomConnection,
     screenStream,
     shareScreenAudio,
+    setScreenStream,
   ]);
 
   const setShareScreenAudioPreference = useCallback((includeAudio) => {

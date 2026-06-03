@@ -161,7 +161,7 @@ describe("MeetingView", () => {
   });
 
   it("renders host meeting UI", async () => {
-    render(<MeetingView role="host" token="host-token" onBack={() => {}} />);
+    render(<MeetingView token="host-token" onBack={() => {}} />);
 
     expect(await screen.findByTestId("primary-view")).toHaveTextContent(
       "Guest",
@@ -172,7 +172,7 @@ describe("MeetingView", () => {
     const user = userEvent.setup();
     const onBack = jest.fn();
 
-    render(<MeetingView role="host" token="host-token" onBack={onBack} />);
+    render(<MeetingView token="host-token" onBack={onBack} />);
 
     await user.click(
       await screen.findByRole("button", { name: "Leave meeting" }),
@@ -182,13 +182,7 @@ describe("MeetingView", () => {
   });
 
   it("allows participants to screen share", async () => {
-    render(
-      <MeetingView
-        role="participant"
-        token="participant-token"
-        onBack={() => {}}
-      />,
-    );
+    render(<MeetingView token="participant-token" onBack={() => {}} />);
 
     await screen.findByTestId("primary-view");
 
@@ -198,13 +192,7 @@ describe("MeetingView", () => {
 
   it("automatically disconnects and shows limit reached screen when 6-hour limit is reached", async () => {
     mockMeetingSeconds = 21600;
-    render(
-      <MeetingView
-        role="participant"
-        token="participant-token"
-        onBack={() => {}}
-      />,
-    );
+    render(<MeetingView token="participant-token" onBack={() => {}} />);
 
     expect(
       await screen.findByText("Meeting limit reached"),

@@ -1,4 +1,4 @@
-import { createJoinCode, normalizeJoinCode } from "./joinCode.js";
+import { normalizeJoinCode } from "./joinCode.js";
 import { deriveRoomIdFromJoinCode } from "./roomIdentity.js";
 import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "./tokens.js";
 

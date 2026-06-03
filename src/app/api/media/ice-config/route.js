@@ -1,7 +1,7 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import crypto from "crypto";
-import { applySecurityHeaders } from "@/lib/room/apiSecurity";
 import { verifyIceRoomToken } from "@/lib/media/iceRoomToken";
+import { applySecurityHeaders } from "@/lib/room/apiSecurity";
 
 export const runtime = "nodejs";
 

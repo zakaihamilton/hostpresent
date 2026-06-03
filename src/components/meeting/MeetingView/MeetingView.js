@@ -36,12 +36,12 @@ import {
   saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
 import {
+  loadChatVisible,
   loadGalleryVisible,
   loadSidebarVisible,
-  loadChatVisible,
+  saveChatVisible,
   saveGalleryVisible,
   saveSidebarVisible,
-  saveChatVisible,
 } from "@/lib/settings/layoutSettings";
 import {
   getRoomTitleByHostToken,
@@ -53,7 +53,6 @@ import {
   createMeetingEndedMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import { attachSpeakingDetector } from "./hooks/RemoteParticipants";
 import {
   getSignalingConfigHint,
   getSignalingErrorHint,
@@ -64,7 +63,10 @@ import {
 } from "@/lib/webrtc/peerClient";
 import { MediaControls } from "./hooks/MediaControls";
 import { Recording } from "./hooks/Recording";
-import { RemoteParticipants } from "./hooks/RemoteParticipants";
+import {
+  attachSpeakingDetector,
+  RemoteParticipants,
+} from "./hooks/RemoteParticipants";
 import styles from "./MeetingView.module.css";
 
 export function MeetingView({ token, ...props }) {
@@ -75,8 +77,9 @@ export function MeetingView({ token, ...props }) {
   );
 }
 
-function isTouchOrMobileDevice() {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+function _isTouchOrMobileDevice() {
+  if (typeof window === "undefined" || typeof navigator === "undefined")
+    return false;
   const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isSmallScreen = window.innerWidth <= 1024 || window.innerHeight <= 700;
@@ -478,7 +481,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         clearTimeout(inviteCopyTimerRef.current);
       }
     };
-  }, []);
+  }, [
+    streamListenerCleanupsRef?.current?.clear,
+    streamListenerCleanupsRef?.current?.values,
+  ]);
 
   const fatalConnectionError =
     roomConnection?.connectionError &&
@@ -661,7 +667,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const handleDismissError = useCallback(() => {
     setErrorMsg("");
-  }, []);
+  }, [setErrorMsg]);
 
   const handleCopyInviteLink = async () => {
     if (!inviteLink) return;
@@ -739,15 +745,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostStream,
     hostVideoMuted,
     hostScreenSharing,
-    isAudioMuted,
     isHost,
-    isVideoMuted,
-    localIsSpeaking,
-    localStream,
     peerParticipants,
-    resolvedDisplayName,
     roomConnection?.localParticipantId,
-    screenStream,
     videoParticipants,
   ]);
 
@@ -821,6 +821,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostVideoMuted,
     roomConnection?.localParticipantId,
     videoParticipants,
+    isAudioMuted,
   ]);
 
   if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
@@ -1019,7 +1020,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
               audioOutputDeviceId={selectedSpeaker}
               connectionStatus={
                 effectiveFocusedId === "host" ||
-                (!isHost && effectiveFocusedId === roomConnection?.localParticipantId)
+                (!isHost &&
+                  effectiveFocusedId === roomConnection?.localParticipantId)
                   ? roomConnection?.status
                   : null
               }
@@ -1121,7 +1123,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
                   onMuteAllAudio={muteAllAudio}
                   canMuteAllVideo={canMuteAllVideo}
                   canMuteAllAudio={canMuteAllAudio}
-                  onRemoveParticipant={isHost ? handleKickParticipant : undefined}
+                  onRemoveParticipant={
+                    isHost ? handleKickParticipant : undefined
+                  }
                 />
               )}
 

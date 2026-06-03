@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { X, Refresh } from "@/components/ui/Icons";
+import { Refresh, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./DiagnosticsPopup.module.css";
 
@@ -28,18 +28,22 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
   const hasTurnServer = Boolean(
     iceServers?.some((server) => {
       const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-      return urls.some((url) => url?.startsWith("turn:") || url?.startsWith("turns:"));
-    })
+      return urls.some(
+        (url) => url?.startsWith("turn:") || url?.startsWith("turns:"),
+      );
+    }),
   );
 
-  const isLocalSignaling = peerConfig?.host === "localhost" || peerConfig?.host === "127.0.0.1";
+  const isLocalSignaling =
+    peerConfig?.host === "localhost" || peerConfig?.host === "127.0.0.1";
 
   // Determine current active media routing
   let mediaRoutingLabel = "Idle (No active streams)";
   let mediaRoutingClass = styles.routeIdle;
   if (activeConnectionsCount > 0) {
     if (isTurnActive) {
-      mediaRoutingLabel = "Relayed through TURN (Bypassing firewall/symmetric NAT)";
+      mediaRoutingLabel =
+        "Relayed through TURN (Bypassing firewall/symmetric NAT)";
       mediaRoutingClass = styles.routeRelayed;
     } else {
       mediaRoutingLabel = "Direct Peer-to-Peer (Optimal high-speed connection)";
@@ -59,7 +63,7 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
         <div className={styles.header}>
           <div className={styles.titleRow}>
             <span
-              className={`${styles.statusDot} ${styles["statusDot_" + statusLabel]}`}
+              className={`${styles.statusDot} ${styles[`statusDot_${statusLabel}`]}`}
             />
             <h2 id="diagnostics-title" className={styles.title}>
               Connection Diagnostics
@@ -79,21 +83,23 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
 
         <div className={styles.content}>
           {/* Status Alert/Summary */}
-          <div className={`${styles.statusBanner} ${styles["statusBanner_" + statusLabel]}`}>
+          <div
+            className={`${styles.statusBanner} ${styles[`statusBanner_${statusLabel}`]}`}
+          >
             <div className={styles.statusBannerTitle}>
               Overall Status: {statusLabel.toUpperCase()}
             </div>
-            {connectionError ? (
-              <div className={styles.statusBannerError}>{connectionError}</div>
-            ) : (
-              <div className={styles.statusBannerDesc}>
-                {statusLabel === "connected"
-                  ? "Connected to signaling and active media session."
-                  : statusLabel === "connecting"
-                    ? "Attempting connection to the signaling server..."
-                    : "Not connected to the meeting session."}
-              </div>
-            )}
+            {connectionError
+              ? <div className={styles.statusBannerError}>
+                  {connectionError}
+                </div>
+              : <div className={styles.statusBannerDesc}>
+                  {statusLabel === "connected"
+                    ? "Connected to signaling and active media session."
+                    : statusLabel === "connecting"
+                      ? "Attempting connection to the signaling server..."
+                      : "Not connected to the meeting session."}
+                </div>}
           </div>
 
           {/* Session Info Section */}
@@ -154,19 +160,25 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
               <div className={styles.gridItem}>
                 <span className={styles.gridLabel}>Server Cluster Node</span>
                 <span className={styles.gridValue}>
-                  {isLocalSignaling ? "Local Development Server" : "Cloud Router Cluster"}
+                  {isLocalSignaling
+                    ? "Local Development Server"
+                    : "Cloud Router Cluster"}
                 </span>
               </div>
               <div className={styles.gridItem}>
                 <span className={styles.gridLabel}>Security Protocol</span>
                 <span className={styles.gridValue}>
-                  {peerConfig?.secure ? "Secure TLS (Encrypted)" : "Standard Non-SSL"}
+                  {peerConfig?.secure
+                    ? "Secure TLS (Encrypted)"
+                    : "Standard Non-SSL"}
                 </span>
               </div>
               <div className={styles.gridItem}>
                 <span className={styles.gridLabel}>API Gateway Status</span>
                 <span className={styles.gridValue}>
-                  {statusLabel === "connected" ? "Operational" : "Degraded / Connecting"}
+                  {statusLabel === "connected"
+                    ? "Operational"
+                    : "Degraded / Connecting"}
                 </span>
               </div>
             </div>
@@ -177,7 +189,9 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
             <h3 className={styles.sectionTitle}>Media Routing & ICE</h3>
             <div className={styles.grid}>
               <div className={styles.gridItem}>
-                <span className={styles.gridLabel}>STUN Server (Direct P2P)</span>
+                <span className={styles.gridLabel}>
+                  STUN Server (Direct P2P)
+                </span>
                 <span className={`${styles.gridValue} ${styles.textSuccess}`}>
                   Active & Available
                 </span>
@@ -193,7 +207,9 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
                 </span>
               </div>
               <div className={`${styles.gridItem} ${styles.fullWidth}`}>
-                <span className={styles.gridLabel}>Current Network Routing</span>
+                <span className={styles.gridLabel}>
+                  Current Network Routing
+                </span>
                 <span className={`${styles.gridValue} ${mediaRoutingClass}`}>
                   {mediaRoutingLabel}
                 </span>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggle";
 import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { UserCircle } from "@/components/ui/Icons";
-import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import tooltipStyles from "@/components/ui/Tooltip/Tooltip.module.css";
 import {
@@ -77,7 +77,7 @@ export function ProfileControls({
     ? "Click to edit name and participation mode"
     : "Click to edit name";
 
-  const updatePopupPosition = () => {
+  const updatePopupPosition = useCallback(() => {
     const anchor = anchorRef.current;
     const popup = popupRef.current;
     if (!anchor || !popup) return;
@@ -85,7 +85,7 @@ export function ProfileControls({
     const anchorRect = anchor.getBoundingClientRect();
     const popupRect = popup.getBoundingClientRect();
     setPopupCoords(computePopupPosition(anchorRect, popupRect));
-  };
+  }, []);
 
   useEffect(() => {
     if (popupOpen) {
@@ -114,7 +114,7 @@ export function ProfileControls({
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [popupOpen, participantMode]);
+  }, [popupOpen, updatePopupPosition]);
 
   useEffect(() => {
     if (!popupOpen) return;

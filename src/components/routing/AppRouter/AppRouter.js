@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { MeetingView } from "@/components/meeting/MeetingView";
 import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
 import { MeetingLoading } from "@/components/ui/MeetingLoading";
-import { MeetingView } from "@/components/meeting/MeetingView";
 import { WelcomeView } from "@/components/welcome/WelcomeView";
 import { APP_ROLE, APP_VIEW, useHashRouter } from "@/hooks/hashRouter";
 import { useRouteToken } from "@/hooks/routeToken";

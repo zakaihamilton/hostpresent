@@ -1,3 +1,4 @@
+import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import { guardGetRequest, RATE_LIMITS } from "@/lib/room/apiSecurity";
 import {
   getSearchParam,
@@ -9,7 +10,6 @@ import {
   ROOM_STATUS,
   restoreRoomFromToken,
 } from "@/lib/room/store";
-import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import { ROOM_ROLE } from "@/lib/room/tokens";
 
 export const runtime = "nodejs";

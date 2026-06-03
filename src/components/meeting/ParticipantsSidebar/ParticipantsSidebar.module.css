@@ -166,8 +166,8 @@
   .slot {
     position: absolute;
     top: 0;
-    right: 0 !important;
-    left: auto !important;
+    right: 0;
+    left: auto;
     margin-left: auto;
     bottom: 0;
     z-index: 25;
@@ -179,7 +179,7 @@
     width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
     pointer-events: none;
     transform: translateX(100%);
-    transition: none !important;
+    transition: none;
   }
 
   .sidebar {
@@ -204,8 +204,8 @@
   .slot {
     position: absolute;
     top: 0;
-    right: 0 !important;
-    left: auto !important;
+    right: 0;
+    left: auto;
     margin-left: auto;
     bottom: 0;
     z-index: 25;
@@ -217,7 +217,7 @@
     width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
     pointer-events: none;
     transform: translateX(100%);
-    transition: none !important;
+    transition: none;
   }
 
   .sidebar {

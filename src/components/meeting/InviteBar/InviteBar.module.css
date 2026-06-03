@@ -224,7 +224,8 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.18em;
   color: var(--text-main);
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-family:
+    ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
 }
 
 .codeButton {
@@ -278,4 +279,3 @@
     text-align: center;
   }
 }
-

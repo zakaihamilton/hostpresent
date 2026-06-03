@@ -278,51 +278,51 @@
 }
 
 .textSuccess {
-  color: #047857 !important;
+  color: #047857;
 }
 
 :global([data-theme="dark"]) .textSuccess {
-  color: var(--success, #10b981) !important;
+  color: var(--success, #10b981);
 }
 
 .textWarning {
-  color: #b45309 !important;
+  color: #b45309;
 }
 
 :global([data-theme="dark"]) .textWarning {
-  color: var(--warning, #f59e0b) !important;
+  color: var(--warning, #f59e0b);
 }
 
 .textDanger {
-  color: #b91c1c !important;
+  color: #b91c1c;
 }
 
 :global([data-theme="dark"]) .textDanger {
-  color: var(--danger, #ef4444) !important;
+  color: var(--danger, #ef4444);
 }
 
 .textMuted {
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
 }
 
 .routeIdle {
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
 }
 
 .routeDirect {
-  color: #047857 !important;
+  color: #047857;
 }
 
 :global([data-theme="dark"]) .routeDirect {
-  color: var(--success, #10b981) !important;
+  color: var(--success, #10b981);
   text-shadow: 0 0 4px rgba(16, 185, 129, 0.2);
 }
 
 .routeRelayed {
-  color: #b45309 !important;
+  color: #b45309;
 }
 
 :global([data-theme="dark"]) .routeRelayed {
-  color: var(--warning, #f59e0b) !important;
+  color: var(--warning, #f59e0b);
   text-shadow: 0 0 4px rgba(245, 158, 11, 0.2);
 }

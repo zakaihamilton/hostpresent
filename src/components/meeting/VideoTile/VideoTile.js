@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { VideoPlayer } from "@/components/meeting/VideoPlayer";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { Focus } from "@/components/ui/Icons";
+import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./VideoTile.module.css";
 
 export const VideoTile = memo(function VideoTile({
@@ -69,14 +69,18 @@ export const VideoTile = memo(function VideoTile({
       <div className={styles.overlay}>
         {connectionStatus && (
           <span
-            className={`${styles.connectionDot} ${styles["connectionDot_" + connectionStatus]}`}
+            className={`${styles.connectionDot} ${styles[`connectionDot_${connectionStatus}`]}`}
             title={`Connection status: ${connectionStatus}`}
           />
         )}
         {isFocused && (
           <span
             className={`${styles.focusBadge} ${isManualFocused ? styles.focusBadgeManual : styles.focusBadgeAuto}`}
-            title={isManualFocused ? "Focused (Pinned)" : "Auto-Focused (Active Speaker)"}
+            title={
+              isManualFocused
+                ? "Focused (Pinned)"
+                : "Auto-Focused (Active Speaker)"
+            }
           >
             <Focus size={10} />
           </span>
@@ -100,10 +104,7 @@ export const VideoTile = memo(function VideoTile({
         : "Auto-Focused (Active Speaker)"
       : `Focus on ${name}`;
     return (
-      <Tooltip
-        text={tooltipText}
-        placement="top"
-      >
+      <Tooltip text={tooltipText} placement="top">
         {tile}
       </Tooltip>
     );

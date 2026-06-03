@@ -13,6 +13,7 @@ import {
   createChatMessage,
   createChatPrivateMessage,
   createHostPresentMessage,
+  createMediaRenegotiateMessage,
   createParticipantProfileMessage,
   isChatMessage,
   isSignalingMessage,
@@ -22,6 +23,8 @@ import {
 import {
   buildOutboundMediaStream,
   destroyOutboundAudioMixer,
+  pickOutboundVideoTrack,
+  resolveOutboundAudioTrack,
   syncOutboundTracks,
 } from "@/lib/webrtc/outboundMedia";
 import {
@@ -81,7 +84,7 @@ export function useRoomDataChannel({
   const [connectionError, setConnectionError] = useState(null);
   const [peerConfig, setPeerConfig] = useState(null);
   const [configReady, setConfigReady] = useState(false);
-  const [reconnectTrigger, setReconnectTrigger] = useState(0);
+  const [_reconnectTrigger, setReconnectTrigger] = useState(0);
   const iceServers = useIceServers();
 
   const peerRef = useRef(null);
@@ -359,7 +362,7 @@ export function useRoomDataChannel({
         console.warn("[peer] relay call failed", error);
       }
     },
-    [isHost],
+    [isHost, relayCallKey],
   );
 
   const syncRelayForViewer = useCallback(
@@ -538,17 +541,56 @@ export function useRoomDataChannel({
         for (const remoteId of connectionsRef.current.keys()) {
           await ensureMediaCall(remoteId);
         }
+      } else {
+        const hostId = hostPeerId(roomIdRef.current);
+        const existing = mediaCallsRef.current.get(hostId);
+        if (existing) {
+          const pc = existing.peerConnection;
+          const hasVideoTrack = Boolean(
+            pickOutboundVideoTrack(
+              localStreamRef.current,
+              screenStreamRef.current,
+            ),
+          );
+          const hasAudioTrack = Boolean(
+            await resolveOutboundAudioTrack(
+              localStreamRef.current,
+              screenStreamRef.current,
+            ),
+          );
+          const senders = pc ? pc.getSenders() : [];
+          const hasVideoSender = senders.some(
+            (s) => (s._hostPresentKind ?? s.track?.kind) === "video" && s.track,
+          );
+          const hasAudioSender = senders.some(
+            (s) => (s._hostPresentKind ?? s.track?.kind) === "audio" && s.track,
+          );
+          if (
+            (hasVideoTrack && !hasVideoSender) ||
+            (hasAudioTrack && !hasAudioSender)
+          ) {
+            send(createMediaRenegotiateMessage());
+          }
+        } else {
+          const outbound = await buildOutboundMediaStream(
+            localStreamRef.current,
+            screenStreamRef.current,
+          );
+          if (outbound) {
+            send(createMediaRenegotiateMessage());
+          }
+        }
       }
     });
     syncQueueRef.current = next.catch(() => {});
     return next;
-  }, [isHost, ensureMediaCall]);
+  }, [isHost, ensureMediaCall, send]);
 
   useEffect(() => {
     enqueueSync().catch((error) => {
       console.warn("[peer] syncAllOutboundTracks failed", error);
     });
-  }, [localStream, screenStream, enqueueSync]);
+  }, [enqueueSync]);
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
@@ -633,6 +675,22 @@ export function useRoomDataChannel({
             return;
           }
           notifyHandlers(resolvedMessage);
+          if (
+            isHost &&
+            resolvedMessage.type === SIGNALING_MESSAGE.MEDIA_RENEGOTIATE
+          ) {
+            const pId = resolvedMessage.participantId;
+            if (pId) {
+              const existingCall = mediaCallsRef.current.get(pId);
+              if (existingCall) {
+                existingCall.close();
+                mediaCallsRef.current.delete(pId);
+              }
+              ensureMediaCall(pId).catch((error) => {
+                console.warn("[peer] renegotiation media call failed", error);
+              });
+            }
+          }
           if (isHost && resolvedMessage.participantId) {
             const participantStatusRelayTypes = new Set([
               SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
@@ -695,13 +753,7 @@ export function useRoomDataChannel({
   useEffect(() => {
     if (isHost) return undefined;
     sendParticipantProfile();
-  }, [
-    displayName,
-    isHost,
-    localParticipantId,
-    participantMode,
-    sendParticipantProfile,
-  ]);
+  }, [isHost, sendParticipantProfile]);
 
   const send = useCallback(
     (message) => {
@@ -798,7 +850,7 @@ export function useRoomDataChannel({
       }
       return sent;
     },
-    [isHost, roomId],
+    [isHost, roomId, notifyHandlers],
   );
 
   const sendPrivateChatMessage = useCallback(
@@ -830,7 +882,7 @@ export function useRoomDataChannel({
       }
       return sent;
     },
-    [isHost, roomId],
+    [isHost, roomId, notifyHandlers],
   );
 
   const schedulePeerRetry = useCallback(
@@ -961,7 +1013,8 @@ export function useRoomDataChannel({
       });
 
       peer.on("disconnected", () => {
-        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current) return;
+        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current)
+          return;
         console.warn(
           "[peer] host disconnected from signaling server, reconnecting...",
         );
@@ -975,7 +1028,9 @@ export function useRoomDataChannel({
         if (connectionsRef.current.size >= 29) {
           const rejectConnection = () => {
             try {
-              conn.send(JSON.stringify({ type: "room_full", timestamp: Date.now() }));
+              conn.send(
+                JSON.stringify({ type: "room_full", timestamp: Date.now() }),
+              );
             } catch (err) {
               console.warn("[peer] failed to send room_full signal", err);
             }
@@ -1102,7 +1157,8 @@ export function useRoomDataChannel({
       });
 
       peer.on("disconnected", () => {
-        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current) return;
+        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current)
+          return;
         console.warn(
           "[peer] participant disconnected from signaling server, reconnecting...",
         );
@@ -1166,7 +1222,8 @@ export function useRoomDataChannel({
     schedulePeerRetry,
     scheduleReconnectToHost,
     token,
-    reconnectTrigger,
+    closeRelayCallsForSource,
+    closeRelayCallsForViewer,
   ]);
 
   useEffect(() => {
@@ -1219,7 +1276,10 @@ export function useRoomDataChannel({
         try {
           const stats = await pc.getStats();
           for (const report of stats.values()) {
-            if (report.type === "candidate-pair" && report.state === "succeeded") {
+            if (
+              report.type === "candidate-pair" &&
+              report.state === "succeeded"
+            ) {
               const localCandidate = stats.get(report.localCandidateId);
               if (localCandidate && localCandidate.candidateType === "relay") {
                 turnUsed = true;
@@ -1240,9 +1300,15 @@ export function useRoomDataChannel({
           try {
             const stats = await pc.getStats();
             for (const report of stats.values()) {
-              if (report.type === "candidate-pair" && report.state === "succeeded") {
+              if (
+                report.type === "candidate-pair" &&
+                report.state === "succeeded"
+              ) {
                 const localCandidate = stats.get(report.localCandidateId);
-                if (localCandidate && localCandidate.candidateType === "relay") {
+                if (
+                  localCandidate &&
+                  localCandidate.candidateType === "relay"
+                ) {
                   turnUsed = true;
                   break;
                 }
@@ -1286,7 +1352,11 @@ export function useRoomDataChannel({
     status,
     peerConfig,
     iceServers: iceServersRef.current,
-    activeConnectionsCount: isHost ? connectionsRef.current.size : (hostConnectionRef.current?.open ? 1 : 0),
+    activeConnectionsCount: isHost
+      ? connectionsRef.current.size
+      : hostConnectionRef.current?.open
+        ? 1
+        : 0,
     reconnect,
     isTurnActive,
   };
