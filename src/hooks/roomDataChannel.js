@@ -307,6 +307,50 @@ export function useRoomDataChannel({
     setReconnectTrigger((prev) => prev + 1);
   }, []);
 
+  const send = useCallback(
+    (message) => {
+      if (!isSignalingMessage(message)) return false;
+
+      let outboundMessage = message;
+      if (!isHost && isParticipantStatusMessage(message)) {
+        const participantId = localParticipantIdRef.current;
+        if (!participantId) return false;
+        outboundMessage = { ...message, participantId };
+      }
+
+      if (
+        !canSendSignalingMessage({
+          isHost,
+          message: outboundMessage,
+          localParticipantId: localParticipantIdRef.current,
+        })
+      ) {
+        return false;
+      }
+
+      if (isHost) {
+        const targetId = message.participantId;
+        if (
+          targetId &&
+          (message.type === SIGNALING_MESSAGE.HOST_MUTE_AUDIO ||
+            message.type === SIGNALING_MESSAGE.HOST_MUTE_VIDEO)
+        ) {
+          const conn = connectionsRef.current.get(targetId);
+          return sendOnConnection(conn, outboundMessage);
+        }
+
+        let sent = false;
+        for (const conn of connectionsRef.current.values()) {
+          if (sendOnConnection(conn, outboundMessage)) sent = true;
+        }
+        return sent;
+      }
+
+      return sendOnConnection(hostConnectionRef.current, outboundMessage);
+    },
+    [isHost],
+  );
+
   useEffect(() => {
     localStreamRef.current = localStream;
   }, [localStream]);
@@ -755,49 +799,7 @@ export function useRoomDataChannel({
     sendParticipantProfile();
   }, [isHost, sendParticipantProfile]);
 
-  const send = useCallback(
-    (message) => {
-      if (!isSignalingMessage(message)) return false;
 
-      let outboundMessage = message;
-      if (!isHost && isParticipantStatusMessage(message)) {
-        const participantId = localParticipantIdRef.current;
-        if (!participantId) return false;
-        outboundMessage = { ...message, participantId };
-      }
-
-      if (
-        !canSendSignalingMessage({
-          isHost,
-          message: outboundMessage,
-          localParticipantId: localParticipantIdRef.current,
-        })
-      ) {
-        return false;
-      }
-
-      if (isHost) {
-        const targetId = message.participantId;
-        if (
-          targetId &&
-          (message.type === SIGNALING_MESSAGE.HOST_MUTE_AUDIO ||
-            message.type === SIGNALING_MESSAGE.HOST_MUTE_VIDEO)
-        ) {
-          const conn = connectionsRef.current.get(targetId);
-          return sendOnConnection(conn, outboundMessage);
-        }
-
-        let sent = false;
-        for (const conn of connectionsRef.current.values()) {
-          if (sendOnConnection(conn, outboundMessage)) sent = true;
-        }
-        return sent;
-      }
-
-      return sendOnConnection(hostConnectionRef.current, outboundMessage);
-    },
-    [isHost],
-  );
 
   const sendToParticipant = useCallback(
     (participantId, message) => {
