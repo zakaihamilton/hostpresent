@@ -50,6 +50,8 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
 
+const relayCallKey = (viewerId, sourceId) => `${viewerId}:${sourceId}`;
+
 function sendOnConnection(conn, message) {
   if (!conn?.open) return false;
   try {
@@ -359,8 +361,6 @@ export function useRoomDataChannel({
     screenStreamRef.current = screenStream;
   }, [screenStream]);
 
-  const relayCallKey = (viewerId, sourceId) => `${viewerId}:${sourceId}`;
-
   const closeRelayCallsForViewer = useCallback((viewerId) => {
     for (const [key, call] of relayCallsRef.current.entries()) {
       if (key.startsWith(`${viewerId}:`)) {
@@ -406,7 +406,7 @@ export function useRoomDataChannel({
         console.warn("[peer] relay call failed", error);
       }
     },
-    [isHost, relayCallKey],
+    [isHost],
   );
 
   const syncRelayForViewer = useCallback(
@@ -798,8 +798,6 @@ export function useRoomDataChannel({
     if (isHost) return undefined;
     sendParticipantProfile();
   }, [isHost, sendParticipantProfile]);
-
-
 
   const sendToParticipant = useCallback(
     (participantId, message) => {
