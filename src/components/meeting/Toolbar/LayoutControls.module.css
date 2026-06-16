@@ -56,6 +56,24 @@
     color-mix(in srgb, var(--danger, #ef4444) 35%, transparent);
 }
 
+.countBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-panel);
+}
+
 /* Dynamic styling for buttons within the tooltip wrappers in the cluster */
 .cluster > div .btn {
   border-right: none;

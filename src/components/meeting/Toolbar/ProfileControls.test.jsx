@@ -19,7 +19,7 @@ describe("ProfileControls", () => {
 
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent("Alex");
-    expect(tooltip).toHaveTextContent("Click to edit name");
+    expect(tooltip).toHaveTextContent("Click to edit name and device settings");
   });
 
   it("mentions participation mode in the tooltip when mode controls are available", async () => {
@@ -38,7 +38,7 @@ describe("ProfileControls", () => {
 
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent(
-      "Click to edit name and participation mode",
+      "Click to edit name, participation mode, and device settings",
     );
     expect(getProfileButton()).toHaveAccessibleName(
       "Display name: Alex. Participation mode: Listening only",

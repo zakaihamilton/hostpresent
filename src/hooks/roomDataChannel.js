@@ -956,28 +956,57 @@ export function useRoomDataChannel({
     destroyedRef.current = false;
 
     const teardownPeer = () => {
-      for (const call of mediaCallsRef.current.values()) {
-        call.close();
+      try {
+        for (const call of mediaCallsRef.current.values()) {
+          call.close();
+        }
+      } catch (e) {
+        console.warn("[peer] error closing media calls", e);
       }
       mediaCallsRef.current.clear();
-      for (const call of relayCallsRef.current.values()) {
-        call.close();
+
+      try {
+        for (const call of relayCallsRef.current.values()) {
+          call.close();
+        }
+      } catch (e) {
+        console.warn("[peer] error closing relay calls", e);
       }
       relayCallsRef.current.clear();
       inboundStreamsRef.current.clear();
-      for (const conn of connectionsRef.current.values()) {
-        conn.close();
+
+      try {
+        for (const conn of connectionsRef.current.values()) {
+          conn.close();
+        }
+      } catch (e) {
+        console.warn("[peer] error closing connections", e);
       }
       connectionsRef.current.clear();
-      hostConnectionRef.current?.close();
+
+      try {
+        hostConnectionRef.current?.close();
+      } catch (e) {
+        console.warn("[peer] error closing host connection", e);
+      }
       hostConnectionRef.current = null;
-      peerRef.current?.disconnect();
-      peerRef.current?.destroy();
+
+      try {
+        peerRef.current?.destroy();
+      } catch (e) {
+        console.warn("[peer] error destroying peer", e);
+      }
       peerRef.current = null;
+
       openCountRef.current = 0;
       signalingOpenRef.current = false;
       localParticipantIdRef.current = "";
-      destroyOutboundAudioMixer();
+
+      try {
+        destroyOutboundAudioMixer();
+      } catch (e) {
+        console.warn("[peer] error destroying audio mixer", e);
+      }
     };
     teardownPeerRef.current = teardownPeer;
 

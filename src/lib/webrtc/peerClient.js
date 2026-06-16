@@ -96,10 +96,9 @@ export function isSignalingServerReachabilityError(message) {
 export function isFatalSignalingError(message) {
   if (!message) return false;
   if (isWaitingForHostMessage(message)) return false;
+  if (isWaitingForParticipantsMessage(message)) return false;
   if (isSignalingRetryMessage(message)) return false;
-  if (isSignalingConfigError(message)) return true;
-  if (isSignalingServerReachabilityError(message)) return true;
-  return false;
+  return true;
 }
 
 export function getSignalingErrorHint(message, { isHost = false } = {}) {
@@ -127,7 +126,7 @@ export function participantSignalingRetryExhaustedError() {
   return SIGNALING_ERROR.PARTICIPANT_RETRY_EXHAUSTED;
 }
 
-export const MAX_SIGNALING_RETRIES = 5;
+export const MAX_SIGNALING_RETRIES = 10;
 export const SIGNALING_CONNECT_TIMEOUT_MS = 45000;
 export const HOST_ID_RETRY_DELAY_MS = 1000;
 
@@ -221,18 +220,57 @@ export function peerErrorMessage(error, { isHost = false } = {}) {
     return "[E011] Waiting for the host to join…";
   }
 
+  let baseMsg = "";
   switch (type) {
     case "network":
     case "socket-error":
     case "socket-closed":
-      return "[E008] Could not reach the signaling server. Check your connection and try again.";
+      baseMsg =
+        "[E008] Could not reach the signaling server. Check your connection and try again";
+      break;
     case "server-error":
-      return "[E009] The signaling server returned an error. It may be restarting.";
+      baseMsg =
+        "[E009] The signaling server returned an error. It may be restarting";
+      break;
     case "peer-unavailable":
-      return "[E010] Waiting for participants…";
+      baseMsg = "[E010] Waiting for participants";
+      break;
+    case "invalid-id":
+      baseMsg = "[E016] The provided meeting ID is invalid";
+      break;
+    case "invalid-key":
+      baseMsg = "[E017] The signaling server API key is invalid or not found";
+      break;
+    case "ssl-unavailable":
+      baseMsg =
+        "[E018] Secure connection (SSL) is unavailable on the signaling server";
+      break;
+    case "browser-incompatible":
+      baseMsg =
+        "[E019] This browser is not compatible with the WebRTC features required";
+      break;
+    case "disconnected":
+      baseMsg = "[E020] Disconnected from the signaling server";
+      break;
     default:
-      return "[E012] Signaling connection failed. Retrying…";
+      baseMsg = "[E012] Signaling connection failed";
+      break;
   }
+
+  const details = error?.message ? `: ${error.message}` : "";
+  const suffix = isRetryablePeerError(error) ? ". Retrying…" : "";
+
+  let finalMsg = baseMsg + details;
+  if (suffix) {
+    finalMsg += suffix;
+  } else {
+    if (type === "peer-unavailable" && !details) {
+      finalMsg += "…";
+    } else {
+      finalMsg += ".";
+    }
+  }
+  return finalMsg;
 }
 
 export function isWaitingForParticipantsMessage(message) {

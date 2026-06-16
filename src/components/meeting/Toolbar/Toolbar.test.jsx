@@ -34,47 +34,19 @@ describe("Toolbar", () => {
         isScreenAudioShared={false}
         isGalleryVisible={false}
         isSidebarVisible={false}
-        isRecording={false}
-        isRecordingPaused={false}
         {...handlers}
       />,
     );
 
-    const footer = screen.getByRole("contentinfo");
-    const buttons = within(footer).getAllByRole("button");
-
     await user.click(screen.getByRole("button", { name: "Share screen" }));
-    await user.click(buttons[5]);
-    await user.click(buttons[6]);
+    await user.click(
+      screen.getByRole("button", { name: "Show video gallery" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Show participants" }));
 
     expect(handlers.onToggleScreenShare).toHaveBeenCalled();
     expect(handlers.onToggleGallery).toHaveBeenCalledTimes(1);
     expect(handlers.onToggleSidebar).toHaveBeenCalledTimes(1);
-  });
-
-  it("starts recording from idle state", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <Toolbar
-        isAudioMuted={false}
-        isVideoMuted={false}
-        screenStream={null}
-        shareScreenAudio={false}
-        isScreenAudioShared={false}
-        isGalleryVisible={false}
-        isSidebarVisible={false}
-        isRecording={false}
-        isRecordingPaused={false}
-        {...handlers}
-      />,
-    );
-
-    const footer = screen.getByRole("contentinfo");
-    const buttons = within(footer).getAllByRole("button");
-    await user.click(buttons[9]);
-
-    expect(handlers.onStartRecording).toHaveBeenCalledTimes(1);
   });
 
   it("marks chat as changed while chat is hidden", () => {

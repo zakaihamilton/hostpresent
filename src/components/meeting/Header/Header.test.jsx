@@ -41,25 +41,6 @@ describe("Header", () => {
     expect(screen.getByText("00:42")).toBeInTheDocument();
   });
 
-  it("calls onBack when back button is clicked", async () => {
-    const user = userEvent.setup();
-    const onBack = jest.fn();
-
-    render(
-      <Header
-        meetingDurationSeconds={0}
-        isRecording={false}
-        isRecordingPaused={false}
-        recordingDurationSeconds={0}
-        onBack={onBack}
-        backLabel="Leave"
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Leave" }));
-    expect(onBack).toHaveBeenCalledTimes(1);
-  });
-
   it("copies room id to clipboard when clicked", async () => {
     const user = userEvent.setup();
 

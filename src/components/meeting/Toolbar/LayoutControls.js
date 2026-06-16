@@ -16,6 +16,7 @@ export function LayoutControls({
   onToggleSidebar,
   onTogglePip,
   onToggleChat,
+  participantCount = 0,
 }) {
   return (
     <div className={styles.cluster}>
@@ -46,6 +47,9 @@ export function LayoutControls({
           }
         >
           <Users />
+          {participantCount > 0
+            ? <span className={styles.countBadge}>{participantCount}</span>
+            : null}
         </button>
       </Tooltip>
 

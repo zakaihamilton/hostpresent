@@ -41,15 +41,20 @@ export const PrimaryView = memo(function PrimaryView({
         </output>
       )}
 
-      {stream && (
-        <div className={styles.media}>
-          <VideoPlayer
-            stream={stream}
-            isMuted={isMuted}
-            audioOutputDeviceId={audioOutputDeviceId}
-          />
-        </div>
-      )}
+      {stream
+        ? <div className={styles.media}>
+            <VideoPlayer
+              stream={stream}
+              isMuted={isMuted}
+              audioOutputDeviceId={audioOutputDeviceId}
+            />
+          </div>
+        : <div className={styles.placeholder} aria-hidden>
+            <div className={styles.placeholderIcon}>
+              <VideoOff size={48} />
+            </div>
+            <span className={styles.placeholderText}>Camera Off</span>
+          </div>}
       <div className={styles.overlay}>
         {connectionStatus && (
           <Tooltip
@@ -58,13 +63,20 @@ export const PrimaryView = memo(function PrimaryView({
           >
             <button
               type="button"
-              className={styles.connectionDotButton}
+              className={styles.connectionBadge}
               onClick={onShowDiagnostics}
               aria-label="View connection diagnostics"
             >
               <span
                 className={`${styles.connectionDot} ${styles[`connectionDot_${connectionStatus}`]}`}
               />
+              <span className={styles.connectionStatusLabel}>
+                {connectionStatus === "connected"
+                  ? "Connected"
+                  : connectionStatus === "connecting"
+                    ? "Connecting..."
+                    : "Disconnected"}
+              </span>
             </button>
           </Tooltip>
         )}

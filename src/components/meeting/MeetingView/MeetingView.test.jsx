@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MeetingView } from "./MeetingView";
 
 const mockDisconnect = jest.fn();
+const mockConfirm = jest.fn();
 let latestToolbarProps = null;
 let mockMeetingSeconds = 0;
 
@@ -56,6 +57,9 @@ jest.mock("@/components/meeting/Toolbar", () => ({
         </button>
         <button type="button" onClick={props.onToggleSidebar}>
           Toggle sidebar
+        </button>
+        <button type="button" onClick={props.onLeave}>
+          Leave meeting
         </button>
       </div>
     );
@@ -125,7 +129,7 @@ jest.mock("@/components/webrtc/PeerStreamConnection", () => ({
 
 jest.mock("@/hooks", () => ({
   useConfirmDialog: () => ({
-    confirm: jest.fn(),
+    confirm: mockConfirm,
     dialogProps: {},
   }),
   useHostControls: () => ({
@@ -156,6 +160,7 @@ jest.mock("@/hooks", () => ({
 describe("MeetingView", () => {
   beforeEach(() => {
     mockDisconnect.mockClear();
+    mockConfirm.mockClear();
     latestToolbarProps = null;
     mockMeetingSeconds = 0;
   });
@@ -176,6 +181,26 @@ describe("MeetingView", () => {
 
     await user.click(
       await screen.findByRole("button", { name: "Leave meeting" }),
+    );
+    expect(mockDisconnect).toHaveBeenCalled();
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("ends the meeting for everyone and navigates back when host confirms", async () => {
+    mockConfirm.mockResolvedValue(true);
+    const onBack = jest.fn();
+
+    render(<MeetingView role="host" token="host-token" onBack={onBack} />);
+
+    await screen.findByTestId("primary-view");
+
+    await latestToolbarProps.onEndMeeting();
+
+    expect(mockConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "End meeting",
+        variant: "danger",
+      }),
     );
     expect(mockDisconnect).toHaveBeenCalled();
     expect(onBack).toHaveBeenCalledTimes(1);

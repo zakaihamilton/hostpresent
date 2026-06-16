@@ -1,8 +1,16 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { BackButton } from "@/components/routing/BackButton";
-import { Edit, Link, Logo, Stop, X } from "@/components/ui/Icons";
+import {
+  Edit,
+  Link,
+  Logo,
+  Stop,
+  X,
+  Play,
+  Pause,
+  Record,
+} from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -16,12 +24,14 @@ export const Header = memo(function Header({
   isRecording,
   isRecordingPaused,
   recordingDurationSeconds,
-  onBack,
-  backLabel = "Back",
   onShowInviteLink = null,
   onSessionTitleChange = null,
   revealTitleOnLogoClick = false,
-  onEndMeeting = null,
+  showRecording = false,
+  onStartRecording = null,
+  onPauseRecording = null,
+  onResumeRecording = null,
+  onStopRecording = null,
 }) {
   const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");
   const roomIdCopyTimerRef = useRef(null);
@@ -146,7 +156,6 @@ export const Header = memo(function Header({
       className={`${styles.header} ${isRecording ? styles.headerRecording : ""}`}
     >
       <div className={styles.leading}>
-        {onBack ? <BackButton label={backLabel} onClick={onBack} /> : null}
         <div className={styles.logo}>
           {revealTitleOnLogoClick
             ? <>
@@ -266,7 +275,63 @@ export const Header = memo(function Header({
           </span>
         </div>
 
-        {isRecording && (
+        {showRecording && (
+          <div className={styles.recordingSection}>
+            {!isRecording
+              ? <Tooltip text="Start Local Recording" placement="bottom">
+                  <button
+                    type="button"
+                    className={styles.recordStartBtn}
+                    onClick={onStartRecording}
+                    aria-label="Start recording"
+                  >
+                    <span className={styles.recordIndicatorDot} />
+                    <span>Record</span>
+                  </button>
+                </Tooltip>
+              : <output
+                  className={`${styles.recordingBadge} ${isRecordingPaused ? styles.recordingPaused : ""}`}
+                  aria-live="polite"
+                >
+                  <span className={styles.recordingDot} aria-hidden />
+                  <span className={styles.recordingLabel}>
+                    {isRecordingPaused ? "REC Paused" : "Recording"}
+                  </span>
+                  <span className={styles.recordingTime}>
+                    {formatDuration(recordingDurationSeconds)}
+                  </span>
+                  <div className={styles.recordingActions}>
+                    {isRecordingPaused
+                      ? <button
+                          type="button"
+                          className={styles.recordingActionBtn}
+                          onClick={onResumeRecording}
+                          aria-label="Resume recording"
+                        >
+                          <Play size={12} />
+                        </button>
+                      : <button
+                          type="button"
+                          className={styles.recordingActionBtn}
+                          onClick={onPauseRecording}
+                          aria-label="Pause recording"
+                        >
+                          <Pause size={12} />
+                        </button>}
+                    <button
+                      type="button"
+                      className={`${styles.recordingActionBtn} ${styles.recordingActionBtnStop}`}
+                      onClick={onStopRecording}
+                      aria-label="Stop and save recording"
+                    >
+                      <Stop size={12} />
+                    </button>
+                  </div>
+                </output>}
+          </div>
+        )}
+
+        {!showRecording && isRecording && (
           <output
             className={`${styles.recordingBadge} ${isRecordingPaused ? styles.recordingPaused : ""}`}
             aria-live="polite"
@@ -280,19 +345,6 @@ export const Header = memo(function Header({
             </span>
           </output>
         )}
-
-        {onEndMeeting
-          ? <Tooltip text="End meeting for everyone" placement="bottom">
-              <button
-                type="button"
-                className={`${styles.iconButton} ${styles.endMeetingButton}`}
-                onClick={onEndMeeting}
-                aria-label="End meeting"
-              >
-                <Stop size={18} />
-              </button>
-            </Tooltip>
-          : null}
 
         <ThemeToggle className={styles.iconButton} />
       </div>

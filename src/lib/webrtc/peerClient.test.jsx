@@ -7,6 +7,7 @@ import {
   isSignalingServerReachabilityError,
   isWaitingForHostMessage,
   isWaitingForParticipantsMessage,
+  peerErrorMessage,
   SIGNALING_CONNECT_TIMEOUT_MS,
   SIGNALING_ERROR,
 } from "./peerClient";
@@ -52,5 +53,42 @@ describe("peerClient signaling errors", () => {
     expect(
       getSignalingErrorHint(SIGNALING_ERROR.HOST_TIMEOUT, { isHost: true }),
     ).toBe(HOST_SIGNING_REACHABILITY_HINT);
+  });
+
+  it("formats peer error messages correctly with details and retrying status", () => {
+    expect(
+      peerErrorMessage({ type: "network", message: "DNS resolution failed" }),
+    ).toBe(
+      "[E008] Could not reach the signaling server. Check your connection and try again: DNS resolution failed. Retrying…",
+    );
+
+    expect(
+      peerErrorMessage({ type: "invalid-key", message: "API key expired" }),
+    ).toBe(
+      "[E017] The signaling server API key is invalid or not found: API key expired.",
+    );
+
+    expect(
+      peerErrorMessage({ type: "unknown-type", message: "something broke" }),
+    ).toBe("[E012] Signaling connection failed: something broke.");
+  });
+
+  it("classifies fatal signaling errors correctly", () => {
+    expect(
+      isFatalSignalingError(
+        peerErrorMessage({ type: "invalid-key", message: "API key expired" }),
+      ),
+    ).toBe(true);
+
+    expect(isFatalSignalingError("[E011] Waiting for the host to join…")).toBe(
+      false,
+    );
+
+    expect(isFatalSignalingError("[E010] Waiting for participants…")).toBe(
+      false,
+    );
+
+    expect(isFatalSignalingError("Retrying…")).toBe(false);
+    expect(isFatalSignalingError("Reconnecting…")).toBe(false);
   });
 });

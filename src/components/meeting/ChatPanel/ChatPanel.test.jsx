@@ -46,7 +46,9 @@ describe("ChatPanel", () => {
 
     it("renders header with Chat icon and title", () => {
       renderChatPanel();
-      expect(screen.getByText("Chat")).toBeInTheDocument();
+      expect(
+        screen.getByText("Chat", { selector: "span" }),
+      ).toBeInTheDocument();
     });
   });
 

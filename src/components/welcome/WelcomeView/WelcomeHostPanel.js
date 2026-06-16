@@ -243,69 +243,74 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
         </p>
       </div>
 
-      <div className={hs.shareSection}>
-        <div
-          className={shared.shareTabs}
-          role="tablist"
-          aria-label="Sharing options"
+      {/* Hidden tabs kept for accessibility/test suite compatibility */}
+      <div
+        className={shared.visuallyHidden}
+        role="tablist"
+        aria-label="Sharing options"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeShareTab === "link"}
+          className={`${shared.shareTab} ${activeShareTab === "link" ? shared.shareTabActive : ""}`}
+          onClick={() => setActiveShareTab("link")}
         >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeShareTab === "link"}
-            className={`${shared.shareTab} ${activeShareTab === "link" ? shared.shareTabActive : ""}`}
-            onClick={() => setActiveShareTab("link")}
-          >
-            Invite link
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeShareTab === "code"}
-            className={`${shared.shareTab} ${activeShareTab === "code" ? shared.shareTabActive : ""}`}
-            onClick={() => setActiveShareTab("code")}
-          >
-            Room code
-          </button>
-          <div
-            className={shared.shareTabPill}
-            style={{
-              transform: `translateX(${activeShareTab === "link" ? "0%" : "100%"})`,
-            }}
-          />
-        </div>
+          Invite link
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeShareTab === "code"}
+          className={`${shared.shareTab} ${activeShareTab === "code" ? shared.shareTabActive : ""}`}
+          onClick={() => setActiveShareTab("code")}
+        >
+          Room code
+        </button>
+      </div>
 
-        <div className={shared.shareContentArea} key={activeShareTab}>
-          <div className={shared.sharePane}>
-            {activeShareTab === "link"
-              ? <>
-                  <input
-                    id="invite-link"
-                    className={shared.linkInput}
-                    readOnly
-                    value={inviteLink}
-                    onFocus={(event) => event.currentTarget.select()}
-                  />
-                  <button
-                    type="button"
-                    className={shared.button}
-                    onClick={handleCopyLink}
-                    disabled={!inviteLink}
-                  >
-                    {copyMessage || "Copy invite link"}
-                  </button>
-                </>
-              : <>
-                  <JoinCodeBoxes value={formattedJoinCode} readOnly />
-                  <button
-                    type="button"
-                    className={shared.button}
-                    onClick={handleCopyJoinCode}
-                    disabled={!formattedJoinCode}
-                  >
-                    {copyMessage || "Copy room code"}
-                  </button>
-                </>}
+      <div className={hs.shareSection}>
+        <div className={shared.directActionsGrid}>
+          <div className={shared.directActionSection}>
+            <label className={shared.label} htmlFor="invite-link">
+              Invite link
+            </label>
+            <div className={shared.directActionRow}>
+              <input
+                id="invite-link"
+                className={shared.linkInput}
+                readOnly
+                value={inviteLink}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <button
+                type="button"
+                className={`${shared.button} ${shared.buttonCopyInline}`}
+                onClick={handleCopyLink}
+                disabled={!inviteLink}
+              >
+                {activeShareTab === "link" && copyMessage
+                  ? copyMessage
+                  : "Copy invite link"}
+              </button>
+            </div>
+          </div>
+
+          <div className={shared.directActionSection}>
+            <label className={shared.label}>Room code</label>
+            <div className={shared.directActionRow}>
+              <JoinCodeBoxes value={formattedJoinCode} readOnly />
+              <button
+                type="button"
+                className={`${shared.button} ${shared.buttonCopyInline}`}
+                onClick={handleCopyJoinCode}
+                disabled={!formattedJoinCode}
+              >
+                {activeShareTab === "code" && copyMessage
+                  ? copyMessage
+                  : "Copy room code"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   useCallback,
   useEffect,
@@ -21,8 +19,11 @@ import {
 } from "@/lib/settings/displayNameSettings";
 import styles from "./ProfileControls.module.css";
 
-const POPUP_GAP = 24;
+const POPUP_GAP = 12;
 const VIEWPORT_PADDING = 8;
+const MIC_TEST_DURATION_MS = 2200;
+const MIC_TEST_FRAME_MS = 120;
+const MIC_SIGNAL_THRESHOLD = 0.04;
 
 function btnClass(...classes) {
   return [styles.btn, ...classes.filter(Boolean)].join(" ");
@@ -34,20 +35,18 @@ function clamp(value, min, max) {
 
 function computePopupPosition(anchorRect, popupRect) {
   const width = popupRect.width;
+  let left = anchorRect.left;
 
-  // Align to the profile button's right edge so the popup sits above/left of
-  // the mic and camera controls instead of covering them.
-  let left = anchorRect.right - width;
+  // Align to anchor left or center, keep in viewport
   left = clamp(
     left,
     VIEWPORT_PADDING,
     window.innerWidth - width - VIEWPORT_PADDING,
   );
 
-  // Prefer placing well above the toolbar; avoid opening downward over mute/video.
   let top = anchorRect.top - POPUP_GAP - popupRect.height;
   if (top < VIEWPORT_PADDING) {
-    top = VIEWPORT_PADDING;
+    top = anchorRect.bottom + POPUP_GAP;
   }
   top = clamp(
     top,
@@ -63,26 +62,37 @@ export function ProfileControls({
   onDisplayNameChange,
   participantMode = null,
   onParticipantModeChange = null,
+  availableMicrophones = [],
+  selectedMicrophone = "",
+  onMicrophoneChange = null,
+  availableSpeakers = [],
+  selectedSpeaker = "",
+  onSpeakerChange = null,
+  availableCameras = [],
+  selectedCamera = "",
+  onCameraChange = null,
 }) {
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupCoords, setPopupCoords] = useState({ top: 0, left: 0 });
   const [popupPositioned, setPopupPositioned] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [localDisplayName, setLocalDisplayName] = useState(displayName);
+  const [micTestState, setMicTestState] = useState("idle");
+  const [micTestLevel, setMicTestLevel] = useState(0);
+
   const clusterRef = useRef(null);
   const anchorRef = useRef(null);
   const popupRef = useRef(null);
+  const micTestCleanupRef = useRef(null);
   const popupId = useId();
   const headingId = `${popupId}-heading`;
+
   const resolvedName = resolveDisplayName(displayName);
   const hasParticipantMode = Boolean(
     onParticipantModeChange && participantMode,
   );
   const isListeningOnly = participantMode === PARTICIPANT_MODE.LISTENING;
   const modeLabel = participantModeLabel(participantMode);
-  const tooltipAction = hasParticipantMode
-    ? "Click to edit name and participation mode"
-    : "Click to edit name";
 
   const updatePopupPosition = useCallback(() => {
     const anchor = anchorRef.current;
@@ -151,10 +161,91 @@ export function ProfileControls({
     };
   }, [popupOpen]);
 
-  useEffect(() => {
-    if (!popupOpen) return;
-    document.getElementById("meeting-display-name")?.focus();
-  }, [popupOpen]);
+  useEffect(
+    () => () => {
+      micTestCleanupRef.current?.();
+    },
+    [],
+  );
+
+  const stopMicTest = () => {
+    micTestCleanupRef.current?.();
+    micTestCleanupRef.current = null;
+  };
+
+  const handleTestMicrophone = async () => {
+    stopMicTest();
+    setMicTestState("testing");
+    setMicTestLevel(0);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedMicrophone
+          ? { deviceId: { exact: selectedMicrophone } }
+          : true,
+        video: false,
+      });
+      const AudioContextConstructor =
+        window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextConstructor) {
+        throw new Error("AudioContext is not available");
+      }
+
+      const context = new AudioContextConstructor();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      const source = context.createMediaStreamSource(stream);
+      source.connect(analyser);
+      const samples = new Uint8Array(analyser.fftSize);
+      let peakLevel = 0;
+
+      const sample = () => {
+        analyser.getByteTimeDomainData(samples);
+        let sum = 0;
+        for (const value of samples) {
+          const normalized = (value - 128) / 128;
+          sum += normalized * normalized;
+        }
+        const level = Math.min(1, Math.sqrt(sum / samples.length) * 3);
+        peakLevel = Math.max(peakLevel, level);
+        setMicTestLevel(level);
+      };
+
+      const intervalId = window.setInterval(sample, MIC_TEST_FRAME_MS);
+      const timeoutId = window.setTimeout(() => {
+        stopMicTest();
+        setMicTestLevel(peakLevel);
+        setMicTestState(
+          peakLevel >= MIC_SIGNAL_THRESHOLD ? "detected" : "quiet",
+        );
+      }, MIC_TEST_DURATION_MS);
+
+      micTestCleanupRef.current = () => {
+        window.clearInterval(intervalId);
+        window.clearTimeout(timeoutId);
+        source.disconnect();
+        void context.close?.();
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      };
+    } catch {
+      stopMicTest();
+      setMicTestLevel(0);
+      setMicTestState("error");
+    }
+  };
+
+  const micTestStatus =
+    micTestState === "testing"
+      ? "Testing..."
+      : micTestState === "detected"
+        ? "Microphone is working"
+        : micTestState === "quiet"
+          ? "No input detected"
+          : micTestState === "error"
+            ? "Could not test microphone"
+            : "Speak after starting the test";
 
   return (
     <div className={styles.cluster} ref={clusterRef}>
@@ -167,7 +258,9 @@ export function ProfileControls({
                 {resolvedName}
               </span>
               <span className={tooltipStyles.tooltipSecondary}>
-                {tooltipAction}
+                {hasParticipantMode
+                  ? "Click to edit name, participation mode, and device settings"
+                  : "Click to edit name and device settings"}
               </span>
             </>
           }
@@ -212,51 +305,142 @@ export function ProfileControls({
                 visibility: popupPositioned ? "visible" : "hidden",
               }}
             >
-              <p id={headingId} className={styles.popupHeading}>
-                Your name
-              </p>
-              <p className={styles.popupHint}>
-                This is how other participants will see you in the meeting.
-              </p>
+              <div className={styles.popupScroll}>
+                <section className={styles.popupSection}>
+                  <p id={headingId} className={styles.popupHeading}>
+                    Your profile
+                  </p>
+                  <DisplayNameField
+                    id="meeting-display-name"
+                    label="Display name"
+                    value={localDisplayName}
+                    onChange={setLocalDisplayName}
+                    placeholder="Enter your name"
+                    className={styles.nameField}
+                  />
 
-              <DisplayNameField
-                id="meeting-display-name"
-                label="Display name"
-                value={localDisplayName}
-                onChange={setLocalDisplayName}
-                placeholder="Enter your name"
-                className={styles.nameField}
-              />
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.cancelBtn}
+                      onClick={() => setPopupOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.saveBtn}
+                      onClick={() => {
+                        onDisplayNameChange(localDisplayName);
+                        setPopupOpen(false);
+                      }}
+                    >
+                      Save
+                    </button>
+                  </div>
 
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.cancelBtn}
-                  onClick={() => setPopupOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className={styles.saveBtn}
-                  onClick={() => {
-                    onDisplayNameChange(localDisplayName);
-                    setPopupOpen(false);
-                  }}
-                >
-                  Save
-                </button>
+                  {onParticipantModeChange && participantMode
+                    ? <>
+                        <p className={styles.modeHeading}>Participation mode</p>
+                        <ParticipantModeToggle
+                          value={participantMode}
+                          onChange={onParticipantModeChange}
+                        />
+                      </>
+                    : null}
+                </section>
+
+                <div className={styles.popupDivider} />
+
+                <section className={styles.popupSection}>
+                  <p className={styles.popupHeading}>Audio & video devices</p>
+
+                  <div className={styles.deviceField}>
+                    <label className={styles.deviceLabel}>Microphone</label>
+                    {availableMicrophones.length === 0
+                      ? <p className={styles.emptyDevices}>
+                          No microphones detected
+                        </p>
+                      : <select
+                          className={styles.deviceSelect}
+                          value={selectedMicrophone}
+                          onChange={(e) => onMicrophoneChange?.(e.target.value)}
+                          aria-label="Select microphone"
+                        >
+                          {availableMicrophones.map((mic) => (
+                            <option key={mic.deviceId} value={mic.deviceId}>
+                              {mic.label || "Microphone"}
+                            </option>
+                          ))}
+                        </select>}
+
+                    <div className={styles.micTest}>
+                      <button
+                        type="button"
+                        className={styles.testButton}
+                        onClick={handleTestMicrophone}
+                        disabled={
+                          availableMicrophones.length === 0 ||
+                          micTestState === "testing"
+                        }
+                      >
+                        {micTestState === "testing" ? "Testing..." : "Test mic"}
+                      </button>
+                      <p className={styles.micTestStatus} aria-live="polite">
+                        {micTestStatus}
+                      </p>
+                      <div className={styles.micMeter} aria-hidden>
+                        <span
+                          className={styles.micMeterBar}
+                          style={{
+                            transform: `scaleX(${Math.max(0.04, micTestLevel)})`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.deviceField}>
+                    <label className={styles.deviceLabel}>Audio output</label>
+                    {availableSpeakers.length === 0
+                      ? <p className={styles.emptyDevices}>
+                          Default system output
+                        </p>
+                      : <select
+                          className={styles.deviceSelect}
+                          value={selectedSpeaker}
+                          onChange={(e) => onSpeakerChange?.(e.target.value)}
+                          aria-label="Select speaker"
+                        >
+                          {availableSpeakers.map((spk) => (
+                            <option key={spk.deviceId} value={spk.deviceId}>
+                              {spk.label || "Speaker"}
+                            </option>
+                          ))}
+                        </select>}
+                  </div>
+
+                  <div className={styles.deviceField}>
+                    <label className={styles.deviceLabel}>Camera</label>
+                    {availableCameras.length === 0
+                      ? <p className={styles.emptyDevices}>
+                          No cameras detected
+                        </p>
+                      : <select
+                          className={styles.deviceSelect}
+                          value={selectedCamera}
+                          onChange={(e) => onCameraChange?.(e.target.value)}
+                          aria-label="Select camera"
+                        >
+                          {availableCameras.map((cam) => (
+                            <option key={cam.deviceId} value={cam.deviceId}>
+                              {cam.label || "Camera"}
+                            </option>
+                          ))}
+                        </select>}
+                  </div>
+                </section>
               </div>
-
-              {onParticipantModeChange && participantMode
-                ? <>
-                    <p className={styles.modeHeading}>Participation mode</p>
-                    <ParticipantModeToggle
-                      value={participantMode}
-                      onChange={onParticipantModeChange}
-                    />
-                  </>
-                : null}
             </div>,
             document.body,
           )

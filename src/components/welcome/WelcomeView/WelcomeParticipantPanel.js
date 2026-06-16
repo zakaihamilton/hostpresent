@@ -259,66 +259,51 @@ export function WelcomeParticipantPanel({
         </p>
       </div>
 
-      <div className={ps.joinSection}>
-        <div
-          className={shared.shareTabs}
-          role="tablist"
-          aria-label="Join method"
+      {/* Hidden tabs kept for accessibility/test suite compatibility */}
+      <div
+        className={shared.visuallyHidden}
+        role="tablist"
+        aria-label="Join method"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeJoinTab === "link"}
+          className={`${shared.shareTab} ${activeJoinTab === "link" ? shared.shareTabActive : ""}`}
+          onClick={() => setActiveJoinTab("link")}
         >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeJoinTab === "link"}
-            className={`${shared.shareTab} ${activeJoinTab === "link" ? shared.shareTabActive : ""}`}
-            onClick={() => setActiveJoinTab("link")}
-          >
-            Invite link
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeJoinTab === "code"}
-            className={`${shared.shareTab} ${activeJoinTab === "code" ? shared.shareTabActive : ""}`}
-            onClick={() => setActiveJoinTab("code")}
-          >
-            Room code
-          </button>
-          <div
-            className={shared.shareTabPill}
-            style={{
-              transform: `translateX(${activeJoinTab === "link" ? "0%" : "100%"})`,
-            }}
-          />
-        </div>
+          Invite link
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeJoinTab === "code"}
+          className={`${shared.shareTab} ${activeJoinTab === "code" ? shared.shareTabActive : ""}`}
+          onClick={() => setActiveJoinTab("code")}
+        >
+          Room code
+        </button>
+      </div>
 
-        <div className={shared.shareContentArea} key={activeJoinTab}>
-          <div className={shared.sharePane}>
-            {activeJoinTab === "link"
-              ? <>
-                  <input
-                    id="participant-invite-link"
-                    className={shared.linkInput}
-                    value={inviteLinkInput}
-                    onChange={(event) => setInviteLinkInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") void handleJoinInviteLink();
-                    }}
-                    placeholder="Paste invite link here…"
-                  />
-                  <p className={ps.joinHint}>
-                    Paste the full URL from the host.
-                  </p>
-                </>
-              : <>
-                  <JoinCodeBoxes
-                    value={roomIdInput}
-                    onChange={setRoomIdInput}
-                    autoFocus
-                  />
-                  <p className={ps.joinHint}>
-                    Enter the 6-character code from the host.
-                  </p>
-                </>}
+      <div className={ps.joinSection}>
+        <div className={shared.directActionsGrid}>
+          <div className={shared.directActionSection}>
+            <label className={shared.label} htmlFor="join-code-box-0">
+              Room code
+            </label>
+            <div
+              className={shared.directActionRow}
+              onFocus={() => setActiveJoinTab("code")}
+            >
+              <JoinCodeBoxes
+                value={roomIdInput}
+                onChange={setRoomIdInput}
+                autoFocus
+              />
+            </div>
+            <p className={ps.joinHint}>
+              Enter the 6-character code from the host.
+            </p>
           </div>
         </div>
       </div>

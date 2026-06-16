@@ -39,58 +39,17 @@ export function WelcomeView({
       </header>
 
       <div className={styles.container}>
-        {/* Left Column: Clean, Trusted Editorial Showcase & High-Fidelity CSS Preview */}
-        <div className={styles.heroColumn}>
-          <div className={styles.brandRow}>
-            <Logo size={36} className={styles.brandLogo} />
-            <span className={styles.brandName}>Host Present</span>
-          </div>
-
-          <h2 className={styles.heroTitle}>
-            Presenter-led meetings with room codes, focused streams, and local
-            recording.
-          </h2>
-          <p className={styles.heroSubtitle}>
-            Start a room, share the code, and keep the session centered on the
-            host. Participants can join from the browser with no installation.
+        <div className={styles.brandRowHeader}>
+          <Logo size={44} className={styles.brandLogo} />
+          <h1 className={styles.brandName}>Host Present</h1>
+          <p className={styles.brandSubtitle}>
+            Presenter-led sessions with controlled participant focus and local
+            recording
           </p>
-
-          <div className={styles.workflowList}>
-            <span className={styles.workflowItem}>Create room</span>
-            <span className={styles.workflowDivider} aria-hidden />
-            <span className={styles.workflowItem}>Share invite</span>
-            <span className={styles.workflowDivider} aria-hidden />
-            <span className={styles.workflowItem}>Present live</span>
-          </div>
-
-          {/* High-fidelity app preview showcase */}
-          <div className={styles.previewFrame}>
-            <Image
-              src="/welcome-preview.png"
-              alt="Host Present presenter view with participant tiles and meeting controls"
-              className={styles.previewImage}
-              width={1536}
-              height={1024}
-              priority
-              sizes="(max-width: 967px) 0px, 42vw"
-            />
-          </div>
         </div>
 
-        {/* Right Column: Setup Card */}
+        {/* Setup Card: Now the main visual anchor */}
         <div className={styles.card}>
-          <div className={styles.header}>
-            <div className={styles.headerTop}>
-              <div className={styles.titleRowMobile}>
-                <Logo size={28} />
-                <h1 className={styles.title}>Host Present</h1>
-              </div>
-            </div>
-            <p className={styles.subtitle}>
-              Create a presenter room or join one that was shared with you.
-            </p>
-          </div>
-
           <SecurityNotice />
 
           <div className={styles.tabs} role="tablist" aria-label="Welcome mode">
@@ -98,26 +57,28 @@ export function WelcomeView({
               type="button"
               role="tab"
               aria-selected={role === APP_ROLE.HOST}
+              aria-label="Host"
               className={`${styles.tab} ${role === APP_ROLE.HOST ? styles.tabActive : ""}`}
               onClick={() => switchTab(APP_ROLE.HOST)}
             >
-              Host
+              <span className={styles.tabHeading}>Host a Session</span>
+              <span className={styles.tabSubheading}>
+                Create a room and record locally
+              </span>
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={role === APP_ROLE.PARTICIPANT}
+              aria-label="Participant"
               className={`${styles.tab} ${role === APP_ROLE.PARTICIPANT ? styles.tabActive : ""}`}
               onClick={() => switchTab(APP_ROLE.PARTICIPANT)}
             >
-              Participant
+              <span className={styles.tabHeading}>Join a Session</span>
+              <span className={styles.tabSubheading}>
+                Enter code to participate
+              </span>
             </button>
-            <div
-              className={styles.tabPill}
-              style={{
-                transform: `translateX(${role === APP_ROLE.HOST ? "0%" : "100%"})`,
-              }}
-            />
           </div>
 
           <div className={styles.panel} key={role}>
@@ -135,7 +96,7 @@ export function WelcomeView({
         </div>
       </div>
 
-      {/* Global Viewport Footer pinned to the absolute bottom */}
+      {/* Global Viewport Footer */}
       <footer className={styles.footer}>
         <span className={styles.footerText}>Zakai Hamilton</span>
         <Tooltip text="GitHub Repository" placement="top">

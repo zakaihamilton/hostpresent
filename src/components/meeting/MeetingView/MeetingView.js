@@ -447,6 +447,13 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   }, [isHost, token]);
 
   useEffect(() => {
+    document.body.classList.add("in-meeting");
+    return () => {
+      document.body.classList.remove("in-meeting");
+    };
+  }, []);
+
+  useEffect(() => {
     if (meetingSeconds >= 21600) {
       const autoEnd = async () => {
         if (isHost) {
@@ -551,8 +558,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     }
     roomConnectionRef.current?.send(createMeetingEndedMessage());
     roomConnectionRef.current?.disconnect();
-    window.open("", "_self");
-    window.close();
     handleBack();
   }, [confirm, isHost, isRecording, stopRecordingAsync, handleBack]);
 
@@ -913,14 +918,16 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
-        onBack={handleBack}
-        backLabel="Leave meeting"
         onShowInviteLink={
           isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
         revealTitleOnLogoClick={!isHost}
-        onEndMeeting={isHost ? handleEndMeeting : null}
+        showRecording={isHost}
+        onStartRecording={startRecording}
+        onPauseRecording={pauseRecording}
+        onResumeRecording={resumeRecording}
+        onStopRecording={stopRecording}
       />
 
       <ConnectionBanner
@@ -1167,14 +1174,14 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isPipVisible={isPipVisible}
         isChatVisible={isChatVisible}
         hasUnreadChat={hasUnreadChat}
-        isRecording={isRecording}
-        isRecordingPaused={isRecordingPaused}
         displayName={displayNameInput}
         onDisplayNameChange={handleDisplayNameChange}
         participantMode={participantMode}
-        onParticipantModeChange={handleParticipantModeChange}
+        onParticipantModeChange={
+          handleDisplayNameChange ? handleParticipantModeChange : null
+        }
         showRecording={isHost}
-        allowScreenShare
+        allowScreenShare={true}
         availableMicrophones={availableMicrophones}
         selectedMicrophone={selectedMicrophone}
         onMicrophoneChange={switchMicrophone}
@@ -1192,10 +1199,14 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         onToggleSidebar={handleToggleSidebar}
         onTogglePip={handleTogglePip}
         onToggleChat={handleToggleChat}
-        onStartRecording={startRecording}
-        onPauseRecording={pauseRecording}
-        onResumeRecording={resumeRecording}
-        onStopRecording={stopRecording}
+        isHost={isHost}
+        onEndMeeting={handleEndMeeting}
+        onLeave={handleBack}
+        participantCount={
+          isHost
+            ? 1 + videoParticipants.length + audioList.length
+            : 2 + peerParticipants.length
+        }
       />
     </div>
   );
