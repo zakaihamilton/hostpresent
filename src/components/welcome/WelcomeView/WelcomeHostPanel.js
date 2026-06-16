@@ -228,14 +228,21 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     return (
       <div className={shared.waiting}>
         <div className={shared.spinner} aria-hidden />
-        <p className={shared.helpText}>Preparing your room…</p>
+        <p className={shared.helpText}>Creating a room you can share…</p>
       </div>
     );
   }
 
   return (
     <div className={shared.welcomePanel}>
-      {/* Sharing section with segmented tabs */}
+      <div className={shared.panelIntro}>
+        <h2 className={shared.panelTitle}>Host a session</h2>
+        <p className={shared.panelText}>
+          Your room is ready. Share the invite, name the session, then start
+          presenting.
+        </p>
+      </div>
+
       <div className={hs.shareSection}>
         <div
           className={shared.shareTabs}
@@ -249,7 +256,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
             className={`${shared.shareTab} ${activeShareTab === "link" ? shared.shareTabActive : ""}`}
             onClick={() => setActiveShareTab("link")}
           >
-            Invite Link
+            Invite link
           </button>
           <button
             type="button"
@@ -258,7 +265,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
             className={`${shared.shareTab} ${activeShareTab === "code" ? shared.shareTabActive : ""}`}
             onClick={() => setActiveShareTab("code")}
           >
-            Room Code
+            Room code
           </button>
           <div
             className={shared.shareTabPill}
@@ -317,7 +324,9 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
           autoComplete="off"
           spellCheck={false}
         />
-        <p className={shared.helpText}>Used as the recording file name.</p>
+        <p className={shared.helpText}>
+          This also becomes the default recording file name.
+        </p>
       </div>
 
       <DisplayNameField
@@ -344,7 +353,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
             onClick={handleGenerateRoom}
             disabled={isActionPending}
           >
-            Generate new room
+            New room
           </button>
           <RecentRoomsTrigger
             rooms={recentRooms}

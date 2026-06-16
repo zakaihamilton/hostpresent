@@ -62,13 +62,18 @@ export const InviteBar = memo(function InviteBar({
     .join(" ");
 
   return (
-    <div className={styles.backdrop} onClick={onDismiss}>
+    <div className={styles.backdrop}>
+      <button
+        type="button"
+        className={styles.backdropDismiss}
+        onClick={onDismiss}
+        aria-label="Close invite dialog"
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={dialogId}
         className={styles.dialog}
-        onClick={(event) => event.stopPropagation()}
       >
         <div className={styles.header}>
           <h2 id={dialogId} className={styles.title}>

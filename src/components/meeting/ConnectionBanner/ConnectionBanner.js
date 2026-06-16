@@ -11,17 +11,17 @@ export const ConnectionBanner = memo(function ConnectionBanner({
   return (
     <>
       {!isHost && !hostPresent && connectionError
-        ? <div className={styles.hostWaitingBanner} role="status">
+        ? <output className={styles.hostWaitingBanner}>
             <p className={styles.hostWaitingText}>{connectionError}</p>
-          </div>
+          </output>
         : null}
 
       {!isHost && !hostPresent && !connectionError
-        ? <div className={styles.hostWaitingBanner} role="status">
+        ? <output className={styles.hostWaitingBanner}>
             <p className={styles.hostWaitingText}>
-              [E011] Waiting for the host to join…
+              Waiting for the host to start the session.
             </p>
-          </div>
+          </output>
         : null}
 
       {connectionError &&

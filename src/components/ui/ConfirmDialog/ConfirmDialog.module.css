@@ -10,11 +10,22 @@
   backdrop-filter: blur(4px);
 }
 
+.backdropDismiss {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
 .dialog {
   width: min(100%, 420px);
+  position: relative;
+  z-index: 1;
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 1.5rem;
 }
@@ -40,7 +51,7 @@
 
 .cancelBtn,
 .confirmBtn {
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   border: 1px solid var(--border);
   padding: 0.55rem 1rem;
   font-size: 0.875rem;

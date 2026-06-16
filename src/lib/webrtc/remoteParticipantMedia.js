@@ -60,6 +60,8 @@ export function attachRemoteStreamMediaListeners(stream, onChange) {
   return () => {
     stream.removeEventListener("addtrack", handleAddTrack);
     stream.removeEventListener("removetrack", sync);
-    trackCleanups.forEach((cleanup) => cleanup());
+    trackCleanups.forEach((cleanup) => {
+      cleanup();
+    });
   };
 }

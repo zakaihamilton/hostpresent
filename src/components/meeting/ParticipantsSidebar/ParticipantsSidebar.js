@@ -243,6 +243,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   const totalCount = isHost
     ? 1 + videoParticipants.length + audioList.length
     : 2 + peerParticipants.length;
+  const remoteCount = Math.max(0, totalCount - 1);
   const hasRemoteParticipants =
     isHost && (videoParticipants.length > 0 || audioList.length > 0);
 
@@ -317,9 +318,16 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
     >
       <aside className={styles.sidebar}>
         <div className={styles.header}>
-          <div className={styles.headerTitle}>
-            <span>Participants</span>
-            <span className={styles.count}>{totalCount}</span>
+          <div className={styles.headerCopy}>
+            <div className={styles.headerTitle}>
+              <span>Participants</span>
+              <span className={styles.count}>{totalCount}</span>
+            </div>
+            <p className={styles.headerMeta}>
+              {remoteCount === 0
+                ? "Only you are in the room."
+                : `${remoteCount} ${remoteCount === 1 ? "guest" : "guests"} connected.`}
+            </p>
           </div>
           <div className={styles.headerActions}>
             {hasRemoteParticipants

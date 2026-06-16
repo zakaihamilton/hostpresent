@@ -3,6 +3,7 @@ import { themeInitScript } from "@/lib/settings/themeScript";
 import "./globals.css";
 
 export const metadata = {
+  metadataBase: new URL("https://hostpresent.app"),
   title: "Host Present",
   description: "Host presentation and meeting controls",
   applicationName: "Host Present",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Theme bootstrap must run before hydration to avoid a light/dark flash. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link
           rel="icon"

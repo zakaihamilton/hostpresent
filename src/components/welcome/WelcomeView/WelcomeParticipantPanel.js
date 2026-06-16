@@ -244,7 +244,7 @@ export function WelcomeParticipantPanel({
       <div className={shared.welcomePanel}>
         <div className={shared.waiting}>
           <div className={shared.spinner} aria-hidden />
-          <p className={shared.helpText}>Joining meeting…</p>
+          <p className={shared.helpText}>Checking the room and joining…</p>
         </div>
       </div>
     );
@@ -252,7 +252,13 @@ export function WelcomeParticipantPanel({
 
   return (
     <div className={shared.welcomePanel}>
-      {/* Join method — segmented tabs matching host panel design */}
+      <div className={shared.panelIntro}>
+        <h2 className={shared.panelTitle}>Join a session</h2>
+        <p className={shared.panelText}>
+          Use the invite from the host, or enter the short room code.
+        </p>
+      </div>
+
       <div className={ps.joinSection}>
         <div
           className={shared.shareTabs}
@@ -266,7 +272,7 @@ export function WelcomeParticipantPanel({
             className={`${shared.shareTab} ${activeJoinTab === "link" ? shared.shareTabActive : ""}`}
             onClick={() => setActiveJoinTab("link")}
           >
-            Invite Link
+            Invite link
           </button>
           <button
             type="button"
@@ -275,7 +281,7 @@ export function WelcomeParticipantPanel({
             className={`${shared.shareTab} ${activeJoinTab === "code" ? shared.shareTabActive : ""}`}
             onClick={() => setActiveJoinTab("code")}
           >
-            Room Code
+            Room code
           </button>
           <div
             className={shared.shareTabPill}
@@ -300,7 +306,7 @@ export function WelcomeParticipantPanel({
                     placeholder="Paste invite link here…"
                   />
                   <p className={ps.joinHint}>
-                    Paste the full URL shared by the host
+                    Paste the full URL from the host.
                   </p>
                 </>
               : <>
@@ -310,7 +316,7 @@ export function WelcomeParticipantPanel({
                     autoFocus
                   />
                   <p className={ps.joinHint}>
-                    Enter the 6-character code shared by the host
+                    Enter the 6-character code from the host.
                   </p>
                 </>}
           </div>

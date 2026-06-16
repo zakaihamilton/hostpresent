@@ -29,7 +29,6 @@ function audioConstraintsForDevice(deviceId) {
 export function MediaControls({
   isHost,
   roomConnection,
-  streamListenerCleanupsRef,
   localStream,
   setLocalStream,
   screenStream,

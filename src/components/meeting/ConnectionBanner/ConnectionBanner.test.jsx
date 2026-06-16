@@ -28,7 +28,7 @@ describe("ConnectionBanner", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Waiting for the host to join…",
+      "Waiting for the host to start the session.",
     );
   });
 

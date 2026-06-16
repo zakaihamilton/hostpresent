@@ -51,7 +51,7 @@ describe("WelcomeParticipantPanel", () => {
     const user = userEvent.setup();
     render(<WelcomeParticipantPanel {...defaultProps} />);
 
-    await user.click(screen.getByRole("tab", { name: "Room Code" }));
+    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 6")).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe("WelcomeParticipantPanel", () => {
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
 
-    await user.click(screen.getByRole("tab", { name: "Room Code" }));
+    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     for (let i = 0; i < 6; i++) {
       const char = String.fromCharCode(65 + i);
@@ -134,7 +134,7 @@ describe("WelcomeParticipantPanel", () => {
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
 
-    await user.click(screen.getByRole("tab", { name: "Room Code" }));
+    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     const box1 = screen.getByLabelText("Character 1");
     await user.type(box1, "a");

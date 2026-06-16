@@ -11,12 +11,6 @@
   min-height: 0;
 }
 
-.slotFlex .panel {
-  width: auto;
-  border-left: none;
-  box-shadow: none;
-}
-
 .slotClosed {
   width: 0;
   pointer-events: none;
@@ -37,6 +31,12 @@
 .slotClosed .panel {
   transform: translateX(100%);
   border-left-color: transparent;
+  box-shadow: none;
+}
+
+.slotFlex .panel {
+  width: auto;
+  border-left: none;
   box-shadow: none;
 }
 
@@ -70,7 +70,7 @@
   width: 36px;
   height: 36px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--bg-hover);
   color: var(--text-muted);
   cursor: pointer;
@@ -94,7 +94,7 @@
   width: 36px;
   height: 36px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--bg-hover);
   color: var(--text-muted);
   cursor: pointer;
@@ -209,7 +209,7 @@
   color: var(--text-muted);
   background: var(--bg-hover);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   padding: 0.25rem 0.5rem;
   min-height: 36px;
   transition: border-color 0.2s ease;
@@ -449,7 +449,7 @@
   flex: 1;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--bg-hover);
   color: var(--text-main);
   font-size: 0.8125rem;
@@ -476,7 +476,7 @@
   width: 36px;
   height: 36px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--primary);
   color: white;
   cursor: pointer;

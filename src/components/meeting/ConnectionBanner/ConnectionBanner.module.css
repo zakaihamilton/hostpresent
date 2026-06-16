@@ -1,4 +1,5 @@
 .hostWaitingBanner {
+  display: block;
   padding: 0.65rem max(0.75rem, env(safe-area-inset-left, 0))
     max(0.65rem, env(safe-area-inset-right, 0));
   background: color-mix(in srgb, var(--warning, #ca8a04) 12%, var(--bg-panel));

@@ -11,12 +11,6 @@
   min-height: 0;
 }
 
-.slotFlex .sidebar {
-  width: auto;
-  border-left: none;
-  box-shadow: none;
-}
-
 .slotClosed {
   width: 0;
   pointer-events: none;
@@ -40,6 +34,12 @@
   box-shadow: none;
 }
 
+.slotFlex .sidebar {
+  width: auto;
+  border-left: none;
+  box-shadow: none;
+}
+
 .header {
   padding: 1.25rem 1rem 0.75rem;
   border-bottom: 1px solid var(--border);
@@ -52,11 +52,26 @@
   flex-shrink: 0;
 }
 
+.headerCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
 .headerTitle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+}
+
+.headerMeta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .headerActions {
@@ -73,7 +88,7 @@
   width: 36px;
   height: 36px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--bg-hover);
   color: var(--text-muted);
   cursor: pointer;
@@ -103,7 +118,7 @@
   width: 36px;
   height: 36px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--bg-hover);
   color: var(--text-muted);
   cursor: pointer;

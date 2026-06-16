@@ -281,6 +281,7 @@ export function Tooltip({
 
   return (
     <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: Tooltip wrapper div needs to listen to mouse and focus events */}
       <div
         ref={anchorRef}
         className={styles.wrapper}

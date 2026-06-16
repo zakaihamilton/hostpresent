@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronDown,
@@ -79,7 +86,7 @@ export function MediaControls({
   const outputSectionId = `${menuId}-output`;
   const videoSectionId = `${menuId}-video`;
 
-  const updateMenuPosition = () => {
+  const updateMenuPosition = useCallback(() => {
     const anchor = menuAnchorRef.current;
     const menu = menuRef.current;
     if (!anchor || !menu) return;
@@ -92,7 +99,7 @@ export function MediaControls({
         ? prev
         : nextCoords,
     );
-  };
+  }, []);
 
   useLayoutEffect(() => {
     setMounted(true);

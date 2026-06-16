@@ -1,9 +1,7 @@
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   height: 100dvh;
-  width: 100vw;
   width: 100dvw;
   max-width: 100%;
   background-color: var(--bg-main);

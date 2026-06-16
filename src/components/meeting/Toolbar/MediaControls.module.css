@@ -32,18 +32,19 @@
 }
 
 .btnDanger {
-  background: rgba(239, 68, 68, 0.12);
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-panel));
   color: var(--danger);
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--danger) 36%, transparent);
+  box-shadow: inset 0 -2px 0 var(--danger);
 }
 
 .btnDanger:hover {
-  background: var(--danger);
-  color: white;
+  background: color-mix(in srgb, var(--danger) 18%, var(--bg-panel));
+  color: var(--danger);
 }
 
 .audioBtn {
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  border-radius: 10px 0 0 10px;
   border-right: none;
 }
 
@@ -64,7 +65,7 @@
 .menuBtn {
   width: 30px;
   height: 44px;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-radius: 0 10px 10px 0;
 }
 
 .menuBtn svg {

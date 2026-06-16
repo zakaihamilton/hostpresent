@@ -50,8 +50,8 @@ export function SecurityNotice() {
   }
 
   return (
-    <div className={styles.notice} role="status">
+    <output className={styles.notice}>
       <strong>{notice.title}</strong> {notice.message}
-    </div>
+    </output>
   );
 }

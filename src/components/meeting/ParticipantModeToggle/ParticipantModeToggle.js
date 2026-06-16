@@ -6,11 +6,10 @@ import styles from "./ParticipantModeToggle.module.css";
 
 export function ParticipantModeToggle({ value, onChange, compact = false }) {
   return (
-    <div
+    <fieldset
       className={`${styles.group} ${compact ? styles.groupCompact : ""}`}
-      role="group"
-      aria-label="Participation mode"
     >
+      <legend className={styles.legend}>Participation mode</legend>
       <button
         type="button"
         className={`${styles.option} ${value === PARTICIPANT_MODE.AVAILABLE ? styles.optionActive : ""}`}
@@ -27,6 +26,6 @@ export function ParticipantModeToggle({ value, onChange, compact = false }) {
       >
         {participantModeLabel(PARTICIPANT_MODE.LISTENING)}
       </button>
-    </div>
+    </fieldset>
   );
 }

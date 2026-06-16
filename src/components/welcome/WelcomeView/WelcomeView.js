@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { GitHub, LinkedIn, Logo } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -46,21 +47,32 @@ export function WelcomeView({
           </div>
 
           <h2 className={styles.heroTitle}>
-            Premium video meetings. Designed for professional presenters.
+            Presenter-led meetings with room codes, focused streams, and local
+            recording.
           </h2>
           <p className={styles.heroSubtitle}>
-            Conduct reliable browser-based sessions with complete presenter
-            control. Orchestrate participant stream focus and save crystal-clear
-            recordings locally with zero installation.
+            Start a room, share the code, and keep the session centered on the
+            host. Participants can join from the browser with no installation.
           </p>
 
-          {/* Premium High-Fidelity App Preview Showcase */}
+          <div className={styles.workflowList}>
+            <span className={styles.workflowItem}>Create room</span>
+            <span className={styles.workflowDivider} aria-hidden />
+            <span className={styles.workflowItem}>Share invite</span>
+            <span className={styles.workflowDivider} aria-hidden />
+            <span className={styles.workflowItem}>Present live</span>
+          </div>
+
+          {/* High-fidelity app preview showcase */}
           <div className={styles.previewFrame}>
-            <img
+            <Image
               src="/welcome-preview.png"
-              alt="Host Present Premium Presentation Interface"
+              alt="Host Present presenter view with participant tiles and meeting controls"
               className={styles.previewImage}
-              loading="eager"
+              width={1536}
+              height={1024}
+              priority
+              sizes="(max-width: 967px) 0px, 42vw"
             />
           </div>
         </div>
@@ -75,7 +87,7 @@ export function WelcomeView({
               </div>
             </div>
             <p className={styles.subtitle}>
-              Start a meeting as host or join as a participant.
+              Create a presenter room or join one that was shared with you.
             </p>
           </div>
 

@@ -41,14 +41,19 @@ export function ConfirmDialog({
       : styles.confirmBtn;
 
   return (
-    <div className={styles.backdrop} onClick={onCancel}>
+    <div className={styles.backdrop}>
+      <button
+        type="button"
+        className={styles.backdropDismiss}
+        onClick={onCancel}
+        aria-label="Cancel dialog"
+      />
       <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         className={styles.dialog}
-        onClick={(event) => event.stopPropagation()}
       >
         <h2 id={titleId} className={styles.title}>
           {title}

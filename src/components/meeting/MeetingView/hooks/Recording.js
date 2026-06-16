@@ -78,7 +78,6 @@ export function Recording({
   videoParticipants = [],
   focusedParticipantId = "host",
   resetRecordingTimer,
-  videoParticipantsLength,
   isRecording,
   setIsRecording,
   isRecordingPaused,

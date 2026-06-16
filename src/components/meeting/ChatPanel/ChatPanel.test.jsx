@@ -145,7 +145,7 @@ describe("ChatPanel", () => {
 
     it("clears input after sending", async () => {
       const user = userEvent.setup();
-      const { onSendMessage } = renderChatPanel();
+      renderChatPanel();
       const input = screen.getByLabelText("Chat message");
       await user.type(input, "Hello");
       await user.click(screen.getByLabelText("Send message"));

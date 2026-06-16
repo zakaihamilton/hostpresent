@@ -189,24 +189,17 @@ export const Header = memo(function Header({
                   aria-label="Rename meeting"
                 />
               : <>
-                  <span
+                  <button
+                    type="button"
                     className={`${styles.logoText} ${styles.logoTextVisible} ${styles.logoTextEditable}`}
                     onClick={handleTitleClick}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleTitleClick();
-                      }
-                    }}
                     title="Click to rename meeting"
                   >
                     <span className={styles.logoTextLabel}>{meetingName}</span>
                     <span className={styles.editIconWrapper}>
                       <Edit size={14} className={styles.editIcon} />
                     </span>
-                  </span>
+                  </button>
                   <Tooltip text="Rename meeting" placement="bottom">
                     <button
                       type="button"

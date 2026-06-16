@@ -81,7 +81,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .closeButton:hover {
@@ -108,31 +110,19 @@
 .statusBanner_connected {
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.25);
-  color: #065f46;
-}
-
-:global([data-theme="dark"]) .statusBanner_connected {
-  color: #34d399;
+  color: var(--success, #10b981);
 }
 
 .statusBanner_connecting {
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
-  color: #9a3412;
-}
-
-:global([data-theme="dark"]) .statusBanner_connecting {
-  color: #fbbf24;
+  color: var(--warning, #f59e0b);
 }
 
 .statusBanner_error {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #991b1b;
-}
-
-:global([data-theme="dark"]) .statusBanner_error {
-  color: #f87171;
+  color: var(--danger, #ef4444);
 }
 
 .statusBannerTitle {
@@ -214,7 +204,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: background 0.2s ease, transform 0.1s;
+  transition:
+    background 0.2s ease,
+    transform 0.1s;
 }
 
 .reconnectButton:hover {
@@ -235,7 +227,9 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .closeAction:hover {
@@ -243,8 +237,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -259,8 +257,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @media (max-width: 640px) {
@@ -278,26 +281,14 @@
 }
 
 .textSuccess {
-  color: #047857;
-}
-
-:global([data-theme="dark"]) .textSuccess {
   color: var(--success, #10b981);
 }
 
 .textWarning {
-  color: #b45309;
-}
-
-:global([data-theme="dark"]) .textWarning {
   color: var(--warning, #f59e0b);
 }
 
 .textDanger {
-  color: #b91c1c;
-}
-
-:global([data-theme="dark"]) .textDanger {
   color: var(--danger, #ef4444);
 }
 
@@ -310,19 +301,11 @@
 }
 
 .routeDirect {
-  color: #047857;
-}
-
-:global([data-theme="dark"]) .routeDirect {
   color: var(--success, #10b981);
   text-shadow: 0 0 4px rgba(16, 185, 129, 0.2);
 }
 
 .routeRelayed {
-  color: #b45309;
-}
-
-:global([data-theme="dark"]) .routeRelayed {
   color: var(--warning, #f59e0b);
   text-shadow: 0 0 4px rgba(245, 158, 11, 0.2);
 }

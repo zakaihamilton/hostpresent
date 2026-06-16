@@ -358,8 +358,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     setIsRecordingPaused,
     resetRecordingTimer,
     publishParticipantMediaStatus,
-    isRecording,
-    isRecordingPaused,
     setSessionTitle,
   });
 
@@ -418,7 +416,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     videoParticipants,
     focusedParticipantId: effectiveFocusedId,
     resetRecordingTimer,
-    videoParticipantsLength: videoParticipants.length,
     isRecording,
     setIsRecording,
     isRecordingPaused,

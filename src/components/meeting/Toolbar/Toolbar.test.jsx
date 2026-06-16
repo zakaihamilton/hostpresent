@@ -17,7 +17,9 @@ describe("Toolbar", () => {
   };
 
   beforeEach(() => {
-    Object.values(handlers).forEach((handler) => handler.mockClear());
+    Object.values(handlers).forEach((handler) => {
+      handler.mockClear();
+    });
   });
 
   it("calls media and layout toggles", async () => {

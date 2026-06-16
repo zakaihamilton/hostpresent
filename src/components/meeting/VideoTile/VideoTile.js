@@ -61,7 +61,11 @@ export const VideoTile = memo(function VideoTile({
         </div>
       )}
       {mediaBadgeIcon
-        ? <div className={styles.mediaBadge} aria-label={mediaBadgeLabel}>
+        ? <div
+            className={styles.mediaBadge}
+            role="img"
+            aria-label={mediaBadgeLabel}
+          >
             {mediaBadgeIcon}
             <span>{mediaBadgeLabel}</span>
           </div>

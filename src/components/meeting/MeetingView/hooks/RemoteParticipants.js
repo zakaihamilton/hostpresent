@@ -90,8 +90,6 @@ export function RemoteParticipants({
   setIsRecordingPaused,
   resetRecordingTimer,
   publishParticipantMediaStatus,
-  isRecording,
-  isRecordingPaused,
   setSessionTitle,
 }) {
   const [hostStream, setHostStream] = useState(null);

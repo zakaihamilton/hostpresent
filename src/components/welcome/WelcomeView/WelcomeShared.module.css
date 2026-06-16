@@ -4,6 +4,28 @@
   gap: 0.75rem;
 }
 
+.panelIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.25rem;
+}
+
+.panelTitle {
+  color: var(--text-main);
+  font-family: "Outfit", var(--font-sans), sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.panelText {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;
@@ -13,8 +35,7 @@
 .label {
   font-size: 0.6875rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--text-muted);
 }
 
@@ -81,7 +102,7 @@
 .button {
   flex: 1;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--primary);
   color: #ffffff;
   font-size: 0.8125rem;
@@ -93,14 +114,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   transition: all 0.15s ease;
 }
 
 .button:hover:not(:disabled) {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .button:active:not(:disabled) {
@@ -108,10 +129,18 @@
 }
 
 .button:disabled {
-  opacity: 0.4;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  opacity: 1;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+.buttonSecondary:disabled {
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  border-color: var(--border);
 }
 
 .buttonSecondary {
@@ -207,8 +236,7 @@
   padding: 0.375rem 0.5rem;
   cursor: pointer;
   outline: none;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   transition: color 0.2s ease;
 }
 
@@ -237,7 +265,7 @@
 /* Share content area — fixed height to prevent layout shifts */
 .shareContentArea {
   position: relative;
-  height: 88px;
+  min-height: 88px;
   width: 100%;
   overflow: hidden;
 }

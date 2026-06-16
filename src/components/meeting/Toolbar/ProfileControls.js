@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggle";
 import { DisplayNameField } from "@/components/ui/DisplayNameField";

@@ -45,7 +45,7 @@ describe("WelcomeHostPanel", () => {
     const user = userEvent.setup();
     render(<WelcomeHostPanel legacyToken={null} navigate={() => {}} />);
 
-    await user.click(screen.getByRole("tab", { name: "Room Code" }));
+    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     await waitFor(() => {
       expect(screen.getByLabelText("Character 1")).toHaveValue("A");
@@ -56,7 +56,7 @@ describe("WelcomeHostPanel", () => {
       screen.getByRole("button", { name: "Copy room code" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Invite Link" }));
+    await user.click(screen.getByRole("tab", { name: "Invite link" }));
     expect(
       screen.getByRole("button", { name: "Copy invite link" }),
     ).toBeInTheDocument();
