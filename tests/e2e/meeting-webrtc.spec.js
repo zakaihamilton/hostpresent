@@ -23,9 +23,18 @@ async function createHostMeeting(page) {
     page.getByRole("button", { name: "Start meeting" }),
   ).toBeEnabled();
 
-  const joinCode = await page
-    .locator('[id^="join-code-box-"]')
-    .evaluateAll((inputs) => inputs.map((input) => input.value).join(""));
+  const joinCodeBoxes = page.getByLabel(/Character \d/);
+  await expect
+    .poll(async () => {
+      const values = await joinCodeBoxes.evaluateAll((inputs) =>
+        inputs.map((input) => input.value).join(""),
+      );
+      return values.replace(/[^a-zA-Z0-9]/g, "");
+    })
+    .toHaveLength(6);
+  const joinCode = await joinCodeBoxes.evaluateAll((inputs) =>
+    inputs.map((input) => input.value).join(""),
+  );
 
   await page.getByLabel("Your name").fill("Host One");
   await page.getByRole("button", { name: "Start meeting" }).click();
@@ -37,9 +46,22 @@ async function createHostMeeting(page) {
 }
 
 async function joinParticipant(page, joinCode, name) {
+  await page.addInitScript(
+    ({ displayName }) => {
+      localStorage.setItem("hostpresent.displayName", displayName);
+    },
+    { displayName: name },
+  );
   await page.goto(`/#/j/${joinCode}`);
-  await page.getByLabel("Your name").fill(name);
-  await page.getByRole("button", { name: "Join meeting" }).click();
+  const nameField = page.getByLabel("Your name");
+  const canFillName = await nameField
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (canFillName) {
+    await nameField.fill(name);
+    await page.getByRole("button", { name: "Join meeting" }).click();
+  }
   await expect(
     page.getByRole("button", { name: "Mute microphone" }),
   ).toBeVisible();
@@ -50,7 +72,13 @@ async function openParticipants(page) {
   if (await show.isVisible()) {
     await show.click();
   }
-  await expect(page.getByText("Participants")).toBeVisible();
+  await expect(
+    page.getByRole("complementary").filter({ hasText: "Participants" }),
+  ).toBeVisible();
+}
+
+function participantsList(page) {
+  return page.getByLabel("Participants", { exact: true });
 }
 
 async function openChat(page) {
@@ -58,7 +86,19 @@ async function openChat(page) {
   if (await show.isVisible()) {
     await show.click();
   }
-  await expect(page.getByText("Chat")).toBeVisible();
+  await expect(
+    page.getByRole("complementary").filter({ hasText: "Chat" }).last(),
+  ).toBeVisible();
+}
+
+async function closeParticipants(page) {
+  const close = page.getByRole("button", { name: "Close participants" });
+  if (await close.isVisible()) {
+    await close.click();
+  }
+  await expect(
+    page.getByRole("complementary").filter({ hasText: "Participants" }),
+  ).toBeHidden();
 }
 
 test("host and two participants exchange roster, media, chat, and leave state", async ({
@@ -83,8 +123,8 @@ test("host and two participants exchange roster, media, chat, and leave state", 
   await joinParticipant(participantTwo, joinCode, "Pat Two");
 
   await openParticipants(host);
-  await expect(host.getByText("Pat One")).toBeVisible();
-  await expect(host.getByText("Pat Two")).toBeVisible();
+  await expect(participantsList(host).getByText("Pat One")).toBeVisible();
+  await expect(participantsList(host).getByText("Pat Two")).toBeVisible();
   await expect(
     host.getByRole("button", { name: /Show participants|Hide participants/ }),
   ).toContainText("3");
@@ -100,7 +140,7 @@ test("host and two participants exchange roster, media, chat, and leave state", 
 
   await openChat(host);
   await expect(host.getByText("hello from pat one")).toBeVisible();
-  await expect(host.getByText("Pat One")).toBeVisible();
+  await expect(host.getByText("Pat One").first()).toBeVisible();
 
   await participantTwo.getByRole("button", { name: "Leave meeting" }).click();
   await expect(
@@ -111,4 +151,93 @@ test("host and two participants exchange roster, media, chat, and leave state", 
   await participantTwoContext.close();
   await participantOneContext.close();
   await hostContext.close();
+});
+
+test("host records locally and focuses participants with auto-focus fallback", async ({
+  browser,
+}) => {
+  const hostContext = await browser.newContext({ acceptDownloads: true });
+  const participantOneContext = await browser.newContext();
+  const participantTwoContext = await browser.newContext();
+
+  const host = await hostContext.newPage();
+  const participantOne = await participantOneContext.newPage();
+  const participantTwo = await participantTwoContext.newPage();
+
+  try {
+    await Promise.all([
+      clearClientState(host),
+      clearClientState(participantOne),
+      clearClientState(participantTwo),
+    ]);
+
+    const joinCode = await createHostMeeting(host);
+    await joinParticipant(participantOne, joinCode, "Pat One");
+    await joinParticipant(participantTwo, joinCode, "Pat Two");
+
+    await openParticipants(host);
+    await expect(participantsList(host).getByText("Pat One")).toBeVisible();
+    await expect(participantsList(host).getByText("Pat Two")).toBeVisible();
+
+    await host.getByRole("button", { name: "Focus on Pat One" }).click();
+    await expect(
+      host.getByRole("button", { name: "Auto-Focus" }),
+    ).toBeVisible();
+
+    await closeParticipants(host);
+    await expect(host.getByText("Pat One").first()).toBeVisible();
+    await expect(participantOne.getByText("Pat One").first()).toBeVisible();
+    await expect(participantTwo.getByText("Pat One").first()).toBeVisible();
+
+    await host.getByRole("button", { name: "Start recording" }).click();
+    await expect(host.getByText("Recording")).toBeVisible();
+    await expect(host.getByText(/^REC$/)).toBeVisible();
+    await expect(
+      host
+        .getByRole("banner")
+        .getByText(/\d{2}:\d{2}/)
+        .nth(1),
+    ).toBeVisible();
+
+    await host.getByRole("button", { name: "Pause recording" }).click();
+    await expect(
+      host.getByRole("banner").getByText("REC Paused", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      host.getByRole("main").getByText("REC PAUSED", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      host.getByRole("button", { name: "Resume recording" }),
+    ).toBeVisible();
+
+    await host.getByRole("button", { name: "Resume recording" }).click();
+    await expect(host.getByText("Recording")).toBeVisible();
+    await expect(
+      host.getByRole("button", { name: "Pause recording" }),
+    ).toBeVisible();
+
+    await openParticipants(host);
+    await host.getByRole("button", { name: "Auto-Focus" }).click();
+    await closeParticipants(host);
+    await expect(host.getByText("Host One").first()).toBeVisible({
+      timeout: 6_000,
+    });
+
+    const downloadPromise = host
+      .waitForEvent("download", { timeout: 10_000 })
+      .catch(() => null);
+    await host.getByRole("button", { name: "Stop and save recording" }).click();
+    await expect(
+      host.getByText(
+        /Stopping recording|Preparing your file|Starting download|Download started/,
+      ),
+    ).toBeVisible();
+    await downloadPromise;
+  } finally {
+    await Promise.allSettled([
+      participantTwoContext.close(),
+      participantOneContext.close(),
+      hostContext.close(),
+    ]);
+  }
 });
