@@ -103,4 +103,71 @@ describe("ParticipantsSidebar", () => {
     expect(onMuteAllVideo).toHaveBeenCalledTimes(1);
     expect(onMuteAllAudio).toHaveBeenCalledTimes(1);
   });
+
+  it("reflects participant media status changes in the roster", () => {
+    const participant = {
+      id: "p1",
+      name: "Alex",
+      avatarColor: "#000",
+      isAudioMuted: false,
+      isVideoMuted: false,
+      isScreenSharing: false,
+    };
+
+    const { rerender } = render(
+      <ParticipantsSidebar
+        visible
+        audioList={[]}
+        videoParticipants={[participant]}
+        isVideoMuted={false}
+        isAudioMuted={false}
+        isHost
+        onMuteParticipantVideo={() => {}}
+        onMuteParticipantAudio={() => {}}
+        onMuteAllVideo={() => {}}
+        onMuteAllAudio={() => {}}
+        canMuteAllVideo
+        canMuteAllAudio
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Turn off camera" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Mute participant" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <ParticipantsSidebar
+        visible
+        audioList={[]}
+        videoParticipants={[
+          {
+            ...participant,
+            isAudioMuted: true,
+            isVideoMuted: true,
+            isScreenSharing: true,
+          },
+        ]}
+        isVideoMuted={false}
+        isAudioMuted={false}
+        isHost
+        onMuteParticipantVideo={() => {}}
+        onMuteParticipantAudio={() => {}}
+        onMuteAllVideo={() => {}}
+        onMuteAllAudio={() => {}}
+        canMuteAllVideo
+        canMuteAllAudio
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Turn off camera" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Mute participant" }),
+    ).toBeNull();
+    expect(screen.getByText("Alex")).toBeInTheDocument();
+  });
 });
