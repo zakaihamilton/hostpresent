@@ -1,6 +1,11 @@
 import { normalizeJoinCode } from "./joinCode.js";
 import { deriveRoomIdFromJoinCode } from "./roomIdentity.js";
-import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "./tokens.js";
+import {
+  inspectRoomToken,
+  ROOM_ROLE,
+  signRoomToken,
+  TOKEN_FAILURE,
+} from "./tokens.js";
 
 const GLOBAL_STORE_KEY = "__hostpresentRoomStore";
 
@@ -95,8 +100,17 @@ export async function getRoomById(roomId, { joinCode = null } = {}) {
 }
 
 export async function restoreRoomFromToken({ roomId, role, token }) {
-  const verified = verifyRoomToken(token);
-  const joinCode = verified?.joinCode ?? null;
+  const inspection = inspectRoomToken(token);
+  const verified = inspection.verified;
+  if (
+    !verified ||
+    (!inspection.ok && inspection.reason !== TOKEN_FAILURE.EXPIRED)
+  ) {
+    return null;
+  }
+
+  const joinCode = verified.joinCode ?? null;
+  const isExpired = inspection.reason === TOKEN_FAILURE.EXPIRED;
 
   if (joinCode) {
     const derivedRoomId = deriveRoomIdFromJoinCode(joinCode);
@@ -116,11 +130,11 @@ export async function restoreRoomFromToken({ roomId, role, token }) {
     roomId,
     joinCode,
     hostToken:
-      role === ROOM_ROLE.HOST
+      role === ROOM_ROLE.HOST && !isExpired
         ? token
         : signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode }),
     participantToken:
-      role === ROOM_ROLE.PARTICIPANT
+      role === ROOM_ROLE.PARTICIPANT && !isExpired
         ? token
         : signRoomToken({ roomId, role: ROOM_ROLE.PARTICIPANT, joinCode }),
     status: ROOM_STATUS.OPEN,

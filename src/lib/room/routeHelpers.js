@@ -1,5 +1,10 @@
 import { applySecurityHeaders } from "./apiSecurity.js";
-import { verifyRoomToken } from "./tokens.js";
+import {
+  inspectRoomToken,
+  ROOM_ROLE,
+  signRoomToken,
+  TOKEN_FAILURE,
+} from "./tokens.js";
 
 export function jsonOk(body, init) {
   return applySecurityHeaders(Response.json(body, init));
@@ -22,11 +27,44 @@ export function verifyRequestToken(token) {
     return { error: jsonError("[E066] Invalid token", 401) };
   }
 
-  const verified = verifyRoomToken(token);
-  if (!verified) {
-    return { error: jsonError("[E066] Invalid token", 401) };
+  const inspection = inspectRoomToken(token);
+  if (inspection.ok) {
+    return { verified: inspection.verified };
   }
-  return { verified };
+
+  if (inspection.reason === TOKEN_FAILURE.EXPIRED) {
+    return {
+      error: jsonError("[E077] Token expired", 401),
+      expired: true,
+      verified: inspection.verified,
+    };
+  }
+
+  return { error: jsonError("[E066] Invalid token", 401) };
+}
+
+export function resolveHostRoomAuth(token) {
+  const auth = verifyRequestToken(token);
+  if (!auth.error) {
+    return { verified: auth.verified };
+  }
+
+  if (auth.expired && auth.verified?.role === ROOM_ROLE.HOST) {
+    return { verified: auth.verified, renewHostToken: true };
+  }
+
+  return { error: auth.error };
+}
+
+export function issueRenewedRoomTokens({ roomId, joinCode }) {
+  return {
+    hostToken: signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode }),
+    participantToken: signRoomToken({
+      roomId,
+      role: ROOM_ROLE.PARTICIPANT,
+      joinCode,
+    }),
+  };
 }
 
 export async function readJsonBody(request) {

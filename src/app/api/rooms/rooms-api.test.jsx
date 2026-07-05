@@ -248,6 +248,71 @@ describe("room API routes", () => {
     expect(response.status).toBe(401);
     expect(body.error).toBe("[E066] Invalid token");
   });
+
+  it("renews expired host tokens and returns fresh credentials", async () => {
+    jest.useFakeTimers();
+    try {
+      const { GET } = await import("./state/route");
+      const hostToken = signRoomToken({
+        roomId: "room-expired",
+        role: ROOM_ROLE.HOST,
+        joinCode: "ABCDEF",
+      });
+
+      jest.advanceTimersByTime(31 * 24 * 60 * 60 * 1000);
+
+      mockGetRoomById.mockResolvedValue({
+        roomId: "room-expired",
+        joinCode: "ABCDEF",
+        participantToken: "old-participant-token",
+        openedAt: 1,
+        createdAt: 1,
+      });
+
+      const response = await GET(
+        request(
+          `http://localhost/api/rooms/state?token=${encodeURIComponent(hostToken)}`,
+        ),
+      );
+      const body = await readJson(response);
+
+      expect(response.status).toBe(200);
+      expect(body.hostToken).toBeTruthy();
+      expect(body.hostToken).not.toBe(hostToken);
+      expect(body.participantToken).toBeTruthy();
+      expect(body.participantToken).not.toBe("old-participant-token");
+      expect(body.joinCode).toBe("ABCDEF");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("rejects expired participant tokens", async () => {
+    jest.useFakeTimers();
+    try {
+      const { GET } = await import("./state/route");
+      const participantToken = signRoomToken({
+        roomId: "room-expired",
+        role: ROOM_ROLE.PARTICIPANT,
+        joinCode: "ABCDEF",
+      });
+
+      jest.advanceTimersByTime(31 * 24 * 60 * 60 * 1000);
+
+      const response = await GET(
+        request(
+          `http://localhost/api/rooms/state?token=${encodeURIComponent(participantToken)}`,
+        ),
+      );
+      const body = await readJson(response);
+
+      expect(response.status).toBe(401);
+      expect(body.error).toBe("[E077] Token expired");
+      expect(mockGetRoomById).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 describe("media ICE config API route", () => {

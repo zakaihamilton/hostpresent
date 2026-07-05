@@ -12,6 +12,7 @@ import {
   normalizeDisplayNameInput,
   saveDisplayName,
 } from "@/lib/settings/displayNameSettings";
+import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
 import {
   clearHostRooms,
   formatRoomLabel,
@@ -32,7 +33,9 @@ async function fetchHostRoomDetails(hostToken) {
   if (!response.ok) {
     throw new Error("[E050] Could not load room");
   }
-  return response.json();
+  const state = await response.json();
+  renewSavedHostRoom(hostToken, state);
+  return state;
 }
 
 export function WelcomeHostPanel({ legacyToken, navigate }) {
@@ -77,6 +80,27 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   }, [roomState?.joinCode]);
 
   useEffect(() => {
+    if (!roomState?.hostToken || roomState.hostToken === hostToken) return;
+    setHostToken(roomState.hostToken);
+    persistRoom({
+      roomId: roomState.roomId,
+      hostToken: roomState.hostToken,
+      participantToken: roomState.participantToken,
+      joinCode: roomState.joinCode ?? joinCode,
+      createdAt: roomState.createdAt ?? Date.now(),
+    });
+  }, [
+    hostToken,
+    joinCode,
+    persistRoom,
+    roomState?.createdAt,
+    roomState?.hostToken,
+    roomState?.joinCode,
+    roomState?.participantToken,
+    roomState?.roomId,
+  ]);
+
+  useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
 
@@ -98,7 +122,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
             if (details.participantToken) {
               const restored = {
                 roomId: details.roomId,
-                hostToken: legacyToken,
+                hostToken: details.hostToken ?? legacyToken,
                 participantToken: details.participantToken,
                 joinCode: details.joinCode ?? null,
                 createdAt: details.createdAt ?? Date.now(),

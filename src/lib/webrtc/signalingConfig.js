@@ -1,4 +1,5 @@
 import { getPeerJsConfigFromApi } from "./peerClient.js";
+import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
 
 const CONFIG_FETCH_TIMEOUT_MS = 10000;
 
@@ -30,6 +31,7 @@ export async function fetchIceServers(sessionToken) {
   }
 
   const state = await stateResponse.json();
+  renewSavedHostRoom(sessionToken, state);
   const roomToken = state?.iceRoomToken;
   if (!roomToken) {
     throw new Error("Could not load secure streaming configuration.");

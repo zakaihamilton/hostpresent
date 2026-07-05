@@ -77,18 +77,15 @@ export function signRoomToken({ roomId, role, joinCode = null }) {
   return `${payloadPart}.${signaturePart}`;
 }
 
-export function verifyRoomToken(token) {
-  const payload = verifySignedPayload(token);
-  if (
-    !payload?.roomId ||
-    (payload.role !== ROOM_ROLE.HOST &&
-      payload.role !== ROOM_ROLE.PARTICIPANT) ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
-    return null;
-  }
+export const TOKEN_FAILURE = {
+  MISSING: "missing",
+  MALFORMED: "malformed",
+  INVALID_SIGNATURE: "invalid_signature",
+  INVALID_CLAIMS: "invalid_claims",
+  EXPIRED: "expired",
+};
 
+function toVerifiedClaims(payload) {
   return {
     roomId: payload.roomId,
     role: payload.role,
@@ -96,6 +93,42 @@ export function verifyRoomToken(token) {
     exp: payload.exp,
     joinCode: payload.joinCode ?? null,
   };
+}
+
+export function inspectRoomToken(token) {
+  if (!token || typeof token !== "string") {
+    return { ok: false, reason: TOKEN_FAILURE.MISSING };
+  }
+
+  if (!token.includes(".")) {
+    return { ok: false, reason: TOKEN_FAILURE.MALFORMED };
+  }
+
+  const payload = verifySignedPayload(token);
+  if (!payload) {
+    return { ok: false, reason: TOKEN_FAILURE.INVALID_SIGNATURE };
+  }
+
+  if (
+    !payload.roomId ||
+    (payload.role !== ROOM_ROLE.HOST &&
+      payload.role !== ROOM_ROLE.PARTICIPANT) ||
+    typeof payload.exp !== "number"
+  ) {
+    return { ok: false, reason: TOKEN_FAILURE.INVALID_CLAIMS };
+  }
+
+  const verified = toVerifiedClaims(payload);
+  if (payload.exp < Date.now()) {
+    return { ok: false, reason: TOKEN_FAILURE.EXPIRED, verified };
+  }
+
+  return { ok: true, verified };
+}
+
+export function verifyRoomToken(token) {
+  const inspection = inspectRoomToken(token);
+  return inspection.ok ? inspection.verified : null;
 }
 
 export function createRoomTokens(roomId, joinCode = null) {

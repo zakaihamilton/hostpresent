@@ -2,8 +2,9 @@ import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import { guardGetRequest, RATE_LIMITS } from "@/lib/room/apiSecurity";
 import {
   getSearchParam,
+  issueRenewedRoomTokens,
   jsonOk,
-  verifyRequestToken,
+  resolveHostRoomAuth,
 } from "@/lib/room/routeHelpers";
 import {
   getRoomById,
@@ -19,10 +20,10 @@ export async function GET(request) {
   if (blocked) return blocked;
 
   const token = getSearchParam(request, "token");
-  const auth = verifyRequestToken(token);
+  const auth = resolveHostRoomAuth(token);
   if (auth.error) return auth.error;
 
-  const { verified } = auth;
+  const { verified, renewHostToken } = auth;
   let room = await getRoomById(verified.roomId, {
     joinCode: verified.joinCode,
   });
@@ -34,6 +35,20 @@ export async function GET(request) {
     });
   }
 
+  const joinCode = room.joinCode ?? verified.joinCode ?? null;
+  let renewedTokens = null;
+  if (renewHostToken) {
+    renewedTokens = issueRenewedRoomTokens({
+      roomId: verified.roomId,
+      joinCode,
+    });
+    room = {
+      ...room,
+      hostToken: renewedTokens.hostToken,
+      participantToken: renewedTokens.participantToken,
+    };
+  }
+
   const iceRoomToken = signIceRoomToken({ roomId: verified.roomId });
 
   const response = {
@@ -42,12 +57,16 @@ export async function GET(request) {
     status: ROOM_STATUS.OPEN,
     openedAt: room.openedAt ?? null,
     createdAt: room.createdAt ?? null,
-    joinCode: room.joinCode ?? verified.joinCode ?? null,
+    joinCode,
     ...(iceRoomToken ? { iceRoomToken } : {}),
   };
 
   if (verified.role === ROOM_ROLE.HOST) {
-    response.participantToken = room.participantToken;
+    response.participantToken =
+      renewedTokens?.participantToken ?? room.participantToken;
+    if (renewedTokens) {
+      response.hostToken = renewedTokens.hostToken;
+    }
   }
 
   return jsonOk(response);

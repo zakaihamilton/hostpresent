@@ -3,7 +3,7 @@ import {
   jsonError,
   jsonOk,
   readJsonBody,
-  verifyRequestToken,
+  resolveHostRoomAuth,
 } from "@/lib/room/routeHelpers";
 import { getRoomById, openRoom, restoreRoomFromToken } from "@/lib/room/store";
 import { ROOM_ROLE } from "@/lib/room/tokens";
@@ -17,7 +17,7 @@ export async function POST(request) {
   try {
     const body = await readJsonBody(request);
     const token = body?.token;
-    const auth = verifyRequestToken(token);
+    const auth = resolveHostRoomAuth(token);
     if (auth.error) return auth.error;
 
     const { verified } = auth;

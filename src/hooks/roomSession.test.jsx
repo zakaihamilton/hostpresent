@@ -5,6 +5,11 @@ const removeParticipantRoomByToken = jest.fn();
 const removeHostRoomByToken = jest.fn();
 const saveRoom = jest.fn();
 const setActiveHostToken = jest.fn();
+const renewSavedHostRoom = jest.fn();
+
+jest.mock("@/lib/settings/renewRoomTokens", () => ({
+  renewSavedHostRoom: (...args) => renewSavedHostRoom(...args),
+}));
 
 jest.mock("@/lib/settings/participantRoomSettings", () => ({
   removeParticipantRoomByToken: (...args) =>
@@ -109,6 +114,55 @@ describe("useRoomSession", () => {
     expect(removeParticipantRoomByToken).toHaveBeenCalledWith("expired-token");
     expect(result.current.error).toBe(
       "[E021] This room link is no longer valid. Create a new room from the host welcome screen.",
+    );
+  });
+
+  it("surfaces expired participant tokens with a join-code prompt", async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({ error: "[E077] Token expired" }, { status: 401 }),
+    );
+
+    const { result } = renderHook(() =>
+      useRoomSession({
+        role: "participant",
+        token:
+          "eyJyb2xlIjoicGFydGljaXBhbnQifQ.invalid-signature-for-role-check",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe(ROOM_SESSION_STATUS.ERROR);
+    });
+    expect(result.current.error).toBe(
+      "[E033] This join link expired. Enter the join code again on the welcome screen.",
+    );
+  });
+
+  it("persists renewed host tokens returned by the state API", async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({
+        roomId: "room-1",
+        role: "host",
+        status: "open",
+        hostToken: "renewed-host-token",
+        participantToken: "renewed-participant-token",
+        joinCode: "ABCDEF",
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useRoomSession({
+        role: "host",
+        token: "expired-host-token",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe(ROOM_SESSION_STATUS.OPEN);
+    });
+    expect(renewSavedHostRoom).toHaveBeenCalledWith(
+      "expired-host-token",
+      expect.objectContaining({ hostToken: "renewed-host-token" }),
     );
   });
 

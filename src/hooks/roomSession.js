@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
+import { readRoomTokenRole } from "@/lib/room/tokenClaims";
+import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
 import {
   getActiveRoom,
   getRoomByHostToken,
@@ -20,9 +22,16 @@ export const ROOM_SESSION_STATUS = {
   ERROR: "error",
 };
 
-async function readErrorMessage(response, fallback) {
+async function readErrorMessage(response, fallback, token) {
   try {
     const payload = await response.json();
+    if (payload?.error === "[E077] Token expired") {
+      const role = token ? readRoomTokenRole(token) : null;
+      if (role === "participant") {
+        return "[E033] This join link expired. Enter the join code again on the welcome screen.";
+      }
+      return "[E077] This host room link expired after 30 days. Re-open your room from the host welcome screen.";
+    }
     if (payload?.error) return payload.error;
   } catch {
     // ignore non-JSON error bodies (e.g. HTML 500 pages)
@@ -52,10 +61,16 @@ async function fetchRoomState(token) {
       removeParticipantRoomByToken(token);
     }
     throw new Error(
-      await readErrorMessage(response, "[E024] Failed to fetch room state"),
+      await readErrorMessage(
+        response,
+        "[E024] Failed to fetch room state",
+        token,
+      ),
     );
   }
-  return response.json();
+  const state = await response.json();
+  renewSavedHostRoom(token, state);
+  return state;
 }
 
 async function createRoomRequest() {
