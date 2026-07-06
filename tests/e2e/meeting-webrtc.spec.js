@@ -241,3 +241,39 @@ test("host records locally and focuses participants with auto-focus fallback", a
     ]);
   }
 });
+
+test("host records while toggling screen share", async ({ browser }) => {
+  const hostContext = await browser.newContext({ acceptDownloads: true });
+  const host = await hostContext.newPage();
+
+  try {
+    await clearClientState(host);
+    await createHostMeeting(host);
+
+    await host.getByRole("button", { name: "Start recording" }).click();
+    await expect(host.getByText("Recording")).toBeVisible();
+
+    await host.getByRole("button", { name: "Share screen" }).click();
+    await expect(
+      host.getByRole("button", { name: "Stop screen sharing" }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await host.getByRole("button", { name: "Stop screen sharing" }).click();
+    await expect(
+      host.getByRole("button", { name: "Share screen" }),
+    ).toBeVisible();
+
+    const downloadPromise = host
+      .waitForEvent("download", { timeout: 15_000 })
+      .catch(() => null);
+    await host.getByRole("button", { name: "Stop and save recording" }).click();
+    await expect(
+      host.getByText(
+        /Stopping recording|Preparing your file|Starting download|Download started/,
+      ),
+    ).toBeVisible();
+    await downloadPromise;
+  } finally {
+    await hostContext.close();
+  }
+});

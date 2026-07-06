@@ -166,6 +166,7 @@ export function Recording({
 }) {
   const [downloadState, setDownloadState] = useState(null);
   const [savedRecording, setSavedRecording] = useState(null);
+  const [remoteTrackRevision, setRemoteTrackRevision] = useState(0);
 
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
@@ -557,6 +558,33 @@ export function Recording({
   ]);
 
   useEffect(() => {
+    if (!isHost || !isRecording) return undefined;
+    if (!focusedParticipantId || focusedParticipantId === "host") {
+      return undefined;
+    }
+
+    const participant = videoParticipantsRef.current.find(
+      (entry) => entry.id === focusedParticipantId,
+    );
+    const stream = participant?.stream;
+    if (!stream || typeof stream.addEventListener !== "function") {
+      return undefined;
+    }
+
+    const handleTrackChange = () => {
+      setRemoteTrackRevision((revision) => revision + 1);
+    };
+
+    stream.addEventListener("addtrack", handleTrackChange);
+    stream.addEventListener("removetrack", handleTrackChange);
+
+    return () => {
+      stream.removeEventListener("addtrack", handleTrackChange);
+      stream.removeEventListener("removetrack", handleTrackChange);
+    };
+  }, [focusedParticipantId, isHost, isRecording, videoParticipants]);
+
+  useEffect(() => {
     if (!isHost || !isRecording || !focusedParticipantId) {
       return;
     }
@@ -632,6 +660,7 @@ export function Recording({
     localStream,
     screenStream,
     videoParticipants,
+    remoteTrackRevision,
     rebuildRecorder,
     readMediaSignature,
   ]);

@@ -38,6 +38,14 @@ function createTrack({
 
 function createStream(tracks = []) {
   const streamTracks = [...tracks];
+  const listeners = new Map();
+
+  const emit = (type) => {
+    for (const handler of listeners.get(type) ?? []) {
+      handler();
+    }
+  };
+
   return {
     id: `stream-${streamTracks.map((track) => track.id).join("-") || "empty"}`,
     getTracks: () => [...streamTracks],
@@ -47,10 +55,19 @@ function createStream(tracks = []) {
       streamTracks.filter((track) => track.kind === "video"),
     addTrack: jest.fn((track) => {
       streamTracks.push(track);
+      emit("addtrack");
     }),
     removeTrack: jest.fn((track) => {
       const index = streamTracks.indexOf(track);
       if (index >= 0) streamTracks.splice(index, 1);
+      emit("removetrack");
+    }),
+    addEventListener: jest.fn((type, handler) => {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(handler);
+    }),
+    removeEventListener: jest.fn((type, handler) => {
+      listeners.get(type)?.delete(handler);
     }),
   };
 }
@@ -291,5 +308,62 @@ describe("Recording", () => {
 
     const latestRecorder = recorderInstances[recorderInstances.length - 1];
     expect(latestRecorder.stream.getTracks()).toEqual([cameraTrack]);
+  });
+
+  it("rebuilds the recorder when a focused remote participant's tracks change", async () => {
+    const cameraTrack = createTrack({ kind: "video", id: "remote-camera" });
+    const remoteStream = createStream([cameraTrack]);
+    const videoParticipants = [
+      {
+        id: "p1",
+        name: "Pat One",
+        stream: remoteStream,
+      },
+    ];
+
+    const { result, rerender } = renderRecording({
+      localStream: createStream([]),
+      screenStream: null,
+      videoParticipants,
+      focusedParticipantId: "p1",
+      isRecording: true,
+    });
+
+    await act(async () => {
+      await result.current.startRecording();
+    });
+
+    expect(recorderInstances[0].stream.getTracks()).toEqual([cameraTrack]);
+
+    const screenTrack = createTrack({ kind: "video", id: "remote-screen" });
+
+    await act(async () => {
+      remoteStream.removeTrack(cameraTrack);
+      remoteStream.addTrack(screenTrack);
+      rerender({
+        isHost: true,
+        roomConnection: { send: jest.fn() },
+        localStream: createStream([]),
+        screenStream: null,
+        videoParticipants,
+        focusedParticipantId: "p1",
+        resetRecordingTimer: jest.fn(),
+        isRecording: true,
+        setIsRecording: jest.fn(),
+        isRecordingPaused: false,
+        setIsRecordingPaused: jest.fn(),
+        sessionName: "Test Session",
+      });
+      await Promise.resolve();
+      jest.advanceTimersByTime(150);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(recorderInstances.length).toBeGreaterThanOrEqual(2);
+    });
+
+    const latestRecorder = recorderInstances[recorderInstances.length - 1];
+    expect(latestRecorder.stream.getTracks()).toEqual([screenTrack]);
   });
 });

@@ -57,6 +57,9 @@ Use real browsers and devices for these checks:
 | Screen share | Share tab/system audio | Screen audio is audible to peers without local echo |
 | Screen share | Stop from app button | Camera feed returns and peers see share stop |
 | Screen share | Stop from browser sharing control | App clears sharing state and peers see share stop |
+| Recording | Record while toggling screen share | Downloaded file follows screen share and returns to camera when sharing stops |
+| Recording | Record while focused on a participant who shares screen | Recording switches to the participant's screen feed |
+| Recording | Stop and save recording | Browser downloads a video (.mp4) and separate audio (.m4a) file |
 | Participants | Join 3-5 participants | Host roster count, names, mute state, and video state remain stable |
 | Participants | Listening-only participant switches to Available | Roster mode updates and media publishing starts |
 | Host controls | Mute one participant, then mute all | Only the targeted participant changes first; all change after bulk action |

@@ -45,4 +45,21 @@ describe("RecordingDownloadBanner", () => {
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  it("explains the dual file download when complete", () => {
+    render(
+      <RecordingDownloadBanner
+        downloadState={{
+          phase: "complete",
+          progress: 100,
+          filename: "meeting.mp4",
+        }}
+        onDismiss={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByText(/downloads two files: a video \(\.mp4\) and a separate/i),
+    ).toBeInTheDocument();
+  });
 });

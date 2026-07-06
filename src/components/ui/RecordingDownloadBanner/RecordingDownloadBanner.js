@@ -39,6 +39,13 @@ export const RecordingDownloadBanner = memo(function RecordingDownloadBanner({
         </div>
 
         {filename && <span className={styles.filename}>{filename}</span>}
+
+        {isComplete && (
+          <span className={styles.hint}>
+            Your browser downloads two files: a video (.mp4) and a separate
+            audio track (.m4a).
+          </span>
+        )}
       </div>
 
       {isComplete && (

@@ -278,7 +278,10 @@ export const Header = memo(function Header({
         {showRecording && (
           <div className={styles.recordingSection}>
             {!isRecording
-              ? <Tooltip text="Start Local Recording" placement="bottom">
+              ? <Tooltip
+                  text="Record locally. Saves a video (.mp4) and separate audio (.m4a) file."
+                  placement="bottom"
+                >
                   <button
                     type="button"
                     className={styles.recordStartBtn}

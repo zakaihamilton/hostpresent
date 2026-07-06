@@ -237,4 +237,49 @@ describe("RemoteParticipants", () => {
     expect(screenVideo.enabled).toBe(false);
     expect(setIsVideoMuted).toHaveBeenCalledWith(true);
   });
+
+  it("syncs outbound media after host mute commands", () => {
+    const localAudio = { kind: "audio", enabled: true };
+    const screenAudio = { kind: "audio", enabled: true };
+    const localStream = {
+      getAudioTracks: () => [localAudio],
+      getVideoTracks: () => [],
+    };
+    const screenStream = {
+      getAudioTracks: () => [screenAudio],
+      getVideoTracks: () => [],
+    };
+    const syncOutboundMedia = jest.fn();
+    const roomConnection = createRoomConnection();
+    roomConnection.syncOutboundMedia = syncOutboundMedia;
+    const roomConnectionRef = createRef();
+    roomConnectionRef.current = roomConnection;
+
+    renderHook(() =>
+      RemoteParticipants({
+        isHost: false,
+        roomConnectionRef,
+        roomConnection,
+        localStream,
+        screenStream,
+        isAudioMuted: false,
+        isVideoMuted: false,
+        setIsAudioMuted: jest.fn(),
+        setIsVideoMuted: jest.fn(),
+        setIsRecording: jest.fn(),
+        setIsRecordingPaused: jest.fn(),
+        resetRecordingTimer: jest.fn(),
+        publishParticipantMediaStatus: jest.fn(),
+        setSessionTitle: jest.fn(),
+      }),
+    );
+
+    act(() => {
+      roomConnection.emit({
+        type: SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO,
+      });
+    });
+
+    expect(syncOutboundMedia).toHaveBeenCalled();
+  });
 });

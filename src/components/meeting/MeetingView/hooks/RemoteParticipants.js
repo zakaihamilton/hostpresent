@@ -492,6 +492,7 @@ export function RemoteParticipants({
           });
           setIsAudioMuted(true);
           publishParticipantMediaStatus({ audioMuted: true });
+          void roomConnection?.syncOutboundMedia?.();
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_VIDEO:
           if (message.participantId && message.participantId !== localId)
@@ -504,6 +505,7 @@ export function RemoteParticipants({
           });
           setIsVideoMuted(true);
           publishParticipantMediaStatus({ videoMuted: true });
+          void roomConnection?.syncOutboundMedia?.();
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO:
           localStream?.getAudioTracks().forEach((track) => {
@@ -514,6 +516,7 @@ export function RemoteParticipants({
           });
           setIsAudioMuted(true);
           publishParticipantMediaStatus({ audioMuted: true });
+          void roomConnection?.syncOutboundMedia?.();
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO:
           localStream?.getVideoTracks().forEach((track) => {
@@ -524,6 +527,7 @@ export function RemoteParticipants({
           });
           setIsVideoMuted(true);
           publishParticipantMediaStatus({ videoMuted: true });
+          void roomConnection?.syncOutboundMedia?.();
           break;
         case SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST:
           if (message.participantId === localId) return;
@@ -572,6 +576,7 @@ export function RemoteParticipants({
     isHost,
     localStream,
     screenStream,
+    roomConnection,
     publishParticipantMediaStatus,
     resetRecordingTimer,
     roomConnectionRef,
