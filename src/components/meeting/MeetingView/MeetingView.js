@@ -923,7 +923,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
         revealTitleOnLogoClick={!isHost}
-        showRecording={isHost}
         onStartRecording={startRecording}
         onPauseRecording={pauseRecording}
         onResumeRecording={resumeRecording}
@@ -1180,7 +1179,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         onParticipantModeChange={
           handleDisplayNameChange ? handleParticipantModeChange : null
         }
-        showRecording={isHost}
         allowScreenShare={true}
         availableMicrophones={availableMicrophones}
         selectedMicrophone={selectedMicrophone}

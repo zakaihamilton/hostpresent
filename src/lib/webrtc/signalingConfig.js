@@ -1,5 +1,5 @@
-import { getPeerJsConfigFromApi } from "./peerClient.js";
 import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
+import { getPeerJsConfigFromApi } from "./peerClient.js";
 
 const CONFIG_FETCH_TIMEOUT_MS = 10000;
 

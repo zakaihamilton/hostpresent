@@ -55,7 +55,23 @@ describe("WelcomeParticipantPanel", () => {
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 6")).toBeInTheDocument();
+    expect(
+      document.querySelector('label[for="join-code-box-0"]'),
+    ).toHaveTextContent("Room code");
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
+  });
+
+  it("activates the room-code tab when a code input receives focus", async () => {
+    const user = userEvent.setup();
+    render(<WelcomeParticipantPanel {...defaultProps} />);
+
+    await user.click(screen.getByRole("tab", { name: "Invite link" }));
+    await user.click(screen.getByLabelText("Character 1"));
+
+    expect(screen.getByRole("tab", { name: "Room code" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("enables join when all 6 code characters are entered", async () => {

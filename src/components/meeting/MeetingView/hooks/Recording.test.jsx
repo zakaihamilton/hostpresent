@@ -1,8 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import {
-  getRecordingMediaSignature,
-  Recording,
-} from "./Recording";
+import { getRecordingMediaSignature, Recording } from "./Recording";
 
 jest.mock("@/lib/recordingStorage", () => ({
   clearSavedRecording: jest.fn().mockResolvedValue(undefined),

@@ -309,7 +309,7 @@
   align-items: center;
 }
 
-.directActionRow :global(.JoinCodeBoxes_wrapper__aY_G2) {
+.joinCodeBoxes {
   flex: 1;
 }
 

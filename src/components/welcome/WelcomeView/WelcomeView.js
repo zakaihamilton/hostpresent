@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { GitHub, LinkedIn, Logo } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";

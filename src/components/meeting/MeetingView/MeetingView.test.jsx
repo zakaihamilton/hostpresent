@@ -278,7 +278,6 @@ describe("MeetingView", () => {
     await screen.findByTestId("primary-view");
 
     expect(latestToolbarProps.allowScreenShare).toBe(true);
-    expect(latestToolbarProps.showRecording).toBe(false);
   });
 
   it.each([

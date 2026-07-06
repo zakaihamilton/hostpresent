@@ -1,12 +1,5 @@
 import { memo } from "react";
-import {
-  Mic,
-  MicOff,
-  ScreenShare,
-  Stop,
-  Video,
-  VideoOff,
-} from "@/components/ui/Icons";
+import { Mic, MicOff, Stop, Video, VideoOff } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { LayoutControls } from "./LayoutControls";
 import { ProfileControls } from "./ProfileControls";
@@ -54,7 +47,6 @@ export const Toolbar = memo(function Toolbar({
   onLeave = null,
   participantCount = 0,
   allowScreenShare = true,
-  showRecording = false,
 }) {
   return (
     <footer className={styles.toolbar}>

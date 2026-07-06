@@ -321,9 +321,15 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
           </div>
 
           <div className={shared.directActionSection}>
-            <label className={shared.label}>Room code</label>
+            <label className={shared.label} htmlFor="join-code-box-0">
+              Room code
+            </label>
             <div className={shared.directActionRow}>
-              <JoinCodeBoxes value={formattedJoinCode} readOnly />
+              <JoinCodeBoxes
+                value={formattedJoinCode}
+                readOnly
+                className={shared.joinCodeBoxes}
+              />
               <button
                 type="button"
                 className={`${shared.button} ${shared.buttonCopyInline}`}

@@ -109,6 +109,27 @@ describe("ProfileControls", () => {
     ).toBeInTheDocument();
   });
 
+  it("associates device labels with their selectors", async () => {
+    const user = userEvent.setup();
+    const device = (deviceId, label) => ({ deviceId, label });
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        availableMicrophones={[device("mic-1", "Desk mic")]}
+        availableSpeakers={[device("speaker-1", "Desk speakers")]}
+        availableCameras={[device("camera-1", "Desk camera")]}
+      />,
+    );
+
+    await user.click(getProfileButton());
+
+    expect(screen.getByLabelText("Microphone")).toHaveValue("mic-1");
+    expect(screen.getByLabelText("Audio output")).toHaveValue("speaker-1");
+    expect(screen.getByLabelText("Camera")).toHaveValue("camera-1");
+  });
+
   it("shows the listening-only state on the profile button", () => {
     const { container } = render(
       <ProfileControls

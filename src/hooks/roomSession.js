@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
+import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
 import {
   getActiveRoom,

@@ -1,16 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import {
-  Edit,
-  Link,
-  Logo,
-  Stop,
-  X,
-  Play,
-  Pause,
-  Record,
-} from "@/components/ui/Icons";
+import { Edit, Link, Logo, Pause, Play, Stop, X } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";

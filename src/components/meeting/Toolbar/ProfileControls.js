@@ -356,12 +356,18 @@ export function ProfileControls({
                   <p className={styles.popupHeading}>Audio & video devices</p>
 
                   <div className={styles.deviceField}>
-                    <label className={styles.deviceLabel}>Microphone</label>
+                    <label
+                      className={styles.deviceLabel}
+                      htmlFor="microphone-device"
+                    >
+                      Microphone
+                    </label>
                     {availableMicrophones.length === 0
                       ? <p className={styles.emptyDevices}>
                           No microphones detected
                         </p>
                       : <select
+                          id="microphone-device"
                           className={styles.deviceSelect}
                           value={selectedMicrophone}
                           onChange={(e) => onMicrophoneChange?.(e.target.value)}
@@ -401,12 +407,18 @@ export function ProfileControls({
                   </div>
 
                   <div className={styles.deviceField}>
-                    <label className={styles.deviceLabel}>Audio output</label>
+                    <label
+                      className={styles.deviceLabel}
+                      htmlFor="speaker-device"
+                    >
+                      Audio output
+                    </label>
                     {availableSpeakers.length === 0
                       ? <p className={styles.emptyDevices}>
                           Default system output
                         </p>
                       : <select
+                          id="speaker-device"
                           className={styles.deviceSelect}
                           value={selectedSpeaker}
                           onChange={(e) => onSpeakerChange?.(e.target.value)}
@@ -421,12 +433,18 @@ export function ProfileControls({
                   </div>
 
                   <div className={styles.deviceField}>
-                    <label className={styles.deviceLabel}>Camera</label>
+                    <label
+                      className={styles.deviceLabel}
+                      htmlFor="camera-device"
+                    >
+                      Camera
+                    </label>
                     {availableCameras.length === 0
                       ? <p className={styles.emptyDevices}>
                           No cameras detected
                         </p>
                       : <select
+                          id="camera-device"
                           className={styles.deviceSelect}
                           value={selectedCamera}
                           onChange={(e) => onCameraChange?.(e.target.value)}

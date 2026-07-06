@@ -12,7 +12,14 @@ function charAt(code, index) {
   return raw[index] ?? "";
 }
 
-export function JoinCodeBoxes({ value, onChange, readOnly, autoFocus }) {
+export function JoinCodeBoxes({
+  value,
+  onChange,
+  readOnly,
+  autoFocus,
+  className = "",
+  onFocus,
+}) {
   const refs = useRef([]);
 
   const fire = useCallback(
@@ -98,13 +105,14 @@ export function JoinCodeBoxes({ value, onChange, readOnly, autoFocus }) {
         onChange={(e) => handleChange(index, e.target.value)}
         onKeyDown={(e) => handleKeyDown(index, e)}
         onPaste={index === 0 ? handlePaste : undefined}
+        onFocus={onFocus}
         aria-label={`Character ${index + 1}`}
       />
     );
   });
 
   return (
-    <div className={styles.wrapper}>
+    <div className={[styles.wrapper, className].filter(Boolean).join(" ")}>
       <div className={styles.groups}>
         <div className={styles.group}>{boxes.slice(0, GROUP)}</div>
         <span className={styles.separator} aria-hidden>

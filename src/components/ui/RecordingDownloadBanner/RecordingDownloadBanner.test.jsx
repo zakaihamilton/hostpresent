@@ -59,7 +59,9 @@ describe("RecordingDownloadBanner", () => {
     );
 
     expect(
-      screen.getByText(/downloads two files: a video \(\.mp4\) and a separate/i),
+      screen.getByText(
+        /downloads two files: a video \(\.mp4\) and a separate/i,
+      ),
     ).toBeInTheDocument();
   });
 });

@@ -58,7 +58,7 @@ export function WelcomeParticipantPanel({
   const [roomIdInput, setRoomIdInput] = useState(
     joinCode ? formatRoomIdInput(joinCode) : "",
   );
-  const [inviteLinkInput, setInviteLinkInput] = useState("");
+  const [inviteLinkInput] = useState("");
   const [recentRooms, setRecentRooms] = useState([]);
   const [resolveError, setResolveError] = useState("");
   const [isResolving, setIsResolving] = useState(false);
@@ -291,14 +291,13 @@ export function WelcomeParticipantPanel({
             <label className={shared.label} htmlFor="join-code-box-0">
               Room code
             </label>
-            <div
-              className={shared.directActionRow}
-              onFocus={() => setActiveJoinTab("code")}
-            >
+            <div className={shared.directActionRow}>
               <JoinCodeBoxes
                 value={roomIdInput}
                 onChange={setRoomIdInput}
                 autoFocus
+                className={shared.joinCodeBoxes}
+                onFocus={() => setActiveJoinTab("code")}
               />
             </div>
             <p className={ps.joinHint}>

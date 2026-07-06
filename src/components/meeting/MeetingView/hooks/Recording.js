@@ -582,8 +582,10 @@ export function Recording({
       stream.removeEventListener("addtrack", handleTrackChange);
       stream.removeEventListener("removetrack", handleTrackChange);
     };
-  }, [focusedParticipantId, isHost, isRecording, videoParticipants]);
+  }, [focusedParticipantId, isHost, isRecording]);
 
+  // These mutable media inputs intentionally trigger source-signature checks.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: media source changes must rebuild the active recorder
   useEffect(() => {
     if (!isHost || !isRecording || !focusedParticipantId) {
       return;
