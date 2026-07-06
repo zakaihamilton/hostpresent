@@ -6,17 +6,19 @@ import {
 
 export { destroyOutboundAudioMixer, needsOutboundAudioMix };
 
+function getEnabledLiveVideoTrack(stream) {
+  return (
+    stream
+      ?.getVideoTracks()
+      .find((track) => track.readyState === "live" && track.enabled) ?? null
+  );
+}
+
 export function pickOutboundVideoTrack(localStream, screenStream) {
-  const screenVideo = screenStream
-    ?.getVideoTracks()
-    .find((track) => track.readyState === "live");
+  const screenVideo = getEnabledLiveVideoTrack(screenStream);
   if (screenVideo) return screenVideo;
 
-  return (
-    localStream
-      ?.getVideoTracks()
-      .find((track) => track.readyState === "live") ?? null
-  );
+  return getEnabledLiveVideoTrack(localStream);
 }
 
 export async function resolveOutboundAudioTrack(localStream, screenStream) {

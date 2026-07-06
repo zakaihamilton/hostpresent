@@ -23,7 +23,12 @@ beforeAll(() => {
 function mockStream({ video = false, audio = false, videoId = "video" } = {}) {
   const tracks = [];
   if (video) {
-    tracks.push({ kind: "video", readyState: "live", id: videoId });
+    tracks.push({
+      kind: "video",
+      readyState: "live",
+      id: videoId,
+      enabled: true,
+    });
   }
   if (audio) {
     tracks.push({
@@ -46,6 +51,16 @@ describe("pickOutboundVideoTrack", () => {
       mockStream({ video: true, videoId: "screen" }),
     );
     expect(track.id).toBe("screen");
+  });
+
+  it("skips disabled screen video and falls back to the camera", () => {
+    const camera = mockStream({ video: true, videoId: "cam" });
+    const screen = mockStream({ video: true, videoId: "screen" });
+    screen.getVideoTracks()[0].enabled = false;
+
+    const track = pickOutboundVideoTrack(camera, screen);
+
+    expect(track.id).toBe("cam");
   });
 });
 

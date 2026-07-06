@@ -499,6 +499,9 @@ export function RemoteParticipants({
           localStream?.getVideoTracks().forEach((track) => {
             track.enabled = false;
           });
+          screenStream?.getVideoTracks().forEach((track) => {
+            track.enabled = false;
+          });
           setIsVideoMuted(true);
           publishParticipantMediaStatus({ videoMuted: true });
           break;
@@ -506,11 +509,17 @@ export function RemoteParticipants({
           localStream?.getAudioTracks().forEach((track) => {
             track.enabled = false;
           });
+          screenStream?.getAudioTracks().forEach((track) => {
+            track.enabled = false;
+          });
           setIsAudioMuted(true);
           publishParticipantMediaStatus({ audioMuted: true });
           break;
         case SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO:
           localStream?.getVideoTracks().forEach((track) => {
+            track.enabled = false;
+          });
+          screenStream?.getVideoTracks().forEach((track) => {
             track.enabled = false;
           });
           setIsVideoMuted(true);

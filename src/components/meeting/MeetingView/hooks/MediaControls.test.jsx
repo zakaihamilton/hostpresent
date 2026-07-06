@@ -583,4 +583,34 @@ describe("MediaControls Hook", () => {
 
     warnSpy.mockRestore();
   });
+
+  it("handles display media streams without a video track", async () => {
+    const audioOnlyScreenStream = createStream([
+      createTrack({ kind: "audio", id: "screen-audio-track" }),
+    ]);
+    const setScreenStream = jest.fn();
+
+    navigator.mediaDevices.getDisplayMedia = jest
+      .fn()
+      .mockResolvedValue(audioOnlyScreenStream);
+
+    const { result } = renderHook(() =>
+      MediaControls({
+        isHost: true,
+        roomConnection: {
+          send: jest.fn(),
+          localParticipantId: "host",
+          syncOutboundMedia: jest.fn(),
+        },
+        localStream: createStream([]),
+        setLocalStream: jest.fn(),
+        screenStream: null,
+        setScreenStream,
+      }),
+    );
+
+    await expect(result.current.toggleScreenShare()).resolves.toBeUndefined();
+
+    expect(setScreenStream).toHaveBeenCalledWith(audioOnlyScreenStream);
+  });
 });

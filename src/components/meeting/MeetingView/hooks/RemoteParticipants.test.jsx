@@ -177,4 +177,64 @@ describe("RemoteParticipants", () => {
     expect(setIsAudioMuted).toHaveBeenCalledWith(true);
     expect(setIsVideoMuted).toHaveBeenCalledWith(true);
   });
+
+  it("host mute all disables screen-share audio and video tracks", () => {
+    const localAudio = { kind: "audio", enabled: true };
+    const localVideo = { kind: "video", enabled: true };
+    const screenAudio = { kind: "audio", enabled: true };
+    const screenVideo = { kind: "video", enabled: true };
+    const localStream = {
+      getAudioTracks: () => [localAudio],
+      getVideoTracks: () => [localVideo],
+    };
+    const screenStream = {
+      getAudioTracks: () => [screenAudio],
+      getVideoTracks: () => [screenVideo],
+    };
+    const setIsAudioMuted = jest.fn();
+    const setIsVideoMuted = jest.fn();
+    const publishParticipantMediaStatus = jest.fn();
+    const roomConnection = createRoomConnection();
+    const roomConnectionRef = createRef();
+    roomConnectionRef.current = roomConnection;
+
+    renderHook(() =>
+      RemoteParticipants({
+        isHost: false,
+        roomConnectionRef,
+        roomConnection,
+        localStream,
+        screenStream,
+        isAudioMuted: false,
+        isVideoMuted: false,
+        setIsAudioMuted,
+        setIsVideoMuted,
+        setIsRecording: jest.fn(),
+        setIsRecordingPaused: jest.fn(),
+        resetRecordingTimer: jest.fn(),
+        publishParticipantMediaStatus,
+        setSessionTitle: jest.fn(),
+      }),
+    );
+
+    act(() => {
+      roomConnection.emit({
+        type: SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO,
+      });
+    });
+
+    expect(localAudio.enabled).toBe(false);
+    expect(screenAudio.enabled).toBe(false);
+    expect(setIsAudioMuted).toHaveBeenCalledWith(true);
+
+    act(() => {
+      roomConnection.emit({
+        type: SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO,
+      });
+    });
+
+    expect(localVideo.enabled).toBe(false);
+    expect(screenVideo.enabled).toBe(false);
+    expect(setIsVideoMuted).toHaveBeenCalledWith(true);
+  });
 });

@@ -424,11 +424,14 @@ export function MediaControls({
             : false,
         });
 
-        stream.getVideoTracks()[0].onended = () => {
-          setScreenStream(null);
-          publishScreenShareStatus(false);
-          void roomConnection.syncOutboundMedia?.();
-        };
+        const screenVideoTrack = stream.getVideoTracks()[0];
+        if (screenVideoTrack) {
+          screenVideoTrack.onended = () => {
+            setScreenStream(null);
+            publishScreenShareStatus(false);
+            void roomConnection.syncOutboundMedia?.();
+          };
+        }
 
         setScreenStream(stream);
         publishScreenShareStatus(true);

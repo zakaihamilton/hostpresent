@@ -42,11 +42,11 @@ function pickTracksForFocus({
       videoTrack:
         focusedParticipant.stream
           .getVideoTracks()
-          .find((t) => t.readyState === "live") ?? null,
+          .find((t) => t.readyState === "live" && t.enabled) ?? null,
       audioTrack:
         focusedParticipant.stream
           .getAudioTracks()
-          .find((t) => t.readyState === "live") ?? null,
+          .find((t) => t.readyState === "live" && t.enabled) ?? null,
     };
   }
 
@@ -54,6 +54,86 @@ function pickTracksForFocus({
     videoTrack: pickOutboundVideoTrack(localStream, screenStream),
     audioTrack: null,
   };
+}
+
+function trackSignature(track) {
+  if (!track || track.readyState !== "live") return "";
+  return `${track.id}:${track.enabled ? "1" : "0"}`;
+}
+
+export function getRecordingMediaSignature({
+  focusedParticipantId,
+  videoParticipants,
+  localStream,
+  screenStream,
+}) {
+  const focusedParticipant =
+    focusedParticipantId && focusedParticipantId !== "host"
+      ? videoParticipants.find((p) => p.id === focusedParticipantId)
+      : null;
+
+  if (focusedParticipant?.stream) {
+    const videoTrack = focusedParticipant.stream
+      .getVideoTracks()
+      .find((track) => track.readyState === "live");
+    const audioTrack = focusedParticipant.stream
+      .getAudioTracks()
+      .find((track) => track.readyState === "live");
+    return `remote:${focusedParticipantId}:${trackSignature(videoTrack)}:${trackSignature(audioTrack)}`;
+  }
+
+  const screenVideo = screenStream
+    ?.getVideoTracks()
+    .find((track) => track.readyState === "live");
+  const cameraVideo = localStream
+    ?.getVideoTracks()
+    .find((track) => track.readyState === "live");
+  const videoTrack = screenVideo ?? cameraVideo;
+  const micTrack = localStream
+    ?.getAudioTracks()
+    .find((track) => track.readyState === "live");
+  const screenAudio = screenStream
+    ?.getAudioTracks()
+    .find((track) => track.readyState === "live");
+
+  return `host:${trackSignature(videoTrack)}:${trackSignature(micTrack)}:${trackSignature(screenAudio)}`;
+}
+
+const RECORDER_RESTART_DELAY_MS = 150;
+
+function stopActiveRecorders(videoRecorder, audioRecorder) {
+  return new Promise((resolve) => {
+    let videoStopped = false;
+    let audioStopped = false;
+
+    const checkResolve = () => {
+      if (videoStopped && audioStopped) {
+        resolve();
+      }
+    };
+
+    if (videoRecorder && videoRecorder.state !== "inactive") {
+      videoRecorder.onstop = () => {
+        videoStopped = true;
+        checkResolve();
+      };
+      videoRecorder.stop();
+    } else {
+      videoStopped = true;
+    }
+
+    if (audioRecorder && audioRecorder.state !== "inactive") {
+      audioRecorder.onstop = () => {
+        audioStopped = true;
+        checkResolve();
+      };
+      audioRecorder.stop();
+    } else {
+      audioStopped = true;
+    }
+
+    checkResolve();
+  });
 }
 
 function createRecorder(stream, options) {
@@ -96,6 +176,13 @@ export function Recording({
   const switchingFocusRef = useRef(false);
   const focusSwitchTimerRef = useRef(null);
   const prevFocusedIdRef = useRef(focusedParticipantId);
+  const prevMediaSignatureRef = useRef(null);
+  const localStreamRef = useRef(localStream);
+  localStreamRef.current = localStream;
+  const screenStreamRef = useRef(screenStream);
+  screenStreamRef.current = screenStream;
+  const videoParticipantsRef = useRef(videoParticipants);
+  videoParticipantsRef.current = videoParticipants;
 
   const cancelFocusSwitch = useCallback(() => {
     if (focusSwitchTimerRef.current) {
@@ -237,17 +324,17 @@ export function Recording({
 
   const rebuildRecorder = useCallback(async () => {
     const { videoTrack, audioTrack } = pickTracksForFocus({
-      focusedParticipantId,
-      videoParticipants,
-      localStream,
-      screenStream,
+      focusedParticipantId: focusedIdRef.current,
+      videoParticipants: videoParticipantsRef.current,
+      localStream: localStreamRef.current,
+      screenStream: screenStreamRef.current,
     });
 
     let resolvedAudioTrack = audioTrack;
     if (!resolvedAudioTrack) {
       resolvedAudioTrack = await resolveOutboundAudioTrack(
-        localStream,
-        screenStream,
+        localStreamRef.current,
+        screenStreamRef.current,
       );
     }
 
@@ -301,7 +388,18 @@ export function Recording({
     }
 
     recorder.start(1000);
-  }, [focusedParticipantId, localStream, screenStream, videoParticipants]);
+  }, []);
+
+  const readMediaSignature = useCallback(
+    () =>
+      getRecordingMediaSignature({
+        focusedParticipantId: focusedIdRef.current,
+        videoParticipants: videoParticipantsRef.current,
+        localStream: localStreamRef.current,
+        screenStream: screenStreamRef.current,
+      }),
+    [],
+  );
 
   const startRecording = useCallback(async () => {
     if (!isHost) return;
@@ -311,10 +409,13 @@ export function Recording({
     chunkIndexRef.current = 0;
     switchingFocusRef.current = false;
     prevFocusedIdRef.current = focusedIdRef.current;
+    prevMediaSignatureRef.current = null;
     setSavedRecording(null);
     clearSavedRecording().catch(() => {});
 
     await rebuildRecorder();
+    prevFocusedIdRef.current = focusedIdRef.current;
+    prevMediaSignatureRef.current = readMediaSignature();
 
     resetRecordingTimer();
     setIsRecording(true);
@@ -323,6 +424,7 @@ export function Recording({
   }, [
     isHost,
     rebuildRecorder,
+    readMediaSignature,
     resetRecordingTimer,
     publishRecordingState,
     setIsRecording,
@@ -463,75 +565,76 @@ export function Recording({
       return;
     }
 
-    if (focusedParticipantId === prevFocusedIdRef.current) return;
+    const signature = readMediaSignature();
+    const focusChanged = focusedParticipantId !== prevFocusedIdRef.current;
+    const mediaChanged =
+      prevMediaSignatureRef.current !== null &&
+      signature !== prevMediaSignatureRef.current;
+
+    if (!focusChanged && !mediaChanged) {
+      if (prevMediaSignatureRef.current === null) {
+        prevMediaSignatureRef.current = signature;
+        prevFocusedIdRef.current = focusedParticipantId;
+      }
+      return;
+    }
 
     const runSwitch = async () => {
       switchingFocusRef.current = true;
 
-      while (
-        focusedIdRef.current !== prevFocusedIdRef.current &&
-        isRecordingRef.current
-      ) {
-        const targetId = focusedIdRef.current;
-        prevFocusedIdRef.current = targetId;
+      try {
+        while (isRecordingRef.current) {
+          prevFocusedIdRef.current = focusedIdRef.current;
 
-        const prevRecorder = mediaRecorderRef.current;
-        const audioPrev = audioRecorderRef.current;
+          await stopActiveRecorders(
+            mediaRecorderRef.current,
+            audioRecorderRef.current,
+          );
 
-        await new Promise((resolve) => {
-          let videoStopped = false;
-          let audioStopped = false;
+          if (!isRecordingRef.current) break;
 
-          const checkResolve = () => {
-            if (videoStopped && audioStopped) {
-              resolve();
-            }
-          };
+          await new Promise((resolve) => {
+            focusSwitchTimerRef.current = setTimeout(
+              resolve,
+              RECORDER_RESTART_DELAY_MS,
+            );
+          });
+          focusSwitchTimerRef.current = null;
 
-          if (prevRecorder && prevRecorder.state !== "inactive") {
-            prevRecorder.onstop = () => {
-              videoStopped = true;
-              checkResolve();
-            };
-            prevRecorder.stop();
-          } else {
-            videoStopped = true;
+          if (!isRecordingRef.current) break;
+
+          try {
+            await rebuildRecorder();
+          } catch (e) {
+            console.error("Failed to rebuild recorder during source switch", e);
           }
 
-          if (audioPrev && audioPrev.state !== "inactive") {
-            audioPrev.onstop = () => {
-              audioStopped = true;
-              checkResolve();
-            };
-            audioPrev.stop();
-          } else {
-            audioStopped = true;
+          const currentSignature = readMediaSignature();
+          prevMediaSignatureRef.current = currentSignature;
+
+          if (
+            focusedIdRef.current === prevFocusedIdRef.current &&
+            readMediaSignature() === currentSignature
+          ) {
+            break;
           }
-
-          checkResolve();
-        });
-
-        if (!isRecordingRef.current) break;
-
-        await new Promise((resolve) => {
-          focusSwitchTimerRef.current = setTimeout(resolve, 150);
-        });
-        focusSwitchTimerRef.current = null;
-
-        if (!isRecordingRef.current) break;
-
-        try {
-          await rebuildRecorder();
-        } catch (e) {
-          console.error("Failed to rebuild recorder during focus switch", e);
         }
+      } finally {
+        switchingFocusRef.current = false;
       }
-
-      switchingFocusRef.current = false;
     };
 
     runSwitch();
-  }, [focusedParticipantId, isHost, isRecording, rebuildRecorder]);
+  }, [
+    focusedParticipantId,
+    isHost,
+    isRecording,
+    localStream,
+    screenStream,
+    videoParticipants,
+    rebuildRecorder,
+    readMediaSignature,
+  ]);
 
   useEffect(() => {
     if (!isHost || !isRecording) return;
