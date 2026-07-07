@@ -17,6 +17,7 @@ describe("ErrorBanner", () => {
     render(<ErrorBanner message="Something failed" onDismiss={onDismiss} />);
 
     expect(screen.getByText("Something failed")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveAttribute("aria-live", "assertive");
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });

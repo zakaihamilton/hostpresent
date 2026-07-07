@@ -186,6 +186,70 @@ describe("MediaControls Hook", () => {
     expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
   });
 
+  it("does not reacquire local media when mute states change", async () => {
+    const localStream = createStream([
+      createTrack({ kind: "audio" }),
+      createTrack({ kind: "video" }),
+    ]);
+    navigator.mediaDevices.getUserMedia.mockResolvedValue(localStream);
+    const setLocalStream = jest.fn();
+
+    const { result } = renderHook(() =>
+      MediaControls({
+        isHost: false,
+        roomConnection: {
+          send: jest.fn(),
+          localParticipantId: "p1",
+          syncOutboundMedia: jest.fn(),
+        },
+        localStream,
+        setLocalStream,
+        screenStream: null,
+        setScreenStream: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    });
+    act(() => result.current.toggleAudio());
+    act(() => result.current.toggleVideo());
+    await act(async () => Promise.resolve());
+
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops media that resolves after the hook unmounts", async () => {
+    let resolveMedia;
+    const lateStream = createStream([
+      createTrack({ kind: "audio" }),
+      createTrack({ kind: "video" }),
+    ]);
+    navigator.mediaDevices.getUserMedia.mockReturnValue(
+      new Promise((resolve) => {
+        resolveMedia = resolve;
+      }),
+    );
+
+    const { unmount } = renderHook(() =>
+      MediaControls({
+        isHost: false,
+        roomConnection: { send: jest.fn() },
+        localStream: null,
+        setLocalStream: jest.fn(),
+        screenStream: null,
+        setScreenStream: jest.fn(),
+      }),
+    );
+
+    unmount();
+    await act(async () => resolveMedia(lateStream));
+
+    for (const track of lateStream.getTracks()) {
+      expect(track.stop).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it("switches camera by replacing the old video track and syncing outbound media", async () => {
     const oldVideoTrack = createTrack({
       kind: "video",
@@ -393,10 +457,11 @@ describe("MediaControls Hook", () => {
 
   it("clears screen sharing when the browser ends capture", async () => {
     const screenTrack = createTrack({ kind: "video", id: "screen-track" });
-    const screenStream = createStream([
-      screenTrack,
-      createTrack({ kind: "audio", id: "screen-audio-track" }),
-    ]);
+    const screenAudioTrack = createTrack({
+      kind: "audio",
+      id: "screen-audio-track",
+    });
+    const screenStream = createStream([screenTrack, screenAudioTrack]);
     const setScreenStream = jest.fn();
     const send = jest.fn();
     const syncOutboundMedia = jest.fn();
@@ -434,6 +499,7 @@ describe("MediaControls Hook", () => {
       }),
     );
     expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    expect(screenAudioTrack.stop).toHaveBeenCalledTimes(1);
   });
 
   it("does not publish participant screen-share status for the host", async () => {
@@ -584,11 +650,12 @@ describe("MediaControls Hook", () => {
     warnSpy.mockRestore();
   });
 
-  it("handles display media streams without a video track", async () => {
-    const audioOnlyScreenStream = createStream([
-      createTrack({ kind: "audio", id: "screen-audio-track" }),
-    ]);
+  it("rejects and cleans up display media streams without a video track", async () => {
+    const audioTrack = createTrack({ kind: "audio", id: "screen-audio-track" });
+    const audioOnlyScreenStream = createStream([audioTrack]);
     const setScreenStream = jest.fn();
+    const setLocalStream = jest.fn();
+    const send = jest.fn();
 
     navigator.mediaDevices.getDisplayMedia = jest
       .fn()
@@ -598,19 +665,24 @@ describe("MediaControls Hook", () => {
       MediaControls({
         isHost: true,
         roomConnection: {
-          send: jest.fn(),
+          send,
           localParticipantId: "host",
           syncOutboundMedia: jest.fn(),
         },
         localStream: createStream([]),
-        setLocalStream: jest.fn(),
+        setLocalStream,
         screenStream: null,
         setScreenStream,
       }),
     );
 
-    await expect(result.current.toggleScreenShare()).resolves.toBeUndefined();
+    await act(async () => {
+      await result.current.toggleScreenShare();
+    });
 
-    expect(setScreenStream).toHaveBeenCalledWith(audioOnlyScreenStream);
+    expect(setScreenStream).not.toHaveBeenCalled();
+    expect(audioTrack.stop).toHaveBeenCalledTimes(1);
+    expect(result.current.errorMsg).toContain("[E041]");
+    expect(send).not.toHaveBeenCalled();
   });
 });

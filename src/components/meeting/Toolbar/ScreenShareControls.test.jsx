@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ScreenShareControls } from "./ScreenShareControls";
 
@@ -43,9 +43,33 @@ describe("ScreenShareControls", () => {
 
     await user.click(getMenuButton());
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("radio", { name: /Video only/i })).toHaveFocus();
+    });
 
     await user.click(screen.getByRole("radio", { name: /With audio/i }));
     expect(onShareScreenAudioChange).toHaveBeenCalledWith(true);
+  });
+
+  it("restores trigger focus when Escape closes settings", async () => {
+    const user = userEvent.setup();
+    render(
+      <ScreenShareControls
+        screenStream={null}
+        shareScreenAudio={false}
+        isScreenAudioShared={false}
+        onToggleScreenShare={() => {}}
+        onShareScreenAudioChange={() => {}}
+      />,
+    );
+
+    const trigger = getMenuButton();
+    await user.click(trigger);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("shows stop sharing state while a screen stream is active", async () => {

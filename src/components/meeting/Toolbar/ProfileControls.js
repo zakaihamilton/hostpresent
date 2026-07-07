@@ -82,6 +82,7 @@ export function ProfileControls({
 
   const clusterRef = useRef(null);
   const anchorRef = useRef(null);
+  const triggerRef = useRef(null);
   const popupRef = useRef(null);
   const micTestCleanupRef = useRef(null);
   const popupId = useId();
@@ -93,6 +94,13 @@ export function ProfileControls({
   );
   const isListeningOnly = participantMode === PARTICIPANT_MODE.LISTENING;
   const modeLabel = participantModeLabel(participantMode);
+
+  const closePopup = useCallback((restoreFocus = false) => {
+    setPopupOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }
+  }, []);
 
   const updatePopupPosition = useCallback(() => {
     const anchor = anchorRef.current;
@@ -136,6 +144,10 @@ export function ProfileControls({
   useEffect(() => {
     if (!popupOpen) return;
 
+    requestAnimationFrame(() => {
+      popupRef.current?.querySelector("input, select, button")?.focus();
+    });
+
     const handlePointerDown = (event) => {
       if (
         clusterRef.current?.contains(event.target) ||
@@ -143,12 +155,12 @@ export function ProfileControls({
       ) {
         return;
       }
-      setPopupOpen(false);
+      closePopup(false);
     };
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        setPopupOpen(false);
+        closePopup(true);
       }
     };
 
@@ -159,7 +171,7 @@ export function ProfileControls({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [popupOpen]);
+  }, [closePopup, popupOpen]);
 
   useEffect(
     () => () => {
@@ -266,6 +278,7 @@ export function ProfileControls({
           }
         >
           <button
+            ref={triggerRef}
             type="button"
             className={btnClass(popupOpen && styles.btnActive)}
             aria-expanded={popupOpen}
@@ -323,7 +336,7 @@ export function ProfileControls({
                     <button
                       type="button"
                       className={styles.cancelBtn}
-                      onClick={() => setPopupOpen(false)}
+                      onClick={() => closePopup(true)}
                     >
                       Cancel
                     </button>
@@ -332,7 +345,7 @@ export function ProfileControls({
                       className={styles.saveBtn}
                       onClick={() => {
                         onDisplayNameChange(localDisplayName);
-                        setPopupOpen(false);
+                        closePopup(true);
                       }}
                     >
                       Save

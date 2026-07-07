@@ -64,6 +64,8 @@ export function MediaControls({
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
   const screenAudioRef = useRef(null);
+  const initialAudioMutedRef = useRef(isAudioMuted);
+  const initialVideoMutedRef = useRef(isVideoMuted);
 
   const isScreenAudioShared = Boolean(
     screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
@@ -131,20 +133,29 @@ export function MediaControls({
   }, [enumerateMediaDevices]);
 
   useEffect(() => {
+    let cancelled = false;
+    let acquiredStream = null;
+
     const initLocalMedia = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: audioConstraintsForDevice(),
         });
+        acquiredStream = stream;
+        if (cancelled) {
+          for (const track of stream.getTracks()) track.stop();
+          return;
+        }
         stream.getAudioTracks().forEach((track) => {
-          track.enabled = !isAudioMuted;
+          track.enabled = !initialAudioMutedRef.current;
         });
         stream.getVideoTracks().forEach((track) => {
-          track.enabled = !isVideoMuted;
+          track.enabled = !initialVideoMutedRef.current;
         });
         setLocalStream(stream);
         const devices = await navigator.mediaDevices.enumerateDevices();
+        if (cancelled) return;
         const videoInputs = devices.filter((d) => d.kind === "videoinput");
         const audioInputs = devices.filter((d) => d.kind === "audioinput");
         const audioOutputs = devices.filter((d) => d.kind === "audiooutput");
@@ -169,8 +180,10 @@ export function MediaControls({
     initLocalMedia();
 
     return () => {
-      if (localStreamRef.current) {
-        for (const track of localStreamRef.current.getTracks()) {
+      cancelled = true;
+      const streamToStop = localStreamRef.current ?? acquiredStream;
+      if (streamToStop) {
+        for (const track of streamToStop.getTracks()) {
           track.stop();
         }
       }
@@ -180,7 +193,7 @@ export function MediaControls({
         }
       }
     };
-  }, [isAudioMuted, isVideoMuted, setLocalStream]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setLocalStream]);
 
   const switchCamera = useCallback(
     async (deviceId) => {
@@ -425,13 +438,21 @@ export function MediaControls({
         });
 
         const screenVideoTrack = stream.getVideoTracks()[0];
-        if (screenVideoTrack) {
-          screenVideoTrack.onended = () => {
-            setScreenStream(null);
-            publishScreenShareStatus(false);
-            void roomConnection.syncOutboundMedia?.();
-          };
+        if (!screenVideoTrack) {
+          for (const track of stream.getTracks()) track.stop();
+          setErrorMsg(
+            "[E041] Could not start screen sharing. Check browser permissions and try again.",
+          );
+          return;
         }
+        screenVideoTrack.onended = () => {
+          for (const track of stream.getTracks()) {
+            if (track.readyState !== "ended") track.stop();
+          }
+          setScreenStream(null);
+          publishScreenShareStatus(false);
+          void roomConnection.syncOutboundMedia?.();
+        };
 
         setScreenStream(stream);
         publishScreenShareStatus(true);

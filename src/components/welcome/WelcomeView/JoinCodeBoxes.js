@@ -34,8 +34,8 @@ export function JoinCodeBoxes({
   const handleChange = (index, char) => {
     if (readOnly) return;
     const upper = char.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (!upper && !char) return;
     const chars = Array.from({ length: TOTAL }, (_, i) => charAt(value, i));
+    if (!upper && char) return;
     chars[index] = upper;
     fire(chars);
     if (upper && index < TOTAL - 1) {
@@ -44,6 +44,13 @@ export function JoinCodeBoxes({
   };
 
   const handleKeyDown = (index, e) => {
+    if ((e.key === "Backspace" || e.key === "Delete") && charAt(value, index)) {
+      const chars = Array.from({ length: TOTAL }, (_, i) => charAt(value, i));
+      chars[index] = "";
+      fire(chars);
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Backspace") {
       const current = charAt(value, index);
       if (!current && index > 0) {

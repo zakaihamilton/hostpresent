@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import { ProfileControls } from "./ProfileControls";
@@ -52,6 +52,26 @@ describe("ProfileControls", () => {
 
     await user.click(getProfileButton());
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText("Display name")).toHaveFocus();
+    });
+  });
+
+  it("restores trigger focus when Escape closes the popup", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProfileControls displayName="Alex" onDisplayNameChange={() => {}} />,
+    );
+
+    const trigger = getProfileButton();
+    await user.click(trigger);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Display name")).toHaveFocus(),
+    );
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("saves the name when the save button is clicked", async () => {

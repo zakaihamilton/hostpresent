@@ -59,10 +59,18 @@ export function ScreenShareControls({
   const [mounted, setMounted] = useState(false);
   const clusterRef = useRef(null);
   const menuAnchorRef = useRef(null);
+  const menuTriggerRef = useRef(null);
   const menuRef = useRef(null);
   const menuId = useId();
   const headingId = `${menuId}-heading`;
   const isSharing = Boolean(screenStream);
+
+  const closeMenu = useCallback((restoreFocus = false) => {
+    setMenuOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => menuTriggerRef.current?.focus());
+    }
+  }, []);
 
   const updateMenuPosition = useCallback(() => {
     const anchor = menuAnchorRef.current;
@@ -100,6 +108,10 @@ export function ScreenShareControls({
   useEffect(() => {
     if (!menuOpen) return;
 
+    requestAnimationFrame(() => {
+      menuRef.current?.querySelector("input, button")?.focus();
+    });
+
     const handlePointerDown = (event) => {
       if (
         clusterRef.current?.contains(event.target) ||
@@ -107,12 +119,12 @@ export function ScreenShareControls({
       ) {
         return;
       }
-      setMenuOpen(false);
+      closeMenu(false);
     };
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        setMenuOpen(false);
+        closeMenu(true);
       }
     };
 
@@ -123,12 +135,12 @@ export function ScreenShareControls({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [menuOpen]);
+  }, [closeMenu, menuOpen]);
 
   useEffect(() => {
     if (!isSharing) return;
-    setMenuOpen(false);
-  }, [isSharing]);
+    closeMenu(true);
+  }, [closeMenu, isSharing]);
 
   return (
     <div className={styles.cluster} ref={clusterRef}>
@@ -146,6 +158,7 @@ export function ScreenShareControls({
       <div className={styles.menuWrap} ref={menuAnchorRef}>
         <Tooltip text="Screen share settings" forceHidden={menuOpen}>
           <button
+            ref={menuTriggerRef}
             type="button"
             className={btnClass(
               styles.menuBtn,

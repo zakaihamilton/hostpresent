@@ -16,7 +16,6 @@ export function AppRouter() {
     token: routeToken,
     joinCode,
     navigate,
-    navigateJoinCode,
     navigateParticipantWelcome,
   } = useHashRouter();
 
@@ -114,8 +113,6 @@ export function AppRouter() {
       joinCode={joinCode}
       autoJoinFromRoute={view === APP_VIEW.JOIN}
       navigate={navigate}
-      navigateJoinCode={navigateJoinCode}
-      navigateParticipantWelcome={navigateParticipantWelcome}
     />
   );
 }

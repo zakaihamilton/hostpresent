@@ -5,7 +5,7 @@ export const ErrorBanner = memo(function ErrorBanner({ message, onDismiss }) {
   if (!message) return null;
 
   return (
-    <div className={styles.banner}>
+    <div className={styles.banner} role="alert" aria-live="assertive">
       <span className={styles.message}>{message}</span>
       <button type="button" className={styles.dismiss} onClick={onDismiss}>
         Dismiss

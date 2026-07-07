@@ -18,7 +18,6 @@ jest.mock("@/hooks/roomSession", () => ({
 }));
 
 jest.mock("@/lib/room/inviteLink", () => ({
-  extractJoinCodeFromInput: () => "",
   formatRoomIdInput: (value) =>
     value
       .replace(/[\s-]+/g, "")
@@ -42,16 +41,11 @@ const defaultProps = {
   token: null,
   joinCode: null,
   navigate: () => {},
-  navigateJoinCode: () => {},
-  navigateParticipantWelcome: () => {},
 };
 
 describe("WelcomeParticipantPanel", () => {
   it("shows code entry boxes", async () => {
-    const user = userEvent.setup();
     render(<WelcomeParticipantPanel {...defaultProps} />);
-
-    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 6")).toBeInTheDocument();
@@ -59,19 +53,6 @@ describe("WelcomeParticipantPanel", () => {
       document.querySelector('label[for="join-code-box-0"]'),
     ).toHaveTextContent("Room code");
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
-  });
-
-  it("activates the room-code tab when a code input receives focus", async () => {
-    const user = userEvent.setup();
-    render(<WelcomeParticipantPanel {...defaultProps} />);
-
-    await user.click(screen.getByRole("tab", { name: "Invite link" }));
-    await user.click(screen.getByLabelText("Character 1"));
-
-    expect(screen.getByRole("tab", { name: "Room code" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
   });
 
   it("enables join when all 6 code characters are entered", async () => {
@@ -84,8 +65,6 @@ describe("WelcomeParticipantPanel", () => {
     });
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
-
-    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     for (let i = 0; i < 6; i++) {
       const char = String.fromCharCode(65 + i);
@@ -149,8 +128,6 @@ describe("WelcomeParticipantPanel", () => {
     const user = userEvent.setup();
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
-
-    await user.click(screen.getByRole("tab", { name: "Room code" }));
 
     const box1 = screen.getByLabelText("Character 1");
     await user.type(box1, "a");

@@ -18,8 +18,6 @@ export function WelcomeView({
   joinCode,
   autoJoinFromRoute = false,
   navigate,
-  navigateJoinCode,
-  navigateParticipantWelcome,
 }) {
   const switchTab = (nextRole) => {
     navigate({
@@ -88,8 +86,6 @@ export function WelcomeView({
                   joinCode={joinCode}
                   autoJoinFromRoute={autoJoinFromRoute}
                   navigate={navigate}
-                  navigateJoinCode={navigateJoinCode}
-                  navigateParticipantWelcome={navigateParticipantWelcome}
                 />}
           </div>
         </div>

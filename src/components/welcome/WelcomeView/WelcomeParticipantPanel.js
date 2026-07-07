@@ -5,7 +5,6 @@ import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggl
 import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import {
-  extractJoinCodeFromInput,
   formatRoomIdInput,
   normalizeRoomIdInput,
   resolveJoinCode,
@@ -32,42 +31,21 @@ import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import ps from "./WelcomeParticipantPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
-function extractLegacyTokenFromInput(value) {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  const hashMatch = trimmed.match(/#\/welcome\/participant\/([^/?#]+)/);
-  if (hashMatch) return hashMatch[1];
-
-  const pathMatch = trimmed.match(/\/welcome\/participant\/([^/?#]+)/);
-  if (pathMatch) return pathMatch[1];
-
-  if (trimmed.includes(".")) return trimmed;
-
-  return "";
-}
-
 export function WelcomeParticipantPanel({
   token,
   joinCode,
   autoJoinFromRoute = false,
   navigate,
-  navigateJoinCode: _navigateJoinCode,
-  navigateParticipantWelcome: _navigateParticipantWelcome,
 }) {
   const [roomIdInput, setRoomIdInput] = useState(
     joinCode ? formatRoomIdInput(joinCode) : "",
   );
-  const [inviteLinkInput] = useState("");
   const [recentRooms, setRecentRooms] = useState([]);
   const [resolveError, setResolveError] = useState("");
   const [isResolving, setIsResolving] = useState(false);
   const [displayName, setDisplayName] = useState(() => loadDisplayName());
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
-  );
-  const [activeJoinTab, setActiveJoinTab] = useState(() =>
-    joinCode ? "code" : "link",
   );
   const resolvedJoinCodeRef = useRef(null);
 
@@ -172,26 +150,6 @@ export function WelcomeParticipantPanel({
     void resolveAndJoin(roomIdInput);
   };
 
-  const handleJoinInviteLink = async () => {
-    setResolveError("");
-    const code = extractJoinCodeFromInput(inviteLinkInput);
-    if (code) {
-      setRoomIdInput(formatRoomIdInput(code));
-      await resolveAndJoin(code);
-      return;
-    }
-
-    const legacyToken = extractLegacyTokenFromInput(inviteLinkInput);
-    if (legacyToken) {
-      joinWithToken(legacyToken);
-      return;
-    }
-
-    setResolveError(
-      "[E051] Enter a valid participant join code or invite link.",
-    );
-  };
-
   const handleSelectRoom = (room) => {
     if (room.joinCode) {
       setRoomIdInput(formatJoinCode(room.joinCode));
@@ -259,32 +217,6 @@ export function WelcomeParticipantPanel({
         </p>
       </div>
 
-      {/* Hidden tabs kept for accessibility/test suite compatibility */}
-      <div
-        className={shared.visuallyHidden}
-        role="tablist"
-        aria-label="Join method"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeJoinTab === "link"}
-          className={`${shared.shareTab} ${activeJoinTab === "link" ? shared.shareTabActive : ""}`}
-          onClick={() => setActiveJoinTab("link")}
-        >
-          Invite link
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeJoinTab === "code"}
-          className={`${shared.shareTab} ${activeJoinTab === "code" ? shared.shareTabActive : ""}`}
-          onClick={() => setActiveJoinTab("code")}
-        >
-          Room code
-        </button>
-      </div>
-
       <div className={ps.joinSection}>
         <div className={shared.directActionsGrid}>
           <div className={shared.directActionSection}>
@@ -297,7 +229,6 @@ export function WelcomeParticipantPanel({
                 onChange={setRoomIdInput}
                 autoFocus
                 className={shared.joinCodeBoxes}
-                onFocus={() => setActiveJoinTab("code")}
               />
             </div>
             <p className={ps.joinHint}>
@@ -337,12 +268,8 @@ export function WelcomeParticipantPanel({
         <button
           type="button"
           className={shared.button}
-          onClick={
-            activeJoinTab === "code" ? handleJoinRoomId : handleJoinInviteLink
-          }
-          disabled={
-            activeJoinTab === "code" ? !allFilled : !inviteLinkInput.trim()
-          }
+          onClick={handleJoinRoomId}
+          disabled={!allFilled}
         >
           Join meeting
         </button>
