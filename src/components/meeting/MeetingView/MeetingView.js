@@ -381,8 +381,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     hostIsSpeaking,
   ]);
 
-  const [effectiveFocusedId, setEffectiveFocusedId] =
-    useState(focusedParticipantId || "host");
+  const [effectiveFocusedId, setEffectiveFocusedId] = useState(
+    focusedParticipantId || "host",
+  );
 
   useEffect(() => {
     if (focusedParticipantId !== "") {

@@ -7,10 +7,142 @@ import {
   saveRecordingMeta,
 } from "@/lib/recordingStorage";
 import { createRecordingStateMessage } from "@/lib/signaling/messages";
-import {
-  pickOutboundVideoTrack,
-  resolveOutboundAudioTrack,
-} from "@/lib/webrtc/outboundMedia";
+import { pickOutboundVideoTrack } from "@/lib/webrtc/outboundMedia";
+
+export class CanvasVideoRenderer {
+  constructor() {
+    if (typeof document !== "undefined") {
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = 1280;
+      this.canvas.height = 720;
+      this.ctx = this.canvas.getContext("2d");
+      this.videoElement = document.createElement("video");
+      this.videoElement.muted = true;
+      this.videoElement.playsInline = true;
+    }
+    this.activeTrack = null;
+    this.animationId = null;
+    this.running = false;
+
+    this.render = this.render.bind(this);
+  }
+
+  setTrack(track) {
+    if (this.activeTrack === track) return;
+    this.activeTrack = track;
+
+    if (track && typeof MediaStream !== "undefined") {
+      const stream = new MediaStream([track]);
+      this.videoElement.srcObject = stream;
+      this.videoElement
+        .play()
+        .catch((err) => console.warn("Canvas video play failed:", err));
+    } else if (this.videoElement) {
+      this.videoElement.srcObject = null;
+    }
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.render();
+  }
+
+  stop() {
+    this.running = false;
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    if (this.videoElement) {
+      this.videoElement.srcObject = null;
+    }
+  }
+
+  render() {
+    if (!this.running) return;
+
+    if (this.videoElement && this.videoElement.readyState >= 2) {
+      this.ctx.drawImage(
+        this.videoElement,
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height,
+      );
+    } else if (this.ctx) {
+      this.ctx.fillStyle = "#1e1e24";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    this.animationId = requestAnimationFrame(this.render);
+  }
+
+  getStream() {
+    if (this.canvas?.captureStream) {
+      return this.canvas.captureStream(30);
+    }
+    return new MediaStream();
+  }
+}
+
+export class RecordingAudioMixer {
+  constructor() {
+    const AudioContextConstructor =
+      typeof window !== "undefined" &&
+      (window.AudioContext || window.webkitAudioContext);
+    if (AudioContextConstructor) {
+      this.context = new AudioContextConstructor();
+      this.destination = this.context.createMediaStreamDestination();
+    }
+    this.sources = new Map();
+  }
+
+  updateTracks(tracks) {
+    if (!this.context) return;
+
+    // Disconnect removed tracks
+    for (const [trackId, info] of this.sources.entries()) {
+      if (!tracks.some((t) => t.id === trackId && t.readyState === "live")) {
+        try {
+          info.sourceNode.disconnect();
+        } catch {}
+        this.sources.delete(trackId);
+      }
+    }
+
+    // Connect new tracks
+    for (const track of tracks) {
+      if (!track || track.readyState !== "live") continue;
+      if (this.sources.has(track.id)) continue;
+
+      try {
+        const stream = new MediaStream([track]);
+        const sourceNode = this.context.createMediaStreamSource(stream);
+        sourceNode.connect(this.destination);
+        this.sources.set(track.id, { sourceNode, stream });
+      } catch (err) {
+        console.warn("Failed to connect audio track to recording mixer:", err);
+      }
+    }
+  }
+
+  getAudioTrack() {
+    return this.destination?.stream.getAudioTracks()[0] ?? null;
+  }
+
+  destroy() {
+    for (const info of this.sources.values()) {
+      try {
+        info.sourceNode.disconnect();
+      } catch {}
+    }
+    this.sources.clear();
+    if (this.context && this.context.state !== "closed") {
+      void this.context.close();
+    }
+  }
+}
 
 function setStreamTracks(stream, tracks) {
   const currentTracks = stream.getTracks();
@@ -99,9 +231,9 @@ export function getRecordingMediaSignature({
   return `host:${trackSignature(videoTrack)}:${trackSignature(micTrack)}:${trackSignature(screenAudio)}`;
 }
 
-const RECORDER_RESTART_DELAY_MS = 150;
+const _RECORDER_RESTART_DELAY_MS = 150;
 
-function stopActiveRecorders(videoRecorder, audioRecorder) {
+function _stopActiveRecorders(videoRecorder, audioRecorder) {
   return new Promise((resolve) => {
     let videoStopped = false;
     let audioStopped = false;
@@ -166,18 +298,12 @@ export function Recording({
 }) {
   const [downloadState, setDownloadState] = useState(null);
   const [savedRecording, setSavedRecording] = useState(null);
-  const [remoteTrackRevision, setRemoteTrackRevision] = useState(0);
+  const [_remoteTrackRevision, setRemoteTrackRevision] = useState(0);
 
   const mediaRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
   const compositeStreamRef = useRef(null);
-  const audioRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
   const downloadDismissTimerRef = useRef(null);
-  const switchingFocusRef = useRef(false);
-  const focusSwitchTimerRef = useRef(null);
-  const prevFocusedIdRef = useRef(focusedParticipantId);
-  const prevMediaSignatureRef = useRef(null);
   const localStreamRef = useRef(localStream);
   localStreamRef.current = localStream;
   const screenStreamRef = useRef(screenStream);
@@ -185,19 +311,14 @@ export function Recording({
   const videoParticipantsRef = useRef(videoParticipants);
   videoParticipantsRef.current = videoParticipants;
 
-  const cancelFocusSwitch = useCallback(() => {
-    if (focusSwitchTimerRef.current) {
-      clearTimeout(focusSwitchTimerRef.current);
-      focusSwitchTimerRef.current = null;
-    }
-    switchingFocusRef.current = false;
-  }, []);
+  const canvasRendererRef = useRef(null);
+  const audioMixerRef = useRef(null);
+
   const focusedIdRef = useRef(focusedParticipantId);
   focusedIdRef.current = focusedParticipantId;
   const isRecordingRef = useRef(isRecording);
   isRecordingRef.current = isRecording;
   const chunkIndexRef = useRef(0);
-  const _unloadHandlerRef = useRef(null);
 
   const publishRecordingState = useCallback(
     (active, paused = false) => {
@@ -230,10 +351,6 @@ export function Recording({
   const finalizeRecordingDownload = useCallback(async () => {
     const filename = buildRecordingFilename({
       sessionName: sessionNameRef.current,
-    });
-    const audioFilename = buildRecordingFilename({
-      sessionName: sessionNameRef.current,
-      extension: "m4a",
     });
     const chunks = recordingChunksRef.current;
     const chunkCount = chunks.length;
@@ -268,51 +385,7 @@ export function Recording({
       window.URL.revokeObjectURL(url);
     }, 100);
 
-    if (
-      audioRecorderRef.current &&
-      audioRecorderRef.current.state !== "inactive"
-    ) {
-      await new Promise((resolve) => {
-        const checkState = () => {
-          if (
-            !audioRecorderRef.current ||
-            audioRecorderRef.current.state === "inactive"
-          ) {
-            resolve();
-          } else {
-            setTimeout(checkState, 10);
-          }
-        };
-        checkState();
-      });
-    }
-
-    const audioChunks = audioChunksRef.current;
-    if (audioChunks.length > 0) {
-      let audioMimeType = "audio/mp4";
-      try {
-        audioMimeType = audioChunks[0].type || "audio/mp4";
-      } catch (e) {
-        console.warn("Failed to read audio chunk mimeType", e);
-      }
-      const audioBlob = new Blob(audioChunks, { type: audioMimeType });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audioAnchor = document.createElement("a");
-      audioAnchor.style.display = "none";
-      audioAnchor.href = audioUrl;
-      audioAnchor.download = audioFilename;
-
-      document.body.appendChild(audioAnchor);
-      audioAnchor.click();
-
-      setTimeout(() => {
-        document.body.removeChild(audioAnchor);
-        window.URL.revokeObjectURL(audioUrl);
-      }, 100);
-    }
-
     recordingChunksRef.current = [];
-    audioChunksRef.current = [];
     chunkIndexRef.current = 0;
     updateDownloadProgress("complete", 100, filename);
     clearSavedRecording().catch(() => {});
@@ -324,23 +397,45 @@ export function Recording({
   }, [updateDownloadProgress]);
 
   const rebuildRecorder = useCallback(async () => {
-    const { videoTrack, audioTrack } = pickTracksForFocus({
+    if (!canvasRendererRef.current) {
+      canvasRendererRef.current = new CanvasVideoRenderer();
+      canvasRendererRef.current.start();
+    }
+    if (!audioMixerRef.current) {
+      audioMixerRef.current = new RecordingAudioMixer();
+    }
+
+    const { videoTrack } = pickTracksForFocus({
       focusedParticipantId: focusedIdRef.current,
       videoParticipants: videoParticipantsRef.current,
       localStream: localStreamRef.current,
       screenStream: screenStreamRef.current,
     });
+    canvasRendererRef.current.setTrack(videoTrack);
 
-    let resolvedAudioTrack = audioTrack;
-    if (!resolvedAudioTrack) {
-      resolvedAudioTrack = await resolveOutboundAudioTrack(
-        localStreamRef.current,
-        screenStreamRef.current,
-      );
-    }
+    const micTrack = localStreamRef.current
+      ?.getAudioTracks()
+      .find((t) => t.readyState === "live");
+    const screenAudio = screenStreamRef.current
+      ?.getAudioTracks()
+      .find((t) => t.readyState === "live");
+    const remoteAudioTracks = videoParticipantsRef.current
+      .map((p) =>
+        p.stream?.getAudioTracks().find((t) => t.readyState === "live"),
+      )
+      .filter(Boolean);
 
-    const tracksToRecord = [videoTrack, resolvedAudioTrack].filter(Boolean);
+    const allAudioTracks = [micTrack, screenAudio, ...remoteAudioTracks].filter(
+      Boolean,
+    );
+    audioMixerRef.current.updateTracks(allAudioTracks);
 
+    const recVideoTrack = canvasRendererRef.current
+      .getStream()
+      .getVideoTracks()[0];
+    const recAudioTrack = audioMixerRef.current.getAudioTrack();
+
+    const tracksToRecord = [recVideoTrack, recAudioTrack].filter(Boolean);
     if (!compositeStreamRef.current) {
       compositeStreamRef.current = new MediaStream(tracksToRecord);
     } else {
@@ -370,53 +465,18 @@ export function Recording({
       }
     };
 
-    if (resolvedAudioTrack) {
-      const audioStream = new MediaStream([resolvedAudioTrack]);
-      let audioOptions = { mimeType: "audio/mp4" };
-      if (!MediaRecorder.isTypeSupported(audioOptions.mimeType)) {
-        audioOptions = {};
-      }
-      const audioRecorder = createRecorder(audioStream, audioOptions);
-      audioRecorderRef.current = audioRecorder;
-      audioRecorder.ondataavailable = (event) => {
-        if (event.data?.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      audioRecorder.start(1000);
-    } else {
-      audioRecorderRef.current = null;
-    }
-
     recorder.start(1000);
   }, []);
-
-  const readMediaSignature = useCallback(
-    () =>
-      getRecordingMediaSignature({
-        focusedParticipantId: focusedIdRef.current,
-        videoParticipants: videoParticipantsRef.current,
-        localStream: localStreamRef.current,
-        screenStream: screenStreamRef.current,
-      }),
-    [],
-  );
 
   const startRecording = useCallback(async () => {
     if (!isHost) return;
 
     recordingChunksRef.current = [];
-    audioChunksRef.current = [];
     chunkIndexRef.current = 0;
-    switchingFocusRef.current = false;
-    prevFocusedIdRef.current = focusedIdRef.current;
-    prevMediaSignatureRef.current = null;
     setSavedRecording(null);
     clearSavedRecording().catch(() => {});
 
     await rebuildRecorder();
-    prevFocusedIdRef.current = focusedIdRef.current;
-    prevMediaSignatureRef.current = readMediaSignature();
 
     resetRecordingTimer();
     setIsRecording(true);
@@ -425,7 +485,6 @@ export function Recording({
   }, [
     isHost,
     rebuildRecorder,
-    readMediaSignature,
     resetRecordingTimer,
     publishRecordingState,
     setIsRecording,
@@ -438,12 +497,6 @@ export function Recording({
       mediaRecorderRef.current.state === "recording"
     ) {
       mediaRecorderRef.current.pause();
-      if (
-        audioRecorderRef.current &&
-        audioRecorderRef.current.state === "recording"
-      ) {
-        audioRecorderRef.current.pause();
-      }
       setIsRecordingPaused(true);
       publishRecordingState(true, true);
     }
@@ -455,12 +508,6 @@ export function Recording({
       mediaRecorderRef.current.state === "paused"
     ) {
       mediaRecorderRef.current.resume();
-      if (
-        audioRecorderRef.current &&
-        audioRecorderRef.current.state === "paused"
-      ) {
-        audioRecorderRef.current.resume();
-      }
       setIsRecordingPaused(false);
       publishRecordingState(true, false);
     }
@@ -469,7 +516,6 @@ export function Recording({
   const stopRecording = useCallback(() => {
     if (!isHost) return;
 
-    cancelFocusSwitch();
     setIsRecording(false);
     setIsRecordingPaused(false);
     resetRecordingTimer();
@@ -481,24 +527,25 @@ export function Recording({
     if (hasActiveRecorder) {
       updateDownloadProgress("preparing", 5);
       recorder.onstop = () => {
+        canvasRendererRef.current?.stop();
+        canvasRendererRef.current = null;
+        audioMixerRef.current?.destroy();
+        audioMixerRef.current = null;
         void finalizeRecordingDownload();
       };
       recorder.stop();
-      if (
-        audioRecorderRef.current &&
-        audioRecorderRef.current.state !== "inactive"
-      ) {
-        audioRecorderRef.current.stop();
-      }
       return;
     }
 
     if (recordingChunksRef.current.length > 0) {
       updateDownloadProgress("preparing", 5);
+      canvasRendererRef.current?.stop();
+      canvasRendererRef.current = null;
+      audioMixerRef.current?.destroy();
+      audioMixerRef.current = null;
       void finalizeRecordingDownload();
     }
   }, [
-    cancelFocusSwitch,
     finalizeRecordingDownload,
     isHost,
     resetRecordingTimer,
@@ -511,7 +558,6 @@ export function Recording({
   const stopRecordingAsync = useCallback(async () => {
     if (!isHost) return;
 
-    cancelFocusSwitch();
     const recorder = mediaRecorderRef.current;
     const hasActiveRecorder = recorder && recorder.state !== "inactive";
 
@@ -522,6 +568,10 @@ export function Recording({
       publishRecordingState(false, false);
       if (recordingChunksRef.current.length > 0) {
         updateDownloadProgress("preparing", 5);
+        canvasRendererRef.current?.stop();
+        canvasRendererRef.current = null;
+        audioMixerRef.current?.destroy();
+        audioMixerRef.current = null;
         await finalizeRecordingDownload();
       }
       return;
@@ -529,14 +579,12 @@ export function Recording({
 
     updateDownloadProgress("preparing", 5);
     const activeRecorder = recorder;
-    if (
-      audioRecorderRef.current &&
-      audioRecorderRef.current.state !== "inactive"
-    ) {
-      audioRecorderRef.current.stop();
-    }
     await new Promise((resolve) => {
       activeRecorder.onstop = async () => {
+        canvasRendererRef.current?.stop();
+        canvasRendererRef.current = null;
+        audioMixerRef.current?.destroy();
+        audioMixerRef.current = null;
         await finalizeRecordingDownload();
         resolve();
       };
@@ -547,7 +595,6 @@ export function Recording({
     resetRecordingTimer();
     publishRecordingState(false, false);
   }, [
-    cancelFocusSwitch,
     finalizeRecordingDownload,
     isHost,
     resetRecordingTimer,
@@ -584,87 +631,40 @@ export function Recording({
     };
   }, [focusedParticipantId, isHost, isRecording]);
 
-  // These mutable media inputs intentionally trigger source-signature checks.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: media source changes must rebuild the active recorder
   useEffect(() => {
-    if (!isHost || !isRecording || !focusedParticipantId) {
-      return;
-    }
+    if (!isHost || !isRecording) return;
 
-    if (switchingFocusRef.current) {
-      return;
-    }
+    const { videoTrack } = pickTracksForFocus({
+      focusedParticipantId,
+      videoParticipants,
+      localStream,
+      screenStream,
+    });
+    canvasRendererRef.current?.setTrack(videoTrack);
 
-    const signature = readMediaSignature();
-    const focusChanged = focusedParticipantId !== prevFocusedIdRef.current;
-    const mediaChanged =
-      prevMediaSignatureRef.current !== null &&
-      signature !== prevMediaSignatureRef.current;
+    const micTrack = localStream
+      ?.getAudioTracks()
+      .find((t) => t.readyState === "live");
+    const screenAudio = screenStream
+      ?.getAudioTracks()
+      .find((t) => t.readyState === "live");
+    const remoteAudioTracks = videoParticipants
+      .map((p) =>
+        p.stream?.getAudioTracks().find((t) => t.readyState === "live"),
+      )
+      .filter(Boolean);
 
-    if (!focusChanged && !mediaChanged) {
-      if (prevMediaSignatureRef.current === null) {
-        prevMediaSignatureRef.current = signature;
-        prevFocusedIdRef.current = focusedParticipantId;
-      }
-      return;
-    }
-
-    const runSwitch = async () => {
-      switchingFocusRef.current = true;
-
-      try {
-        while (isRecordingRef.current) {
-          prevFocusedIdRef.current = focusedIdRef.current;
-
-          await stopActiveRecorders(
-            mediaRecorderRef.current,
-            audioRecorderRef.current,
-          );
-
-          if (!isRecordingRef.current) break;
-
-          await new Promise((resolve) => {
-            focusSwitchTimerRef.current = setTimeout(
-              resolve,
-              RECORDER_RESTART_DELAY_MS,
-            );
-          });
-          focusSwitchTimerRef.current = null;
-
-          if (!isRecordingRef.current) break;
-
-          try {
-            await rebuildRecorder();
-          } catch (e) {
-            console.error("Failed to rebuild recorder during source switch", e);
-          }
-
-          const currentSignature = readMediaSignature();
-          prevMediaSignatureRef.current = currentSignature;
-
-          if (
-            focusedIdRef.current === prevFocusedIdRef.current &&
-            readMediaSignature() === currentSignature
-          ) {
-            break;
-          }
-        }
-      } finally {
-        switchingFocusRef.current = false;
-      }
-    };
-
-    runSwitch();
+    const allAudioTracks = [micTrack, screenAudio, ...remoteAudioTracks].filter(
+      Boolean,
+    );
+    audioMixerRef.current?.updateTracks(allAudioTracks);
   }, [
-    focusedParticipantId,
     isHost,
     isRecording,
+    focusedParticipantId,
+    videoParticipants,
     localStream,
     screenStream,
-    videoParticipants,
-    remoteTrackRevision,
-    rebuildRecorder,
-    readMediaSignature,
   ]);
 
   useEffect(() => {
