@@ -628,6 +628,13 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     }
   }, [focusedParticipantId, handleFocusParticipant, isHost, videoParticipants]);
 
+  useEffect(() => {
+    if (!isHost) return;
+    roomConnectionRef.current?.send(
+      createHostFocusChangedMessage({ focusedId: effectiveFocusedId }),
+    );
+  }, [isHost, effectiveFocusedId]);
+
   const handleToggleGallery = useCallback(() => {
     setIsGalleryVisible((v) => !v);
   }, []);
