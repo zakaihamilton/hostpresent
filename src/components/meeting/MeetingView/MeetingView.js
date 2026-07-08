@@ -923,6 +923,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
         revealTitleOnLogoClick={!isHost}
+        showRecording={isHost}
         onStartRecording={startRecording}
         onPauseRecording={pauseRecording}
         onResumeRecording={resumeRecording}
