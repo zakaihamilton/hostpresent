@@ -178,7 +178,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     loadParticipantMode(),
   );
   const [sessionTitle, setSessionTitle] = useState("");
-  const [focusedParticipantId, setFocusedParticipantId] = useState("host");
+  const [focusedParticipantId, setFocusedParticipantId] = useState("");
   const [meetingDisconnectReason, setMeetingDisconnectReason] = useState(null);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
@@ -382,11 +382,16 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   ]);
 
   const [effectiveFocusedId, setEffectiveFocusedId] =
-    useState(focusedParticipantId);
+    useState(focusedParticipantId || "host");
 
   useEffect(() => {
     if (focusedParticipantId !== "") {
       setEffectiveFocusedId(focusedParticipantId);
+      return undefined;
+    }
+
+    if (autoFocusTargetId !== "host") {
+      setEffectiveFocusedId(autoFocusTargetId);
       return undefined;
     }
 

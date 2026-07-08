@@ -296,30 +296,36 @@ export const Header = memo(function Header({
                   </span>
                   <div className={styles.recordingActions}>
                     {isRecordingPaused
-                      ? <button
-                          type="button"
-                          className={styles.recordingActionBtn}
-                          onClick={onResumeRecording}
-                          aria-label="Resume recording"
-                        >
-                          <Play size={12} />
-                        </button>
-                      : <button
-                          type="button"
-                          className={styles.recordingActionBtn}
-                          onClick={onPauseRecording}
-                          aria-label="Pause recording"
-                        >
-                          <Pause size={12} />
-                        </button>}
-                    <button
-                      type="button"
-                      className={`${styles.recordingActionBtn} ${styles.recordingActionBtnStop}`}
-                      onClick={onStopRecording}
-                      aria-label="Stop and save recording"
-                    >
-                      <Stop size={12} />
-                    </button>
+                      ? <Tooltip text="Resume Recording" placement="bottom">
+                          <button
+                            type="button"
+                            className={styles.recordingActionBtn}
+                            onClick={onResumeRecording}
+                            aria-label="Resume recording"
+                          >
+                            <Play size={12} />
+                          </button>
+                        </Tooltip>
+                      : <Tooltip text="Pause Recording" placement="bottom">
+                          <button
+                            type="button"
+                            className={styles.recordingActionBtn}
+                            onClick={onPauseRecording}
+                            aria-label="Pause recording"
+                          >
+                            <Pause size={12} />
+                          </button>
+                        </Tooltip>}
+                    <Tooltip text="Stop & Save Recording" placement="bottom">
+                      <button
+                        type="button"
+                        className={`${styles.recordingActionBtn} ${styles.recordingActionBtnStop}`}
+                        onClick={onStopRecording}
+                        aria-label="Stop and save recording"
+                      >
+                        <Stop size={12} />
+                      </button>
+                    </Tooltip>
                   </div>
                 </output>}
           </div>
