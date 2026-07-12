@@ -41,14 +41,53 @@ export function formatRoomIdInput(value) {
   return formatJoinCode(normalizeJoinCode(value));
 }
 
-export async function resolveJoinCode(joinCode) {
+export async function resolveJoinCode(joinCode, { deviceId = "" } = {}) {
   const normalized = normalizeJoinCode(joinCode);
-  const response = await fetch(
-    `/api/rooms/resolve?code=${encodeURIComponent(normalized)}`,
-  );
+  const params = new URLSearchParams({ code: normalized });
+  if (deviceId) {
+    params.set("deviceId", deviceId);
+  }
+  const response = await fetch(`/api/rooms/resolve?${params.toString()}`);
+  const payload = await response.json().catch(() => ({}));
+
+  if (response.status === 409 && payload.status === "waiting") {
+    return {
+      roomId: payload.roomId ?? null,
+      joinCode: payload.joinCode ?? normalized,
+      status: "waiting",
+      waiting: true,
+      participantToken: null,
+    };
+  }
+
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error ?? "[E031] Could not resolve join code");
   }
-  return response.json();
+  return payload;
+}
+
+export async function openHostRoom(hostToken) {
+  const response = await fetch("/api/rooms/open", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: hostToken }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "[E069] Failed to open room");
+  }
+  return payload;
+}
+
+export async function kickParticipantDevice({ hostToken, deviceId }) {
+  const response = await fetch("/api/rooms/kick", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: hostToken, deviceId }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "[E081] Failed to record kick");
+  }
+  return payload;
 }

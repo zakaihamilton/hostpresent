@@ -127,8 +127,14 @@ export function participantSignalingRetryExhaustedError() {
 }
 
 export const MAX_SIGNALING_RETRIES = 10;
+export const MAX_HOST_ID_RETRIES = 20;
 export const SIGNALING_CONNECT_TIMEOUT_MS = 45000;
 export const HOST_ID_RETRY_DELAY_MS = 1000;
+
+/** Backoff while reclaiming a sticky host PeerJS id after leave/rejoin. */
+export function hostIdRetryDelayMs(attempt) {
+  return Math.min(HOST_ID_RETRY_DELAY_MS * 2 ** attempt, 8000);
+}
 
 function readSignalingPortFromEnv(host) {
   if (process.env.SIGNALING_SERVER_PORT) {

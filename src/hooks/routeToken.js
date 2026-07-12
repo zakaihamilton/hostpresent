@@ -5,7 +5,7 @@ import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { resolveJoinCode } from "@/lib/room/inviteLink";
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
-import { getParticipantRoomByJoinCode } from "@/lib/settings/participantRoomSettings";
+import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import { getActiveRoom, getRoomByJoinCode } from "@/lib/settings/roomSettings";
 
 const HOST_ROOM_MISSING_ERROR =
@@ -16,6 +16,8 @@ const PARTICIPANT_LINK_ON_HOST_ERROR =
 
 const HOST_LINK_ON_PARTICIPANT_ERROR =
   "[E027] This link is for hosts only. Use a participant join code or invite link to join.";
+
+const WAITING_POLL_MS = 2000;
 
 function roleMismatchError(routeRole, tokenRole) {
   if (routeRole === APP_ROLE.HOST && tokenRole === APP_ROLE.PARTICIPANT) {
@@ -51,15 +53,6 @@ function resolveHostRouteToken(joinCode) {
   return verifyTokenForRole(room.hostToken, APP_ROLE.HOST);
 }
 
-function resolveSavedParticipantRouteToken(joinCode) {
-  const normalized = normalizeJoinCode(joinCode);
-  const saved = getParticipantRoomByJoinCode(normalized);
-  if (!saved?.participantToken) {
-    return null;
-  }
-  return verifyTokenForRole(saved.participantToken, APP_ROLE.PARTICIPANT);
-}
-
 function resolveActiveHostToken() {
   const active = getActiveRoom();
   if (!active?.hostToken) {
@@ -80,83 +73,113 @@ export function useRouteToken({ role, token, joinCode, view }) {
     token: null,
     loading: false,
     error: "",
+    waiting: false,
   });
 
   useEffect(() => {
     if (token || !joinCode || role !== APP_ROLE.PARTICIPANT) {
-      setParticipantState({ token: null, loading: false, error: "" });
-      return undefined;
-    }
-
-    const saved = resolveSavedParticipantRouteToken(joinCode);
-    if (saved) {
-      setParticipantState(saved);
+      setParticipantState({
+        token: null,
+        loading: false,
+        error: "",
+        waiting: false,
+      });
       return undefined;
     }
 
     let cancelled = false;
+    let pollTimer = null;
     const normalized = normalizeJoinCode(joinCode);
+    const deviceId = getOrCreateParticipantDeviceId();
 
-    setParticipantState({ token: null, loading: true, error: "" });
-
-    void resolveJoinCode(normalized)
-      .then((resolved) => {
-        if (cancelled) return;
-        if (resolved?.participantToken) {
-          const verified = verifyTokenForRole(
-            resolved.participantToken,
-            APP_ROLE.PARTICIPANT,
-          );
-          setParticipantState({
-            token: verified.token,
-            loading: false,
-            error: verified.error,
-          });
-          return;
-        }
+    const applyResolved = (resolved) => {
+      if (resolved?.waiting) {
         setParticipantState({
           token: null,
-          loading: false,
-          error: "[E029] Could not get a participant token for this room.",
+          loading: true,
+          error: "",
+          waiting: true,
         });
-      })
-      .catch((resolveError) => {
-        if (cancelled) return;
+        pollTimer = window.setTimeout(resolve, WAITING_POLL_MS);
+        return;
+      }
+      if (resolved?.participantToken) {
+        const verified = verifyTokenForRole(
+          resolved.participantToken,
+          APP_ROLE.PARTICIPANT,
+        );
         setParticipantState({
-          token: null,
+          token: verified.token,
           loading: false,
-          error:
-            resolveError instanceof Error
-              ? resolveError.message
-              : "[E030] Could not join this room. Check the join code and try again.",
+          error: verified.error,
+          waiting: false,
         });
+        return;
+      }
+      setParticipantState({
+        token: null,
+        loading: false,
+        error: "[E029] Could not get a participant token for this room.",
+        waiting: false,
       });
+    };
+
+    const resolve = () => {
+      setParticipantState((prev) => ({
+        token: null,
+        loading: !prev.waiting,
+        error: "",
+        waiting: prev.waiting,
+      }));
+
+      void resolveJoinCode(normalized, { deviceId })
+        .then((resolved) => {
+          if (cancelled) return;
+          applyResolved(resolved);
+        })
+        .catch((resolveError) => {
+          if (cancelled) return;
+          setParticipantState({
+            token: null,
+            loading: false,
+            waiting: false,
+            error:
+              resolveError instanceof Error
+                ? resolveError.message
+                : "[E030] Could not join this room. Check the join code and try again.",
+          });
+        });
+    };
+
+    // Always re-resolve so kicked devices and waiting rooms are enforced
+    // even when a participant token is cached locally.
+    resolve();
 
     return () => {
       cancelled = true;
+      if (pollTimer) window.clearTimeout(pollTimer);
     };
   }, [joinCode, role, token]);
 
   if (token) {
     const verified = verifyTokenForRole(token, role);
-    return { ...verified, loading: false };
+    return { ...verified, loading: false, waiting: false };
   }
 
   if (role === APP_ROLE.HOST && view === APP_VIEW.MEETING && !joinCode) {
-    return resolveActiveHostToken();
+    return { ...resolveActiveHostToken(), waiting: false };
   }
 
   if (!joinCode) {
-    return { token: null, loading: false, error: "" };
+    return { token: null, loading: false, error: "", waiting: false };
   }
 
   if (role === APP_ROLE.HOST) {
-    return { ...resolveHostRouteToken(joinCode), loading: false };
-  }
-
-  const saved = resolveSavedParticipantRouteToken(joinCode);
-  if (saved) {
-    return saved;
+    return {
+      ...resolveHostRouteToken(joinCode),
+      loading: false,
+      waiting: false,
+    };
   }
 
   return participantState;

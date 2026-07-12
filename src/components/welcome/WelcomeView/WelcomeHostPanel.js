@@ -5,7 +5,7 @@ import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
+import { buildParticipantInviteLink, openHostRoom } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
@@ -227,15 +227,24 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   };
 
   const handleJoinMeeting = () => {
-    if (!hostToken) return;
+    if (!hostToken || isActionPending) return;
+    setIsActionPending(true);
     markHostRoomUsed(hostToken);
     if (sessionTitle) updateRoomTitle(hostToken, sessionTitle);
     refreshRecentRooms();
-    navigate({
-      view: APP_VIEW.MEETING,
-      role: APP_ROLE.HOST,
-      token: hostToken,
-    });
+
+    void openHostRoom(hostToken)
+      .catch((err) => {
+        console.warn("[host] failed to open room before meeting", err);
+      })
+      .finally(() => {
+        setIsActionPending(false);
+        navigate({
+          view: APP_VIEW.MEETING,
+          role: APP_ROLE.HOST,
+          token: hostToken,
+        });
+      });
   };
 
   const handleRemoveRoom = (room) => {

@@ -1,12 +1,15 @@
 import {
   getSignalingErrorHint,
   HOST_SIGNING_REACHABILITY_HINT,
+  hostIdRetryDelayMs,
+  HOST_ID_RETRY_DELAY_MS,
   isFatalSignalingError,
   isSignalingConfigError,
   isSignalingRetryMessage,
   isSignalingServerReachabilityError,
   isWaitingForHostMessage,
   isWaitingForParticipantsMessage,
+  MAX_HOST_ID_RETRIES,
   peerErrorMessage,
   SIGNALING_CONNECT_TIMEOUT_MS,
   SIGNALING_ERROR,
@@ -15,6 +18,13 @@ import {
 describe("peerClient signaling errors", () => {
   it("uses a longer connect timeout", () => {
     expect(SIGNALING_CONNECT_TIMEOUT_MS).toBeGreaterThanOrEqual(45000);
+  });
+
+  it("backs off host id reclaim retries longer than a single second", () => {
+    expect(MAX_HOST_ID_RETRIES).toBeGreaterThanOrEqual(20);
+    expect(hostIdRetryDelayMs(0)).toBe(HOST_ID_RETRY_DELAY_MS);
+    expect(hostIdRetryDelayMs(1)).toBe(HOST_ID_RETRY_DELAY_MS * 2);
+    expect(hostIdRetryDelayMs(10)).toBe(8000);
   });
 
   it("treats config errors separately from reachability errors", () => {

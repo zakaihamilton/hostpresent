@@ -188,6 +188,7 @@ export function createParticipantProfileMessage({
   participantId,
   displayName,
   mode,
+  deviceId = "",
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE,
@@ -195,6 +196,8 @@ export function createParticipantProfileMessage({
     displayName:
       typeof displayName === "string" ? displayName.trim().slice(0, 32) : "",
     mode: mode === "listening" ? "listening" : "available",
+    deviceId:
+      typeof deviceId === "string" ? deviceId.trim().slice(0, 128) : "",
     timestamp: Date.now(),
   };
 }

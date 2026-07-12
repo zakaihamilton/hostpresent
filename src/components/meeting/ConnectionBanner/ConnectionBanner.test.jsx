@@ -74,6 +74,20 @@ describe("ConnectionBanner", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Server error");
   });
 
+  it("shows E007 host id reclaim message so host knows the room is not live yet", () => {
+    render(
+      <ConnectionBanner
+        isHost={true}
+        hostPresent={true}
+        connectionError="[E007] Another host session may still be disconnecting. Reconnecting…"
+        isWaitingForHost={false}
+        isFatalConnectionError={false}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("E007");
+  });
+
   it("does not show signaling error when there is a fatal connection error", () => {
     render(
       <ConnectionBanner

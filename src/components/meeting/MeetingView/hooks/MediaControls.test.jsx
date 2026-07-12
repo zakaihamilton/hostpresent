@@ -124,6 +124,64 @@ describe("MediaControls Hook", () => {
     });
   });
 
+  it("syncs outbound media when localStream becomes available after join", async () => {
+    const syncOutboundMedia = jest.fn();
+    const acquired = createStream([
+      createTrack({ kind: "audio" }),
+      createTrack({ kind: "video" }),
+    ]);
+    navigator.mediaDevices.getUserMedia.mockResolvedValue(acquired);
+
+    const { rerender } = renderHook(
+      ({ localStream }) =>
+        MediaControls({
+          isHost: false,
+          roomConnection: {
+            send: jest.fn(),
+            syncOutboundMedia,
+          },
+          streamListenerCleanupsRef: { current: [] },
+          localStream,
+          setLocalStream: jest.fn(),
+          screenStream: null,
+          setScreenStream: jest.fn(),
+        }),
+      { initialProps: { localStream: null } },
+    );
+
+    expect(syncOutboundMedia).not.toHaveBeenCalled();
+
+    rerender({ localStream: acquired });
+
+    await waitFor(() => {
+      expect(syncOutboundMedia).toHaveBeenCalled();
+    });
+  });
+
+  it("surfaces an error when initial camera/mic permission is denied", async () => {
+    navigator.mediaDevices.getUserMedia.mockRejectedValue(
+      Object.assign(new Error("Permission denied"), {
+        name: "NotAllowedError",
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      MediaControls({
+        isHost: false,
+        roomConnection: { send: jest.fn(), syncOutboundMedia: jest.fn() },
+        streamListenerCleanupsRef: { current: [] },
+        localStream: null,
+        setLocalStream: jest.fn(),
+        screenStream: null,
+        setScreenStream: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.errorMsg).toContain("E046");
+    });
+  });
+
   it("loads media states from localStorage if set to true", () => {
     window.localStorage.setItem("hostpresent.audioMuted", "true");
     window.localStorage.setItem("hostpresent.videoMuted", "true");
@@ -176,14 +234,14 @@ describe("MediaControls Hook", () => {
     });
     expect(result.current.isAudioMuted).toBe(true);
     expect(window.localStorage.getItem("hostpresent.audioMuted")).toBe("true");
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
 
     act(() => {
       result.current.toggleVideo();
     });
     expect(result.current.isVideoMuted).toBe(true);
     expect(window.localStorage.getItem("hostpresent.videoMuted")).toBe("true");
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(3);
   });
 
   it("does not reacquire local media when mute states change", async () => {
@@ -309,7 +367,7 @@ describe("MediaControls Hook", () => {
     expect(oldVideoTrack.stop).toHaveBeenCalled();
     expect(localStream.addTrack).toHaveBeenCalledWith(newVideoTrack);
     expect(newVideoTrack.enabled).toBe(true);
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
   });
 
   it("switches microphone by replacing the old audio track and preserving muted state", async () => {
@@ -383,7 +441,7 @@ describe("MediaControls Hook", () => {
     expect(oldAudioTrack.stop).toHaveBeenCalled();
     expect(localStream.addTrack).toHaveBeenCalledWith(newAudioTrack);
     expect(newAudioTrack.enabled).toBe(false);
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
   });
 
   it("starts and stops participant screen sharing with status messages and outbound sync", async () => {
@@ -452,7 +510,7 @@ describe("MediaControls Hook", () => {
         participantId: "p1",
       }),
     );
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
   });
 
   it("clears screen sharing when the browser ends capture", async () => {
@@ -498,7 +556,7 @@ describe("MediaControls Hook", () => {
         participantId: "p1",
       }),
     );
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
     expect(screenAudioTrack.stop).toHaveBeenCalledTimes(1);
   });
 
@@ -645,7 +703,8 @@ describe("MediaControls Hook", () => {
     expect(send).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: "participant_screen_share_started" }),
     );
-    expect(syncOutboundMedia).not.toHaveBeenCalled();
+    // Initial localStream presence syncs once; denied share must not sync again.
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
 
     warnSpy.mockRestore();
   });

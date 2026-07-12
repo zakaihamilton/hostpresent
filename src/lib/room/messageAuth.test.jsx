@@ -60,6 +60,48 @@ describe("messageAuth", () => {
     ).toBe(false);
   });
 
+  it("lets the host receive media renegotiate from the sending participant", () => {
+    expect(
+      canReceiveSignalingMessage({
+        isHost: true,
+        message: {
+          type: SIGNALING_MESSAGE.MEDIA_RENEGOTIATE,
+          participantId: "guest-1",
+        },
+        senderId: "guest-1",
+        localParticipantId: "",
+      }),
+    ).toBe(true);
+    expect(
+      canSendSignalingMessage({
+        isHost: false,
+        message: {
+          type: SIGNALING_MESSAGE.MEDIA_RENEGOTIATE,
+          participantId: "guest-1",
+        },
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(true);
+  });
+
+  it("lets participants receive room_full from the host", () => {
+    expect(
+      canReceiveSignalingMessage({
+        isHost: false,
+        message: { type: SIGNALING_MESSAGE.ROOM_FULL },
+        senderId: "hp-room",
+        localParticipantId: "guest-1",
+      }),
+    ).toBe(true);
+    expect(
+      canSendSignalingMessage({
+        isHost: true,
+        message: { type: SIGNALING_MESSAGE.ROOM_FULL },
+        localParticipantId: "",
+      }),
+    ).toBe(true);
+  });
+
   it("lets participants receive host media status broadcasts", () => {
     expect(
       canReceiveSignalingMessage({

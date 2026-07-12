@@ -66,6 +66,8 @@ export function MediaControls({
   const screenAudioRef = useRef(null);
   const initialAudioMutedRef = useRef(isAudioMuted);
   const initialVideoMutedRef = useRef(isVideoMuted);
+  const syncOutboundMediaRef = useRef(roomConnection?.syncOutboundMedia);
+  syncOutboundMediaRef.current = roomConnection?.syncOutboundMedia;
 
   const isScreenAudioShared = Boolean(
     screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
@@ -175,6 +177,11 @@ export function MediaControls({
         }
       } catch (err) {
         console.error("Failed to acquire camera/mic permissions:", err);
+        setErrorMsg(
+          err?.name === "NotAllowedError"
+            ? "[E046] Camera or microphone access was denied. Allow permissions in your browser settings and reload."
+            : "[E047] Could not access camera or microphone. Check devices and try again.",
+        );
       }
     };
     initLocalMedia();
@@ -194,6 +201,19 @@ export function MediaControls({
       }
     };
   }, [setLocalStream]);
+
+  // Once local media first becomes available, push tracks onto any open PeerJS calls.
+  // Device switches/toggles call syncOutboundMedia explicitly.
+  const hadLocalStreamRef = useRef(false);
+  useEffect(() => {
+    if (!localStream) {
+      hadLocalStreamRef.current = false;
+      return;
+    }
+    if (hadLocalStreamRef.current) return;
+    hadLocalStreamRef.current = true;
+    void syncOutboundMediaRef.current?.();
+  }, [localStream]);
 
   const switchCamera = useCallback(
     async (deviceId) => {

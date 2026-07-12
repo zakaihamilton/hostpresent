@@ -66,3 +66,9 @@ Use real browsers and devices for these checks:
 | Recovery | Deny camera/mic or screen permissions | App shows the relevant error and remains usable |
 | Recovery | Participant joins before host is present | Participant sees waiting/retry state and connects once host joins |
 | Recovery | Leave and rejoin | Roster removes the old entry and shows the returning participant |
+| Recovery | Host leaves and rejoins without full page refresh | Host may briefly show E007 while reclaiming PeerJS id, then connects; Diagnostics Reconnect also restarts the peer |
+| Recovery | Guest camera/mic granted after PeerJS already connected | Outbound media sync/renegotiate runs so host sees guest video without mute toggle |
+| Recovery | Guest joins while host PeerJS peer is still reconnecting | Host banner shows connection error; guest waits until host peer is live |
+| Waiting room | Guest resolves join code before host clicks Start meeting | Guest sees waiting UI and polls until host opens the room |
+| Kick | Host removes a participant | Guest is disconnected and cannot resolve the same room from that browser again |
+| Capacity | 30th guest tries to join | Guest sees Meeting is full after receiving room_full |

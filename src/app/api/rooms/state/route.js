@@ -54,7 +54,7 @@ export async function GET(request) {
   const response = {
     roomId: verified.roomId,
     role: verified.role,
-    status: ROOM_STATUS.OPEN,
+    status: room.status ?? ROOM_STATUS.OPEN,
     openedAt: room.openedAt ?? null,
     createdAt: room.createdAt ?? null,
     joinCode,

@@ -115,7 +115,10 @@ describe("WelcomeParticipantPanel", () => {
     );
 
     await waitFor(() => {
-      expect(resolveJoinCode).toHaveBeenCalledWith("ABCDEF");
+      expect(resolveJoinCode).toHaveBeenCalledWith(
+        "ABCDEF",
+        expect.objectContaining({ deviceId: expect.any(String) }),
+      );
     });
     expect(navigate).toHaveBeenCalledWith({
       view: "meeting",

@@ -41,6 +41,7 @@ export const RATE_LIMITS = {
   resolve: { name: "resolve", limit: 60, windowMs: 60 * 1000 },
   state: { name: "state", limit: 120, windowMs: 60 * 1000 },
   open: { name: "open", limit: 30, windowMs: 60 * 1000 },
+  kick: { name: "kick", limit: 60, windowMs: 60 * 1000 },
   messages: { name: "messages", limit: 300, windowMs: 60 * 1000 },
   messagesPerRoom: { name: "messages-room", limit: 120, windowMs: 60 * 1000 },
   stream: { name: "stream", limit: 15, windowMs: 60 * 1000 },

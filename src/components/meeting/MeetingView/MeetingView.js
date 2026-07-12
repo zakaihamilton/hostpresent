@@ -25,7 +25,11 @@ import {
 } from "@/hooks";
 import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
+import {
+  buildParticipantInviteLink,
+  kickParticipantDevice,
+  openHostRoom,
+} from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
@@ -43,6 +47,7 @@ import {
   saveGalleryVisible,
   saveSidebarVisible,
 } from "@/lib/settings/layoutSettings";
+import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import {
   getRoomTitleByHostToken,
   updateRoomTitle,
@@ -252,6 +257,14 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   });
 
   roomConnectionRef.current = roomConnection;
+
+  useEffect(() => {
+    if (!isHost || !token) return undefined;
+    void openHostRoom(token).catch((error) => {
+      console.warn("[host] failed to open room on meeting enter", error);
+    });
+    return undefined;
+  }, [isHost, token]);
 
   onChatMessageRef.current = (message) => {
     const localId = isHost
@@ -580,13 +593,23 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         variant: "danger",
       });
       if (!confirmed) return;
+      const deviceId =
+        roomConnectionRef.current?.getParticipantDeviceId?.(participantId) ??
+        "";
       roomConnectionRef.current?.sendToParticipant(
         participantId,
         createKickParticipantMessage(),
       );
       onRemoteParticipantRef.current?.({ id: participantId, stream: null });
+      if (token && deviceId) {
+        void kickParticipantDevice({ hostToken: token, deviceId }).catch(
+          (error) => {
+            console.warn("[host] failed to record kick denylist entry", error);
+          },
+        );
+      }
     },
-    [confirm, isHost, videoParticipants],
+    [confirm, isHost, token, videoParticipants],
   );
 
   useEffect(() => {
@@ -608,6 +631,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       }
       if (message.type === SIGNALING_MESSAGE.KICK_PARTICIPANT) {
         setMeetingDisconnectReason("kicked");
+        if (token) {
+          removeParticipantRoomByToken(token);
+        }
         roomConnectionRef.current?.disconnect();
       }
       if (message.type === SIGNALING_MESSAGE.ROOM_FULL) {
@@ -615,7 +641,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         roomConnectionRef.current?.disconnect();
       }
     });
-  }, [isHost, meetingDisconnectReason]);
+  }, [isHost, meetingDisconnectReason, token]);
 
   useEffect(() => {
     if (!isHost || !focusedParticipantId || focusedParticipantId === "host")

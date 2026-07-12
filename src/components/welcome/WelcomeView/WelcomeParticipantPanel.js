@@ -10,6 +10,7 @@ import {
   resolveJoinCode,
 } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -31,6 +32,8 @@ import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import ps from "./WelcomeParticipantPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
+const WAITING_POLL_MS = 2000;
+
 export function WelcomeParticipantPanel({
   token,
   joinCode,
@@ -43,20 +46,31 @@ export function WelcomeParticipantPanel({
   const [recentRooms, setRecentRooms] = useState([]);
   const [resolveError, setResolveError] = useState("");
   const [isResolving, setIsResolving] = useState(false);
+  const [waitingForHost, setWaitingForHost] = useState(false);
   const [displayName, setDisplayName] = useState(() => loadDisplayName());
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
   const resolvedJoinCodeRef = useRef(null);
+  const waitingPollRef = useRef(null);
 
   const refreshRecentRooms = useCallback(() => {
     setRecentRooms(listParticipantRooms());
+  }, []);
+
+  const clearWaitingPoll = useCallback(() => {
+    if (waitingPollRef.current) {
+      window.clearTimeout(waitingPollRef.current);
+      waitingPollRef.current = null;
+    }
   }, []);
 
   const enterMeeting = useCallback(
     (resolved) => {
       if (!resolved?.participantToken) return;
 
+      clearWaitingPoll();
+      setWaitingForHost(false);
       saveParticipantRoom({
         roomId: resolved.roomId,
         participantToken: resolved.participantToken,
@@ -81,31 +95,52 @@ export function WelcomeParticipantPanel({
         token: resolved.participantToken,
       });
     },
-    [navigate, refreshRecentRooms],
+    [clearWaitingPoll, navigate, refreshRecentRooms],
   );
 
   const resolveAndJoin = useCallback(
-    async (code) => {
+    async (code, { fromPoll = false } = {}) => {
       const normalized = normalizeRoomIdInput(code);
       if (!normalized) return;
-      setResolveError("");
-      setIsResolving(true);
+      if (!fromPoll) {
+        setResolveError("");
+        setIsResolving(true);
+      }
       try {
-        const resolved = await resolveJoinCode(normalized);
+        const resolved = await resolveJoinCode(normalized, {
+          deviceId: getOrCreateParticipantDeviceId(),
+        });
+        if (resolved?.waiting) {
+          setWaitingForHost(true);
+          setIsResolving(false);
+          clearWaitingPoll();
+          waitingPollRef.current = window.setTimeout(() => {
+            void resolveAndJoin(normalized, { fromPoll: true });
+          }, WAITING_POLL_MS);
+          return;
+        }
         enterMeeting(resolved);
       } catch (joinError) {
+        clearWaitingPoll();
+        setWaitingForHost(false);
         setResolveError(joinError.message);
         resolvedJoinCodeRef.current = null;
       } finally {
-        setIsResolving(false);
+        if (!fromPoll) {
+          setIsResolving(false);
+        }
       }
     },
-    [enterMeeting],
+    [clearWaitingPoll, enterMeeting],
   );
 
   useEffect(() => {
     refreshRecentRooms();
   }, [refreshRecentRooms]);
+
+  useEffect(() => {
+    return () => clearWaitingPoll();
+  }, [clearWaitingPoll]);
 
   useEffect(() => {
     if (joinCode) {
@@ -197,12 +232,16 @@ export function WelcomeParticipantPanel({
 
   const allFilled = (roomIdInput ?? "").replace(/-/g, "").length === 6;
 
-  if (isResolving) {
+  if (isResolving || waitingForHost) {
     return (
       <div className={shared.welcomePanel}>
         <div className={shared.waiting}>
           <div className={shared.spinner} aria-hidden />
-          <p className={shared.helpText}>Checking the room and joining…</p>
+          <p className={shared.helpText}>
+            {waitingForHost
+              ? "Waiting for the host to start the meeting…"
+              : "Checking the room and joining…"}
+          </p>
         </div>
       </div>
     );

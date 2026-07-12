@@ -27,6 +27,8 @@ export {
   createRoomRecord,
   getRoomById,
   getRoomByJoinCode,
+  isDeviceKickedFromRoom,
+  kickDeviceFromRoom,
   openRoom,
   ROOM_STATUS,
   relayRoomMessage,

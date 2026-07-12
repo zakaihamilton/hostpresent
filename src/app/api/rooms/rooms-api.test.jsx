@@ -11,6 +11,8 @@ jest.mock("@/lib/room/apiSecurity", () => ({
     createRoom: {},
     resolve: {},
     state: {},
+    open: {},
+    kick: {},
   },
   applySecurityHeaders: (response) => response,
   guardGetRequest: jest.fn().mockResolvedValue(null),
@@ -24,11 +26,23 @@ jest.mock("@/lib/room/joinCode", () => ({
 jest.mock("@/lib/room/store", () => ({
   ROOM_STATUS: {
     OPEN: "open",
+    WAITING: "waiting",
   },
   createRoomRecord: (...args) => mockCreateRoomRecord(...args),
   getRoomByJoinCode: (...args) => mockGetRoomByJoinCode(...args),
   getRoomById: (...args) => mockGetRoomById(...args),
   restoreRoomFromToken: (...args) => mockRestoreRoomFromToken(...args),
+  isDeviceKickedFromRoom: (room, deviceId) => {
+    if (!deviceId || !room?.kickedDeviceIds) return false;
+    if (room.kickedDeviceIds instanceof Set) {
+      return room.kickedDeviceIds.has(deviceId);
+    }
+    return Array.isArray(room.kickedDeviceIds)
+      ? room.kickedDeviceIds.includes(deviceId)
+      : false;
+  },
+  kickDeviceFromRoom: jest.fn(),
+  openRoom: jest.fn(),
 }));
 
 async function readJson(response) {
@@ -146,6 +160,7 @@ describe("room API routes", () => {
       roomId: "room-1",
       joinCode: "ABCDEF",
       participantToken: "participant-token",
+      status: "open",
     });
 
     const response = await GET(
@@ -160,6 +175,46 @@ describe("room API routes", () => {
       participantToken: "participant-token",
       status: "open",
     });
+  });
+
+  it("returns waiting when the host has not started the meeting", async () => {
+    const { GET } = await import("./resolve/route");
+    mockGetRoomByJoinCode.mockResolvedValue({
+      roomId: "room-1",
+      joinCode: "ABCDEF",
+      participantToken: "participant-token",
+      status: "waiting",
+    });
+
+    const response = await GET(
+      request("http://localhost/api/rooms/resolve?code=ABCDEF"),
+    );
+    const body = await readJson(response);
+
+    expect(response.status).toBe(409);
+    expect(body.status).toBe("waiting");
+    expect(body.participantToken).toBeUndefined();
+  });
+
+  it("rejects kicked devices from resolving a join code", async () => {
+    const { GET } = await import("./resolve/route");
+    mockGetRoomByJoinCode.mockResolvedValue({
+      roomId: "room-1",
+      joinCode: "ABCDEF",
+      participantToken: "participant-token",
+      status: "open",
+      kickedDeviceIds: new Set(["device-kicked"]),
+    });
+
+    const response = await GET(
+      request(
+        "http://localhost/api/rooms/resolve?code=ABCDEF&deviceId=device-kicked",
+      ),
+    );
+    const body = await readJson(response);
+
+    expect(response.status).toBe(403);
+    expect(body.status).toBe("kicked");
   });
 
   it("returns not found for valid but unknown join codes", async () => {
@@ -188,6 +243,7 @@ describe("room API routes", () => {
       participantToken: "participant-token",
       openedAt: 1,
       createdAt: 1,
+      status: "open",
     });
 
     const response = await GET(
