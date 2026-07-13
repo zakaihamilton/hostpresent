@@ -701,11 +701,12 @@ async function exportPersistedRecording(sessionId) {
   activeExportOutputs = [videoOutput, audioOutput];
   await updateExportCheckpoint(sessionId, "remuxing");
   post("progress", { phase: "remuxing" });
-  const exportTrack =
-    manifest.tracks.video?.chunkCount > 0 &&
-    manifest.tracks.audio?.chunkCount > 0
-      ? exportPersistedTrack
-      : exportPersistedSegments;
+  // A completed WebCodecs segment is already a timestamped MP4. Prefer it to
+  // the mirrored MediaRecorder fragments, which exist only for crash recovery
+  // and can have browser-specific container timing.
+  const exportTrack = manifest.export?.segments?.length
+    ? exportPersistedSegments
+    : exportPersistedTrack;
   await exportTrack({
     manifest,
     session,
