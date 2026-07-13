@@ -811,8 +811,13 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     const activeMain = focusedIsSelf
       ? screenStream || localStream
       : focusedParticipant?.stream || screenStream || localStream;
+    const isLocalCamera =
+      !viewingHostStream &&
+      !screenStream &&
+      (focusedIsSelf || !focusedParticipant);
     return {
       stream: viewingHostStream ? hostStream : activeMain,
+      isMirrored: isLocalCamera,
       label: viewingFocusedParticipant
         ? focusedIsSelf
           ? screenStream

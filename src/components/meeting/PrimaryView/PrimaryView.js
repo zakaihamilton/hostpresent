@@ -15,6 +15,7 @@ export const PrimaryView = memo(function PrimaryView({
   isAudioMuted = false,
   isVideoMuted = false,
   audioOutputDeviceId = "",
+  isMirrored = false,
   connectionStatus = null,
   onShowDiagnostics = null,
 }) {
@@ -47,6 +48,7 @@ export const PrimaryView = memo(function PrimaryView({
               stream={stream}
               isMuted={isMuted}
               audioOutputDeviceId={audioOutputDeviceId}
+              className={isMirrored ? styles.mirroredVideo : ""}
             />
           </div>
         : <div className={styles.placeholder} aria-hidden>

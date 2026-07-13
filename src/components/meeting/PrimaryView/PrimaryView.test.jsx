@@ -3,7 +3,9 @@ import { createMediaStream } from "@/test/helpers";
 import { PrimaryView } from "./PrimaryView";
 
 jest.mock("@/components/meeting/VideoPlayer", () => ({
-  VideoPlayer: () => <div data-testid="video-player" />,
+  VideoPlayer: ({ className }) => (
+    <div data-testid="video-player" className={className} />
+  ),
 }));
 
 describe("PrimaryView", () => {
@@ -35,5 +37,17 @@ describe("PrimaryView", () => {
 
     expect(screen.getByText("REC")).toBeInTheDocument();
     expect(screen.getByText("00:15")).toBeInTheDocument();
+  });
+
+  it("mirrors a local camera preview when requested", () => {
+    render(
+      <PrimaryView
+        stream={createMediaStream()}
+        label="You (Host)"
+        isMirrored
+      />,
+    );
+
+    expect(screen.getByTestId("video-player")).toHaveClass("mirroredVideo");
   });
 });
