@@ -44,6 +44,7 @@ describe("RecordingDownloadBanner", () => {
 
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Download complete")).toBeInTheDocument();
   });
 
   it("allows dismiss when export is cancelled", async () => {

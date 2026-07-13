@@ -106,6 +106,25 @@ async function streamToWritable(stream, writable) {
   await stream.pipeTo(writable);
 }
 
+function withFilenameSuffix(filename, suffix) {
+  const extensionIndex = filename.lastIndexOf(".");
+  if (extensionIndex <= 0) return `${filename} (${suffix})`;
+  return `${filename.slice(0, extensionIndex)} (${suffix})${filename.slice(extensionIndex)}`;
+}
+
+async function getAvailableFileHandle(directory, filename) {
+  for (let suffix = 0; ; suffix += 1) {
+    const candidate =
+      suffix === 0 ? filename : withFilenameSuffix(filename, suffix);
+    try {
+      await directory.getFileHandle(candidate);
+    } catch (error) {
+      if (error?.name !== "NotFoundError") throw error;
+      return directory.getFileHandle(candidate, { create: true });
+    }
+  }
+}
+
 export async function deliverOpfsExport({
   sessionId,
   path,
@@ -121,7 +140,7 @@ export async function deliverOpfsExport({
   );
   const output = await source.getFile();
   if (directory) {
-    const target = await directory.getFileHandle(filename, { create: true });
+    const target = await getAvailableFileHandle(directory, filename);
     const writable = await target.createWritable();
     await streamToWritable(output.stream(), writable);
     return;
@@ -143,7 +162,7 @@ export async function deliverIndexedDbExport({
   const createStream = () =>
     createIndexedDbExportStream({ sessionId, filename: path, chunks });
   if (directory) {
-    const target = await directory.getFileHandle(filename, { create: true });
+    const target = await getAvailableFileHandle(directory, filename);
     await streamToWritable(createStream(), await target.createWritable());
     return;
   }

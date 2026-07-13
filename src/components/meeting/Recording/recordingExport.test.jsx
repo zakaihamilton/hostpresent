@@ -1,11 +1,13 @@
 import {
   chooseRecordingDirectory,
   deliverIndexedDbExport,
+  deliverOpfsExport,
   downloadIndexedDbRecording,
   downloadRecordingStream,
 } from "./recordingExport";
 
 const originalServiceWorker = navigator.serviceWorker;
+const originalStorage = navigator.storage;
 const OriginalMessageChannel = global.MessageChannel;
 
 afterEach(() => {
@@ -13,6 +15,10 @@ afterEach(() => {
   Object.defineProperty(navigator, "serviceWorker", {
     configurable: true,
     value: originalServiceWorker,
+  });
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: originalStorage,
   });
   global.MessageChannel = OriginalMessageChannel;
 });
@@ -139,5 +145,68 @@ describe("downloadRecordingStream", () => {
         filename: "recording.mp4",
       }),
     ).rejects.toThrow("Choose an export folder");
+  });
+});
+
+describe("direct folder exports", () => {
+  it("writes to a suffixed filename instead of overwriting an existing file", async () => {
+    const writable = {
+      getWriter: () => ({
+        write: jest.fn(),
+        close: jest.fn(),
+        abort: jest.fn(),
+      }),
+    };
+    const directory = {
+      getFileHandle: jest.fn((filename, options) => {
+        if (filename === "recording.mp4" && !options?.create) {
+          return Promise.resolve({});
+        }
+        if (filename === "recording (1).mp4" && !options?.create) {
+          return Promise.reject({ name: "NotFoundError" });
+        }
+        return Promise.resolve({ createWritable: () => writable });
+      }),
+    };
+    const sourceFile = {
+      stream: () => ({
+        async *[Symbol.asyncIterator]() {
+          yield new Uint8Array([1]);
+        },
+      }),
+    };
+    const root = {
+      getDirectoryHandle: jest.fn().mockResolvedValue({
+        getDirectoryHandle: jest.fn().mockResolvedValue({
+          getDirectoryHandle: jest.fn().mockResolvedValue({
+            getFileHandle: jest.fn().mockResolvedValue({
+              getFile: jest.fn().mockResolvedValue(sourceFile),
+            }),
+          }),
+        }),
+      }),
+    };
+    Object.defineProperty(navigator, "storage", {
+      configurable: true,
+      value: { getDirectory: jest.fn().mockResolvedValue(root) },
+    });
+
+    await deliverOpfsExport({
+      sessionId: "session-1",
+      path: "exports/final-video.mp4",
+      directory,
+      filename: "recording.mp4",
+    });
+
+    expect(directory.getFileHandle).toHaveBeenNthCalledWith(1, "recording.mp4");
+    expect(directory.getFileHandle).toHaveBeenNthCalledWith(
+      2,
+      "recording (1).mp4",
+    );
+    expect(directory.getFileHandle).toHaveBeenNthCalledWith(
+      3,
+      "recording (1).mp4",
+      { create: true },
+    );
   });
 });

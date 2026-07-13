@@ -12,7 +12,7 @@ const PHASE_LABELS = {
   cancelled: "Recording export cancelled",
   saving: "Starting download…",
   warning: "Recording needs attention",
-  complete: "Download started",
+  complete: "Download complete",
 };
 
 export const RecordingDownloadBanner = memo(function RecordingDownloadBanner({
