@@ -1,6 +1,11 @@
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
 
 const runWebRtcE2e = process.env.RUN_WEBRTC_E2E === "1";
+const disableOpfs = process.env.PLAYWRIGHT_DISABLE_OPFS === "1";
+const execFileAsync = promisify(execFile);
 
 test.skip(
   !runWebRtcE2e,
@@ -12,6 +17,15 @@ async function clearClientState(page) {
     localStorage.clear();
     sessionStorage.clear();
   });
+  if (disableOpfs) {
+    await page.addInitScript(() => {
+      window.__HOSTPRESENT_ENABLE_SERVICE_WORKER__ = true;
+      Object.defineProperty(navigator.storage, "getDirectory", {
+        configurable: true,
+        value: undefined,
+      });
+    });
+  }
 }
 
 async function createHostMeeting(page) {
@@ -79,6 +93,69 @@ async function openParticipants(page) {
 
 function participantsList(page) {
   return page.getByLabel("Participants", { exact: true });
+}
+
+async function persistedRecordingBytes(page) {
+  return page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const request = indexedDB.open("HPRecording");
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const transaction = request.result.transaction("data", "readonly");
+          const manifest = transaction.objectStore("data").get("manifest");
+          manifest.onerror = () => reject(manifest.error);
+          manifest.onsuccess = () =>
+            resolve(manifest.result?.persistedBytes ?? 0);
+        };
+      }),
+  );
+}
+
+async function expectFinalRecordingDownloads(downloads) {
+  expect(downloads).toHaveLength(2);
+  expect(downloads.map((download) => download.suggestedFilename())).toEqual(
+    expect.arrayContaining([
+      expect.stringMatching(/\.mp4$/i),
+      expect.stringMatching(/\.m4a$/i),
+    ]),
+  );
+  for (const download of downloads) {
+    const bytes = await readFile(await download.path());
+    expect(bytes.subarray(4, 8).toString("ascii")).toBe("ftyp");
+  }
+  const inspection = await Promise.all(
+    downloads.map(async (download) => {
+      const { stdout } = await execFileAsync("ffprobe", [
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=codec_type,codec_name",
+        "-of",
+        "json",
+        await download.path(),
+      ]);
+      return JSON.parse(stdout).streams;
+    }),
+  );
+  expect(
+    inspection.find((streams) =>
+      streams.some((stream) => stream.codec_type === "video"),
+    ),
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ codec_type: "video", codec_name: "h264" }),
+    ]),
+  );
+  expect(
+    inspection.find((streams) =>
+      streams.some((stream) => stream.codec_type === "audio"),
+    ),
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ codec_type: "audio", codec_name: "aac" }),
+    ]),
+  );
 }
 
 async function openChat(page) {
@@ -190,7 +267,7 @@ test("host records locally and focuses participants with auto-focus fallback", a
     await expect(participantTwo.getByText("Pat One").first()).toBeVisible();
 
     await host.getByRole("button", { name: "Start recording" }).click();
-    await expect(host.getByText("Recording")).toBeVisible();
+    await expect(host.getByText("Recording", { exact: true })).toBeVisible();
     await expect(host.getByText(/^REC$/)).toBeVisible();
     await expect(
       host
@@ -211,7 +288,7 @@ test("host records locally and focuses participants with auto-focus fallback", a
     ).toBeVisible();
 
     await host.getByRole("button", { name: "Resume recording" }).click();
-    await expect(host.getByText("Recording")).toBeVisible();
+    await expect(host.getByText("Recording", { exact: true })).toBeVisible();
     await expect(
       host.getByRole("button", { name: "Pause recording" }),
     ).toBeVisible();
@@ -219,20 +296,19 @@ test("host records locally and focuses participants with auto-focus fallback", a
     await openParticipants(host);
     await host.getByRole("button", { name: "Auto-Focus" }).click();
     await closeParticipants(host);
-    await expect(host.getByText("Host One").first()).toBeVisible({
-      timeout: 6_000,
-    });
 
-    const downloadPromise = host
-      .waitForEvent("download", { timeout: 10_000 })
-      .catch(() => null);
+    const downloads = [];
+    const captureDownload = (download) => downloads.push(download);
+    host.on("download", captureDownload);
     await host.getByRole("button", { name: "Stop and save recording" }).click();
     await expect(
       host.getByText(
         /Stopping recording|Preparing your file|Starting download|Download started/,
       ),
     ).toBeVisible();
-    await downloadPromise;
+    await expect.poll(() => downloads.length, { timeout: 60_000 }).toBe(2);
+    host.off("download", captureDownload);
+    await expectFinalRecordingDownloads(downloads);
   } finally {
     await Promise.allSettled([
       participantTwoContext.close(),
@@ -251,7 +327,7 @@ test("host records while toggling screen share", async ({ browser }) => {
     await createHostMeeting(host);
 
     await host.getByRole("button", { name: "Start recording" }).click();
-    await expect(host.getByText("Recording")).toBeVisible();
+    await expect(host.getByText("Recording", { exact: true })).toBeVisible();
 
     await host.getByRole("button", { name: "Share screen" }).click();
     await expect(
@@ -263,16 +339,55 @@ test("host records while toggling screen share", async ({ browser }) => {
       host.getByRole("button", { name: "Share screen" }),
     ).toBeVisible();
 
-    const downloadPromise = host
-      .waitForEvent("download", { timeout: 15_000 })
-      .catch(() => null);
+    const downloads = [];
+    const captureDownload = (download) => downloads.push(download);
+    host.on("download", captureDownload);
     await host.getByRole("button", { name: "Stop and save recording" }).click();
     await expect(
       host.getByText(
         /Stopping recording|Preparing your file|Starting download|Download started/,
       ),
     ).toBeVisible();
-    await downloadPromise;
+    await expect.poll(() => downloads.length, { timeout: 60_000 }).toBe(2);
+    host.off("download", captureDownload);
+    await expectFinalRecordingDownloads(downloads);
+  } finally {
+    await hostContext.close();
+  }
+});
+
+test("host recovers an interrupted recording after reload", async ({
+  browser,
+}) => {
+  const hostContext = await browser.newContext({ acceptDownloads: true });
+  const host = await hostContext.newPage();
+
+  try {
+    await clearClientState(host);
+    await createHostMeeting(host);
+    await host.getByRole("button", { name: "Start recording" }).click();
+    await expect(host.getByText("Recording", { exact: true })).toBeVisible();
+
+    // The recovery assertion starts only once a five-second fragment is durable.
+    await expect
+      .poll(() => persistedRecordingBytes(host), { timeout: 15_000 })
+      .toBeGreaterThan(0);
+    await host.reload();
+
+    await expect(
+      host.getByText("Recording was interrupted. Save the partial recording?"),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(host.getByRole("button", { name: "Resume" })).toBeEnabled();
+    await expect(host.getByRole("button", { name: "Download" })).toBeEnabled();
+    await expect(host.getByRole("button", { name: "Discard" })).toBeEnabled();
+
+    const downloads = [];
+    const captureDownload = (download) => downloads.push(download);
+    host.on("download", captureDownload);
+    await host.getByRole("button", { name: "Download" }).click();
+    await expect.poll(() => downloads.length, { timeout: 60_000 }).toBe(2);
+    host.off("download", captureDownload);
+    await expectFinalRecordingDownloads(downloads);
   } finally {
     await hostContext.close();
   }

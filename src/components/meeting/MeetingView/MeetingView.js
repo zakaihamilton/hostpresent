@@ -1,21 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChatPanel } from "@/components/meeting/ChatPanel";
 import { ConnectionBanner } from "@/components/meeting/ConnectionBanner/ConnectionBanner";
 import { DiagnosticsPopup } from "@/components/meeting/DiagnosticsPopup";
 import { Header } from "@/components/meeting/Header";
 import { InviteBar } from "@/components/meeting/InviteBar/InviteBar";
-import { ParticipantsSidebar } from "@/components/meeting/ParticipantsSidebar";
-import { PipView } from "@/components/meeting/PipView";
-import { PrimaryView } from "@/components/meeting/PrimaryView";
+import { Recording } from "@/components/meeting/Recording";
 import { Toolbar } from "@/components/meeting/Toolbar";
-import { VideoGallery } from "@/components/meeting/VideoGallery";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
 import { MeetingLoading } from "@/components/ui/MeetingLoading";
-import { RecordingDownloadBanner } from "@/components/ui/RecordingDownloadBanner";
 import { PeerStreamConnection } from "@/components/webrtc/PeerStreamConnection";
 import {
   useConfirmDialog,
@@ -66,8 +60,9 @@ import {
   isSignalingConfigError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
+import { getAutoFocusTargetId } from "./autoFocus";
+import { MeetingWorkspace } from "./components/MeetingWorkspace";
 import { MediaControls } from "./hooks/MediaControls";
-import { Recording } from "./hooks/Recording";
 import {
   attachSpeakingDetector,
   RemoteParticipants,
@@ -379,20 +374,29 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
 
   const AUTO_FOCUS_INACTIVITY_MS = 3000;
 
-  const autoFocusTargetId = useMemo(() => {
-    if (focusedParticipantId !== "") return focusedParticipantId;
-    const speaker = videoParticipants.find((p) => p.isSpeaking);
-    if (speaker) return speaker.id;
-    if (isHost && localIsSpeaking) return "host";
-    if (!isHost && hostIsSpeaking) return "host";
-    return "host";
-  }, [
-    focusedParticipantId,
-    videoParticipants,
-    isHost,
-    localIsSpeaking,
-    hostIsSpeaking,
-  ]);
+  const autoFocusTargetId = useMemo(
+    () =>
+      getAutoFocusTargetId({
+        focusedParticipantId,
+        videoParticipants,
+        isHost,
+        localIsSpeaking,
+        localVideoAvailable: Boolean(screenStream) || !isVideoMuted,
+        hostIsSpeaking,
+        hostVideoAvailable: hostScreenSharing || !hostVideoMuted,
+      }),
+    [
+      focusedParticipantId,
+      videoParticipants,
+      isHost,
+      localIsSpeaking,
+      screenStream,
+      isVideoMuted,
+      hostIsSpeaking,
+      hostScreenSharing,
+      hostVideoMuted,
+    ],
+  );
 
   const [effectiveFocusedId, setEffectiveFocusedId] = useState(
     focusedParticipantId || "host",
@@ -419,8 +423,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const {
     downloadState,
     savedRecording,
+    canResumeSavedRecording,
     dismissDownloadBanner,
     downloadSavedRecording,
+    resumeSavedRecording,
     discardSavedRecording,
     startRecording,
     pauseRecording,
@@ -994,201 +1000,101 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
           />
         : null}
 
-      <main className={styles.workspace}>
-        {isSidebarVisible || isChatVisible
-          ? <button
-              type="button"
-              className={styles.sidebarBackdrop}
-              aria-label="Close panels"
-              onClick={() => {
-                handleCloseSidebar();
-                handleCloseChat();
-              }}
-            />
-          : null}
-
-        <div className={styles.stage}>
-          <ErrorBanner message={errorMsg} onDismiss={handleDismissError} />
-
-          <RecordingDownloadBanner
-            downloadState={downloadState}
-            onDismiss={dismissDownloadBanner}
-          />
-
-          {savedRecording
-            ? <div className={styles.savedRecordingBanner}>
-                <span>
-                  Recording was interrupted. Save the partial recording?
-                </span>
-                <div className={styles.savedRecordingActions}>
-                  <button
-                    type="button"
-                    className={styles.savedRecordingDownload}
-                    onClick={downloadSavedRecording}
-                  >
-                    Download
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.savedRecordingDiscard}
-                    onClick={discardSavedRecording}
-                  >
-                    Discard
-                  </button>
-                </div>
-              </div>
-            : null}
-
-          <div className={styles.gallerySlot}>
-            <VideoGallery
-              visible={isGalleryVisible}
-              screenStream={screenStream}
-              localStream={localStream}
-              participants={galleryParticipants}
-              isAudioMuted={isAudioMuted}
-              isVideoMuted={isVideoMuted}
-              isScreenSharing={Boolean(screenStream)}
-              localDisplayName={resolvedDisplayName}
-              localIsSpeaking={localIsSpeaking}
-              audioOutputDeviceId={selectedSpeaker}
-              focusedParticipantId={effectiveFocusedId}
-              manualFocusedId={focusedParticipantId}
-              allowFocus={isHost}
-              onFocusParticipant={handleFocusParticipant}
-              connectionStatus={roomConnection?.status}
-            />
-          </div>
-
-          <div className={styles.videoStage}>
-            <PrimaryView
-              {...primaryViewProps}
-              isRecording={isRecording}
-              isRecordingPaused={isRecordingPaused}
-              recordingDurationSeconds={recordingSeconds}
-              audioOutputDeviceId={selectedSpeaker}
-              connectionStatus={
-                effectiveFocusedId === "host" ||
-                (!isHost &&
-                  effectiveFocusedId === roomConnection?.localParticipantId)
-                  ? roomConnection?.status
-                  : null
-              }
-              onShowDiagnostics={() => setIsDiagnosticsOpen(true)}
-            />
-          </div>
-
-          {isPipVisible && localStream && (
-            <PipView
-              stream={localStream}
-              isVideoMuted={isVideoMuted}
-              name={resolvedDisplayName}
-              initial={resolvedDisplayName?.charAt(0)}
-            />
-          )}
-        </div>
-
-        {isSidebarVisible && isChatVisible && !isMobile
-          ? <div
-              className={`${styles.combinedSlot} ${isSidebarVisible && isChatVisible && !isMobile ? "" : styles.combinedSlotClosed}`}
-            >
-              <aside className={styles.combinedSidebar}>
-                <div className={styles.combinedSection}>
-                  <ParticipantsSidebar
-                    visible
-                    flex
-                    audioList={audioList}
-                    videoParticipants={videoParticipants}
-                    peerParticipants={peerParticipants}
-                    hostDisplayName={hostDisplayName}
-                    hostIsAudioMuted={hostAudioMuted}
-                    hostIsVideoMuted={hostVideoMuted}
-                    hostIsSpeaking={hostIsSpeaking}
-                    hostMode={hostMode}
-                    isVideoMuted={isVideoMuted}
-                    isAudioMuted={isAudioMuted}
-                    isHost={isHost}
-                    localDisplayName={displayNameInput}
-                    localParticipantMode={participantMode}
-                    focusedParticipantId={focusedParticipantId}
-                    localIsSpeaking={localIsSpeaking}
-                    localIsScreenSharing={Boolean(screenStream)}
-                    hostIsScreenSharing={hostScreenSharing}
-                    connectionStatus={roomConnection?.status}
-                    onFocusParticipant={handleFocusParticipant}
-                    onClose={handleCloseSidebar}
-                    onMuteParticipantVideo={muteParticipantVideo}
-                    onMuteParticipantAudio={muteParticipantAudio}
-                    onMuteAllVideo={muteAllVideo}
-                    onMuteAllAudio={muteAllAudio}
-                    canMuteAllVideo={canMuteAllVideo}
-                    canMuteAllAudio={canMuteAllAudio}
-                    onRemoveParticipant={
-                      isHost ? handleKickParticipant : undefined
-                    }
-                  />
-                </div>
-                <div className={styles.combinedDivider} />
-                <div className={styles.combinedSection}>
-                  <ChatPanel
-                    visible
-                    flex
-                    messages={chatMessages}
-                    participants={chatParticipants}
-                    onClose={handleCloseChat}
-                    onSendMessage={handleSendChatMessage}
-                    sessionName={sessionTitle}
-                  />
-                </div>
-              </aside>
-            </div>
-          : <>
-              {(!isMobile || isSidebarVisible) && (
-                <ParticipantsSidebar
-                  visible={isSidebarVisible}
-                  audioList={audioList}
-                  videoParticipants={videoParticipants}
-                  peerParticipants={peerParticipants}
-                  hostDisplayName={hostDisplayName}
-                  hostIsAudioMuted={hostAudioMuted}
-                  hostIsVideoMuted={hostVideoMuted}
-                  hostIsSpeaking={hostIsSpeaking}
-                  hostMode={hostMode}
-                  isVideoMuted={isVideoMuted}
-                  isAudioMuted={isAudioMuted}
-                  isHost={isHost}
-                  localDisplayName={displayNameInput}
-                  localParticipantMode={participantMode}
-                  focusedParticipantId={focusedParticipantId}
-                  localIsSpeaking={localIsSpeaking}
-                  localIsScreenSharing={Boolean(screenStream)}
-                  hostIsScreenSharing={hostScreenSharing}
-                  connectionStatus={roomConnection?.status}
-                  onFocusParticipant={handleFocusParticipant}
-                  onClose={handleCloseSidebar}
-                  onMuteParticipantVideo={muteParticipantVideo}
-                  onMuteParticipantAudio={muteParticipantAudio}
-                  onMuteAllVideo={muteAllVideo}
-                  onMuteAllAudio={muteAllAudio}
-                  canMuteAllVideo={canMuteAllVideo}
-                  canMuteAllAudio={canMuteAllAudio}
-                  onRemoveParticipant={
-                    isHost ? handleKickParticipant : undefined
-                  }
-                />
-              )}
-
-              {(!isMobile || isChatVisible) && (
-                <ChatPanel
-                  visible={isChatVisible}
-                  messages={chatMessages}
-                  participants={chatParticipants}
-                  onClose={handleCloseChat}
-                  onSendMessage={handleSendChatMessage}
-                  sessionName={sessionTitle}
-                />
-              )}
-            </>}
-      </main>
+      <MeetingWorkspace
+        chatPanelProps={{
+          messages: chatMessages,
+          participants: chatParticipants,
+          onSendMessage: handleSendChatMessage,
+          sessionName: sessionTitle,
+        }}
+        downloadState={downloadState}
+        errorMessage={errorMsg}
+        galleryProps={{
+          visible: isGalleryVisible,
+          screenStream,
+          localStream,
+          isAudioMuted,
+          isVideoMuted,
+          isScreenSharing: Boolean(screenStream),
+          localDisplayName: resolvedDisplayName,
+          localIsSpeaking,
+          audioOutputDeviceId: selectedSpeaker,
+          focusedParticipantId: effectiveFocusedId,
+          manualFocusedId: focusedParticipantId,
+          allowFocus: isHost,
+          onFocusParticipant: handleFocusParticipant,
+          connectionStatus: roomConnection?.status,
+        }}
+        isChatVisible={isChatVisible}
+        isMobile={isMobile}
+        isPipVisible={isPipVisible}
+        isSidebarVisible={isSidebarVisible}
+        localStream={localStream}
+        onCloseChat={handleCloseChat}
+        onClosePanels={() => {
+          handleCloseSidebar();
+          handleCloseChat();
+        }}
+        onCloseSidebar={handleCloseSidebar}
+        onDismissDownload={dismissDownloadBanner}
+        onDismissError={handleDismissError}
+        onShowDiagnostics={() => setIsDiagnosticsOpen(true)}
+        participantSidebarProps={{
+          audioList,
+          videoParticipants,
+          peerParticipants,
+          hostDisplayName,
+          hostIsAudioMuted: hostAudioMuted,
+          hostIsVideoMuted: hostVideoMuted,
+          hostIsSpeaking,
+          hostMode,
+          isVideoMuted,
+          isAudioMuted,
+          isHost,
+          localDisplayName: displayNameInput,
+          localParticipantMode: participantMode,
+          focusedParticipantId,
+          localIsSpeaking,
+          localIsScreenSharing: Boolean(screenStream),
+          hostIsScreenSharing: hostScreenSharing,
+          connectionStatus: roomConnection?.status,
+          onFocusParticipant: handleFocusParticipant,
+          onMuteParticipantVideo: muteParticipantVideo,
+          onMuteParticipantAudio: muteParticipantAudio,
+          onMuteAllVideo: muteAllVideo,
+          onMuteAllAudio: muteAllAudio,
+          canMuteAllVideo,
+          canMuteAllAudio,
+          onRemoveParticipant: isHost ? handleKickParticipant : undefined,
+        }}
+        pipProps={{
+          stream: localStream,
+          isVideoMuted,
+          name: resolvedDisplayName,
+          initial: resolvedDisplayName?.charAt(0),
+        }}
+        primaryViewProps={{
+          ...primaryViewProps,
+          isRecording,
+          isRecordingPaused,
+          recordingDurationSeconds: recordingSeconds,
+          audioOutputDeviceId: selectedSpeaker,
+          connectionStatus:
+            effectiveFocusedId === "host" ||
+            (!isHost &&
+              effectiveFocusedId === roomConnection?.localParticipantId)
+              ? roomConnection?.status
+              : null,
+        }}
+        recording={{
+          canResume: canResumeSavedRecording,
+          onResume: resumeSavedRecording,
+          onDownload: downloadSavedRecording,
+          onDiscard: discardSavedRecording,
+        }}
+        savedRecording={savedRecording}
+        videoParticipants={galleryParticipants}
+      />
 
       <ConfirmDialog {...dialogProps} />
 

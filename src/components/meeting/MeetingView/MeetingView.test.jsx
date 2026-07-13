@@ -35,11 +35,17 @@ beforeAll(() => {
   });
 });
 
-jest.mock("@/lib/recordingStorage", () => ({
-  saveRecordingMeta: jest.fn().mockResolvedValue(undefined),
-  saveRecordingChunk: jest.fn().mockResolvedValue(undefined),
-  loadSavedRecording: jest.fn().mockResolvedValue(null),
+jest.mock("@/components/meeting/Recording/recordingStorage", () => ({
+  beginRecordingSegment: jest.fn().mockResolvedValue(undefined),
   clearSavedRecording: jest.fn().mockResolvedValue(undefined),
+  closeActiveRecordingSegment: jest.fn().mockResolvedValue(undefined),
+  createRecordingSession: jest.fn().mockResolvedValue(undefined),
+  flushRecordingWrites: jest.fn().mockResolvedValue(undefined),
+  getRecordingStorageEstimate: jest.fn().mockResolvedValue(null),
+  getRecordingStoragePreflight: jest.fn().mockResolvedValue({ allowed: true }),
+  loadSavedRecording: jest.fn().mockResolvedValue(null),
+  saveRecordingFragment: jest.fn().mockResolvedValue(undefined),
+  updateRecordingSession: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("@/components/meeting/Header", () => ({
@@ -97,7 +103,7 @@ jest.mock("@/components/ui/ErrorBanner", () => ({
   ErrorBanner: () => null,
 }));
 
-jest.mock("@/components/ui/RecordingDownloadBanner", () => ({
+jest.mock("@/components/meeting/Recording/RecordingDownloadBanner", () => ({
   RecordingDownloadBanner: () => null,
 }));
 

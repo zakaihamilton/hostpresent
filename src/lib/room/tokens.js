@@ -1,13 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSignalingServerHost } from "../webrtc/peerClient.js";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
+import { ROOM_ROLE } from "./roles.js";
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
-export const ROOM_ROLE = {
-  HOST: "host",
-  PARTICIPANT: "participant",
-};
+export { ROOM_ROLE } from "./roles.js";
 
 const DEV_FALLBACK_SECRET = "hostpresent-dev-signing-secret";
 
