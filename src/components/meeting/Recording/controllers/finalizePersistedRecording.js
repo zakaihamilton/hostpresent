@@ -35,21 +35,41 @@ export async function finalizePersistedRecording({
   const worker = createWebCodecsRecordingWorker();
   workerRef.current = worker;
   return new Promise((resolve) => {
+    let settled = false;
+    const releaseWorker = () => {
+      worker.terminate();
+      if (workerRef.current === worker) workerRef.current = null;
+    };
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      releaseWorker();
+      resolve(result);
+    };
+    const fail = async (error, phase = "warning") => {
+      if (settled) return;
+      await updateRecordingSession({ status: "interrupted" });
+      updateProgress(
+        phase,
+        0,
+        phase === "cancelled"
+          ? "Recording export cancelled."
+          : error instanceof Error
+            ? error.message
+            : String(error ?? "Could not deliver recording files."),
+      );
+      finish(false);
+    };
     worker.onmessage = async ({ data }) => {
       if (data.type === "progress") {
         updateProgress(data.phase, 50, videoFilename);
         return;
       }
       if (data.type === "failed" || data.type === "cancelled") {
-        await updateRecordingSession({ status: "interrupted" });
-        workerRef.current?.terminate();
-        workerRef.current = null;
-        updateProgress(
+        await fail(
+          data.error,
           data.type === "failed" ? "warning" : "cancelled",
-          0,
-          data.type === "failed" ? data.error : "Recording export cancelled.",
         );
-        resolve(false);
         return;
       }
       if (data.type !== "complete") return;
@@ -71,21 +91,16 @@ export async function finalizePersistedRecording({
           clearSavedRecording().catch(() => {});
         }
         recordingSessionRef.current = null;
-        resolve(true);
+        finish(true);
       } catch (error) {
-        await updateRecordingSession({ status: "interrupted" });
-        updateProgress(
-          "warning",
-          0,
-          error instanceof Error
-            ? error.message
-            : "Could not deliver recording files.",
-        );
-        resolve(false);
-      } finally {
-        workerRef.current?.terminate();
-        workerRef.current = null;
+        await fail(error);
       }
+    };
+    worker.onerror = (event) => {
+      void fail(new Error(event.message || "Recording export worker failed."));
+    };
+    worker.onmessageerror = () => {
+      void fail(new Error("Recording export worker returned unreadable data."));
     };
     worker.postMessage({ type: "finalize", sessionId: session.id });
   });

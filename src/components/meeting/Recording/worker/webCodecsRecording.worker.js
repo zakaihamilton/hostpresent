@@ -13,7 +13,9 @@ import {
   createMp4SampleMuxer,
   createMp4TrackMuxer,
 } from "../mediaMuxer";
+import { hasCompleteDirectSegmentExport } from "./exportSelection";
 import { createFfmpegBridge } from "./ffmpegBridge";
+import { getSafeSampleDuration } from "./sampleTiming";
 
 let cancelled = false;
 let stopping = false;
@@ -393,16 +395,22 @@ async function appendInputSamples({ source, stream, muxer, timeline }) {
       stream === "video"
         ? new VideoSampleSink(inputTrack)
         : new AudioSampleSink(inputTrack);
-    let firstTimestamp = null;
+    let normalizedTimestamp = timeline;
     for await (const sample of sink.samples()) {
-      firstTimestamp ??= sample.timestamp;
-      sample.setTimestamp(timeline + sample.timestamp - firstTimestamp);
-      timeline = Math.max(timeline, sample.timestamp + sample.duration);
+      const duration = getSafeSampleDuration(stream, sample.duration);
+      sample.setTimestamp(normalizedTimestamp);
+      // Audio samples derive their duration from their frame count and expose
+      // no mutator. Video samples can carry corrupt container tail durations,
+      // so normalize those before muxing.
+      if (typeof sample.setDuration === "function") {
+        sample.setDuration(duration);
+      }
       await muxer.add(sample);
       sample.close();
       samples += 1;
+      normalizedTimestamp += duration;
     }
-    return { timeline, samples };
+    return { timeline: normalizedTimestamp, samples };
   } finally {
     input.dispose();
   }
@@ -658,29 +666,6 @@ async function exportPersistedSegments({
     await muxer.cancel().catch(() => {});
     throw error;
   }
-}
-
-function hasCompleteDirectSegmentExport(manifest) {
-  const recordedSegments = (manifest.segments ?? []).filter((segment) =>
-    ["video", "audio"].some((stream) => {
-      const start = segment[`${stream}StartIndex`] ?? 0;
-      const end =
-        segment[`${stream}EndIndex`] ??
-        manifest.tracks[stream]?.chunkCount ??
-        0;
-      return end > start;
-    }),
-  );
-  if (recordedSegments.length === 0) return false;
-  const exportsById = new Map(
-    (manifest.export?.segments ?? []).map((segment) => [segment.id, segment]),
-  );
-  return recordedSegments.every((segment) => {
-    const exported = exportsById.get(segment.id);
-    return ["video", "audio"].every((stream) =>
-      exported?.files?.some((file) => file.stream === stream && file.path),
-    );
-  });
 }
 
 async function exportPersistedRecording(sessionId) {

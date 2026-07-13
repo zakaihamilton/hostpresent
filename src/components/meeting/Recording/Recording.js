@@ -207,6 +207,32 @@ export function Recording({
     if (webCodecsSupported) {
       const worker = createWebCodecsRecordingWorker();
       webCodecsWorkerRef.current = worker;
+      let workerFailed = false;
+      const releaseWorker = () => {
+        worker.terminate();
+        if (webCodecsWorkerRef.current === worker) {
+          webCodecsWorkerRef.current = null;
+        }
+      };
+      const recoverAfterWorkerFailure = async (message) => {
+        if (workerFailed) return;
+        workerFailed = true;
+        if (!isRecordingRef.current && recordingSessionRef.current) {
+          releaseWorker();
+          await (persistedStopRef.current ?? flushRecordingWrites());
+          persistedStopRef.current = null;
+          await finalizeRecordingDownload();
+          resolveCaptureSaveCompletion();
+          return;
+        }
+        Promise.all([
+          closeActiveRecordingSegment("worker-failure"),
+          updateRecordingSession({ status: "interrupted" }),
+        ]).catch(() => {});
+        releaseWorker();
+        updateDownloadProgress("warning", 0, message);
+        resolveCaptureSaveCompletion();
+      };
       worker.onmessage = async ({ data }) => {
         if (data.type === "progress") {
           if (
@@ -219,37 +245,12 @@ export function Recording({
           return;
         }
         if (data.type === "failed") {
-          if (
-            data.capture &&
-            !isRecordingRef.current &&
-            recordingSessionRef.current
-          ) {
-            if (liveCaptureStopTimerRef.current) {
-              clearTimeout(liveCaptureStopTimerRef.current);
-              liveCaptureStopTimerRef.current = null;
-            }
-            webCodecsWorkerRef.current?.terminate();
-            webCodecsWorkerRef.current = null;
-            await (persistedStopRef.current ?? flushRecordingWrites());
-            persistedStopRef.current = null;
-            await finalizeRecordingDownload();
-            resolveCaptureSaveCompletion();
-            return;
-          }
-          Promise.all([
-            closeActiveRecordingSegment("worker-failure"),
-            updateRecordingSession({ status: "interrupted" }),
-          ]).catch(() => {});
-          webCodecsWorkerRef.current?.terminate();
-          webCodecsWorkerRef.current = null;
-          updateDownloadProgress("warning", 0, data.error);
-          resolveCaptureSaveCompletion();
+          await recoverAfterWorkerFailure(data.error);
           return;
         }
         if (data.type === "cancelled") {
           await updateRecordingSession({ status: "interrupted" });
-          webCodecsWorkerRef.current?.terminate();
-          webCodecsWorkerRef.current = null;
+          releaseWorker();
           updateDownloadProgress("cancelled", 0, "Recording export cancelled.");
           resolveCaptureSaveCompletion();
           return;
@@ -311,10 +312,23 @@ export function Recording({
           }
           await updateRecordingSession({ status: "exported" });
           updateDownloadProgress("complete", 100, videoName);
-          webCodecsWorkerRef.current?.terminate();
-          webCodecsWorkerRef.current = null;
+          if (!data.files.some((file) => file.storage === "indexeddb")) {
+            clearSavedRecording().catch(() => {});
+          }
+          recordingSessionRef.current = null;
+          releaseWorker();
           resolveCaptureSaveCompletion();
         }
+      };
+      worker.onerror = (event) => {
+        void recoverAfterWorkerFailure(
+          event.message || "Recording worker failed.",
+        );
+      };
+      worker.onmessageerror = () => {
+        void recoverAfterWorkerFailure(
+          "Recording worker returned unreadable data.",
+        );
       };
       const videoReadable = new MediaStreamTrackProcessor({
         track: recVideoTrack.clone(),

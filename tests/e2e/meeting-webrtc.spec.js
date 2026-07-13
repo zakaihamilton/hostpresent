@@ -112,7 +112,10 @@ async function persistedRecordingBytes(page) {
   );
 }
 
-async function expectFinalRecordingDownloads(downloads) {
+async function expectFinalRecordingDownloads(
+  downloads,
+  { minDuration = 0 } = {},
+) {
   expect(downloads).toHaveLength(2);
   expect(downloads.map((download) => download.suggestedFilename())).toEqual(
     expect.arrayContaining([
@@ -130,32 +133,35 @@ async function expectFinalRecordingDownloads(downloads) {
         "-v",
         "error",
         "-show_entries",
-        "stream=codec_type,codec_name",
+        "stream=codec_type,codec_name:format=duration",
         "-of",
         "json",
         await download.path(),
       ]);
-      return JSON.parse(stdout).streams;
+      return JSON.parse(stdout);
     }),
   );
-  expect(
-    inspection.find((streams) =>
-      streams.some((stream) => stream.codec_type === "video"),
-    ),
-  ).toEqual(
+  const videoFile = inspection.find((file) =>
+    file.streams.some((stream) => stream.codec_type === "video"),
+  );
+  expect(videoFile?.streams).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ codec_type: "video", codec_name: "h264" }),
     ]),
   );
-  expect(
-    inspection.find((streams) =>
-      streams.some((stream) => stream.codec_type === "audio"),
-    ),
-  ).toEqual(
+  const audioFile = inspection.find((file) =>
+    file.streams.some((stream) => stream.codec_type === "audio"),
+  );
+  expect(audioFile?.streams).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ codec_type: "audio", codec_name: "aac" }),
     ]),
   );
+  for (const file of inspection) {
+    const duration = Number(file.format?.duration);
+    expect(duration).toBeGreaterThanOrEqual(minDuration);
+    expect(duration).toBeLessThan(60);
+  }
 }
 
 async function openChat(page) {
@@ -381,13 +387,17 @@ test("host recovers an interrupted recording after reload", async ({
     await expect(host.getByRole("button", { name: "Download" })).toBeEnabled();
     await expect(host.getByRole("button", { name: "Discard" })).toBeEnabled();
 
+    await host.getByRole("button", { name: "Resume" }).click();
+    await expect(host.getByText("Recording", { exact: true })).toBeVisible();
+    await host.waitForTimeout(5_500);
+
     const downloads = [];
     const captureDownload = (download) => downloads.push(download);
     host.on("download", captureDownload);
-    await host.getByRole("button", { name: "Download" }).click();
+    await host.getByRole("button", { name: "Stop and save recording" }).click();
     await expect.poll(() => downloads.length, { timeout: 60_000 }).toBe(2);
     host.off("download", captureDownload);
-    await expectFinalRecordingDownloads(downloads);
+    await expectFinalRecordingDownloads(downloads, { minDuration: 8 });
   } finally {
     await hostContext.close();
   }
