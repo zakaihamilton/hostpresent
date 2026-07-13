@@ -248,6 +248,21 @@ describe("getRecordingMediaSignature", () => {
   });
 });
 
+describe("CanvasVideoRenderer", () => {
+  it("keeps the source aspect ratio when sizing the recording canvas", () => {
+    const renderer = new CanvasVideoRenderer();
+    Object.defineProperties(renderer.videoElement, {
+      videoWidth: { value: 1440 },
+      videoHeight: { value: 1080 },
+    });
+
+    renderer.resizeToSource();
+
+    expect(renderer.canvas.width).toBe(1440);
+    expect(renderer.canvas.height).toBe(1080);
+  });
+});
+
 describe("Recording", () => {
   let recorderInstances;
 
@@ -281,7 +296,7 @@ describe("Recording", () => {
       await result.current.startRecording();
     });
 
-    expect(recorderInstances).toHaveLength(1);
+    expect(recorderInstances).toHaveLength(2);
     expect(CanvasVideoRenderer.prototype.setTrack).toHaveBeenCalledWith(
       cameraTrack,
     );
@@ -306,7 +321,7 @@ describe("Recording", () => {
       });
     });
 
-    expect(recorderInstances).toHaveLength(1);
+    expect(recorderInstances).toHaveLength(2);
     expect(CanvasVideoRenderer.prototype.setTrack).toHaveBeenLastCalledWith(
       screenTrack,
     );
@@ -349,7 +364,7 @@ describe("Recording", () => {
       });
     });
 
-    expect(recorderInstances).toHaveLength(1);
+    expect(recorderInstances).toHaveLength(2);
     expect(CanvasVideoRenderer.prototype.setTrack).toHaveBeenLastCalledWith(
       cameraTrack,
     );
@@ -403,7 +418,7 @@ describe("Recording", () => {
       });
     });
 
-    expect(recorderInstances).toHaveLength(1);
+    expect(recorderInstances).toHaveLength(2);
     expect(CanvasVideoRenderer.prototype.setTrack).toHaveBeenLastCalledWith(
       screenTrack,
     );

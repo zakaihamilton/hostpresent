@@ -63,6 +63,7 @@ export class CanvasVideoRenderer {
     if (!this.running) return;
 
     if (this.videoElement && this.videoElement.readyState >= 2) {
+      this.resizeToSource();
       this.ctx.drawImage(
         this.videoElement,
         0,
@@ -76,6 +77,20 @@ export class CanvasVideoRenderer {
     }
 
     this.animationId = requestAnimationFrame(this.render);
+  }
+
+  resizeToSource() {
+    const { videoWidth, videoHeight } = this.videoElement;
+    if (!videoWidth || !videoHeight) return;
+
+    const scale = Math.min(1, 1920 / Math.max(videoWidth, videoHeight));
+    const width = Math.max(2, Math.floor((videoWidth * scale) / 2) * 2);
+    const height = Math.max(2, Math.floor((videoHeight * scale) / 2) * 2);
+
+    if (this.canvas.width !== width || this.canvas.height !== height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+    }
   }
 
   getStream() {
@@ -231,9 +246,7 @@ export function getRecordingMediaSignature({
   return `host:${trackSignature(videoTrack)}:${trackSignature(micTrack)}:${trackSignature(screenAudio)}`;
 }
 
-const _RECORDER_RESTART_DELAY_MS = 150;
-
-function _stopActiveRecorders(videoRecorder, audioRecorder) {
+function stopActiveRecorders(videoRecorder, audioRecorder) {
   return new Promise((resolve) => {
     let videoStopped = false;
     let audioStopped = false;
@@ -301,7 +314,9 @@ export function Recording({
   const [_remoteTrackRevision, setRemoteTrackRevision] = useState(0);
 
   const mediaRecorderRef = useRef(null);
+  const audioRecorderRef = useRef(null);
   const recordingChunksRef = useRef([]);
+  const audioChunksRef = useRef([]);
   const compositeStreamRef = useRef(null);
   const downloadDismissTimerRef = useRef(null);
   const localStreamRef = useRef(localStream);
@@ -352,6 +367,10 @@ export function Recording({
     const filename = buildRecordingFilename({
       sessionName: sessionNameRef.current,
     });
+    const audioFilename = buildRecordingFilename({
+      sessionName: sessionNameRef.current,
+      extension: "m4a",
+    });
     const chunks = recordingChunksRef.current;
     const chunkCount = chunks.length;
 
@@ -385,7 +404,26 @@ export function Recording({
       window.URL.revokeObjectURL(url);
     }, 100);
 
+    const audioChunks = audioChunksRef.current;
+    if (audioChunks.length > 0) {
+      const audioBlob = new Blob(audioChunks, {
+        type: audioChunks[0].type || "audio/mp4",
+      });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioAnchor = document.createElement("a");
+      audioAnchor.style.display = "none";
+      audioAnchor.href = audioUrl;
+      audioAnchor.download = audioFilename;
+      document.body.appendChild(audioAnchor);
+      audioAnchor.click();
+      setTimeout(() => {
+        document.body.removeChild(audioAnchor);
+        window.URL.revokeObjectURL(audioUrl);
+      }, 100);
+    }
+
     recordingChunksRef.current = [];
+    audioChunksRef.current = [];
     chunkIndexRef.current = 0;
     updateDownloadProgress("complete", 100, filename);
     clearSavedRecording().catch(() => {});
@@ -465,6 +503,26 @@ export function Recording({
       }
     };
 
+    if (recAudioTrack) {
+      let audioOptions = { mimeType: "audio/mp4" };
+      if (!MediaRecorder.isTypeSupported(audioOptions.mimeType)) {
+        audioOptions = {};
+      }
+      const audioRecorder = createRecorder(
+        new MediaStream([recAudioTrack]),
+        audioOptions,
+      );
+      audioRecorderRef.current = audioRecorder;
+      audioRecorder.ondataavailable = (event) => {
+        if (event.data?.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      audioRecorder.start(1000);
+    } else {
+      audioRecorderRef.current = null;
+    }
+
     recorder.start(1000);
   }, []);
 
@@ -472,6 +530,7 @@ export function Recording({
     if (!isHost) return;
 
     recordingChunksRef.current = [];
+    audioChunksRef.current = [];
     chunkIndexRef.current = 0;
     setSavedRecording(null);
     clearSavedRecording().catch(() => {});
@@ -497,6 +556,9 @@ export function Recording({
       mediaRecorderRef.current.state === "recording"
     ) {
       mediaRecorderRef.current.pause();
+      if (audioRecorderRef.current?.state === "recording") {
+        audioRecorderRef.current.pause();
+      }
       setIsRecordingPaused(true);
       publishRecordingState(true, true);
     }
@@ -508,6 +570,9 @@ export function Recording({
       mediaRecorderRef.current.state === "paused"
     ) {
       mediaRecorderRef.current.resume();
+      if (audioRecorderRef.current?.state === "paused") {
+        audioRecorderRef.current.resume();
+      }
       setIsRecordingPaused(false);
       publishRecordingState(true, false);
     }
@@ -523,17 +588,19 @@ export function Recording({
 
     const recorder = mediaRecorderRef.current;
     const hasActiveRecorder = recorder && recorder.state !== "inactive";
+    const audioRecorder = audioRecorderRef.current;
+    const hasActiveAudioRecorder =
+      audioRecorder && audioRecorder.state !== "inactive";
 
-    if (hasActiveRecorder) {
+    if (hasActiveRecorder || hasActiveAudioRecorder) {
       updateDownloadProgress("preparing", 5);
-      recorder.onstop = () => {
+      void stopActiveRecorders(recorder, audioRecorder).then(() => {
         canvasRendererRef.current?.stop();
         canvasRendererRef.current = null;
         audioMixerRef.current?.destroy();
         audioMixerRef.current = null;
         void finalizeRecordingDownload();
-      };
-      recorder.stop();
+      });
       return;
     }
 
@@ -560,8 +627,11 @@ export function Recording({
 
     const recorder = mediaRecorderRef.current;
     const hasActiveRecorder = recorder && recorder.state !== "inactive";
+    const audioRecorder = audioRecorderRef.current;
+    const hasActiveAudioRecorder =
+      audioRecorder && audioRecorder.state !== "inactive";
 
-    if (!hasActiveRecorder) {
+    if (!hasActiveRecorder && !hasActiveAudioRecorder) {
       setIsRecording(false);
       setIsRecordingPaused(false);
       resetRecordingTimer();
@@ -578,18 +648,12 @@ export function Recording({
     }
 
     updateDownloadProgress("preparing", 5);
-    const activeRecorder = recorder;
-    await new Promise((resolve) => {
-      activeRecorder.onstop = async () => {
-        canvasRendererRef.current?.stop();
-        canvasRendererRef.current = null;
-        audioMixerRef.current?.destroy();
-        audioMixerRef.current = null;
-        await finalizeRecordingDownload();
-        resolve();
-      };
-      activeRecorder.stop();
-    });
+    await stopActiveRecorders(recorder, audioRecorder);
+    canvasRendererRef.current?.stop();
+    canvasRendererRef.current = null;
+    audioMixerRef.current?.destroy();
+    audioMixerRef.current = null;
+    await finalizeRecordingDownload();
     setIsRecording(false);
     setIsRecordingPaused(false);
     resetRecordingTimer();
