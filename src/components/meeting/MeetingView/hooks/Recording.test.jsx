@@ -249,17 +249,18 @@ describe("getRecordingMediaSignature", () => {
 });
 
 describe("CanvasVideoRenderer", () => {
-  it("keeps the source aspect ratio when sizing the recording canvas", () => {
+  it("letterboxes the source on a stable recording canvas", () => {
     const renderer = new CanvasVideoRenderer();
     Object.defineProperties(renderer.videoElement, {
       videoWidth: { value: 1440 },
       videoHeight: { value: 1080 },
     });
 
-    renderer.resizeToSource();
+    const rect = renderer.getDrawRect();
 
-    expect(renderer.canvas.width).toBe(1440);
-    expect(renderer.canvas.height).toBe(1080);
+    expect(renderer.canvas.width).toBe(1280);
+    expect(renderer.canvas.height).toBe(720);
+    expect(rect).toEqual({ x: 160, y: 0, width: 960, height: 720 });
   });
 });
 

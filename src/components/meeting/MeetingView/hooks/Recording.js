@@ -63,14 +63,10 @@ export class CanvasVideoRenderer {
     if (!this.running) return;
 
     if (this.videoElement && this.videoElement.readyState >= 2) {
-      this.resizeToSource();
-      this.ctx.drawImage(
-        this.videoElement,
-        0,
-        0,
-        this.canvas.width,
-        this.canvas.height,
-      );
+      const { x, y, width, height } = this.getDrawRect();
+      this.ctx.fillStyle = "#000";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(this.videoElement, x, y, width, height);
     } else if (this.ctx) {
       this.ctx.fillStyle = "#1e1e24";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -79,18 +75,29 @@ export class CanvasVideoRenderer {
     this.animationId = requestAnimationFrame(this.render);
   }
 
-  resizeToSource() {
+  getDrawRect() {
     const { videoWidth, videoHeight } = this.videoElement;
-    if (!videoWidth || !videoHeight) return;
-
-    const scale = Math.min(1, 1920 / Math.max(videoWidth, videoHeight));
-    const width = Math.max(2, Math.floor((videoWidth * scale) / 2) * 2);
-    const height = Math.max(2, Math.floor((videoHeight * scale) / 2) * 2);
-
-    if (this.canvas.width !== width || this.canvas.height !== height) {
-      this.canvas.width = width;
-      this.canvas.height = height;
+    if (!videoWidth || !videoHeight) {
+      return {
+        x: 0,
+        y: 0,
+        width: this.canvas.width,
+        height: this.canvas.height,
+      };
     }
+
+    const scale = Math.min(
+      this.canvas.width / videoWidth,
+      this.canvas.height / videoHeight,
+    );
+    const width = videoWidth * scale;
+    const height = videoHeight * scale;
+    return {
+      x: (this.canvas.width - width) / 2,
+      y: (this.canvas.height - height) / 2,
+      width,
+      height,
+    };
   }
 
   getStream() {
