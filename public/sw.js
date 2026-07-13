@@ -45,9 +45,12 @@ function createIndexedDbDownloadStream({ sessionId, sourceFilename, chunks }) {
           const key = `export:${sessionId}:${sourceFilename}:${String(index).padStart(9, "0")}`;
           index += 1;
           const value = await readRecordingChunk(key);
+          if (!value) {
+            throw new Error(`Recording export chunk ${index - 1} is missing.`);
+          }
           if (value instanceof Blob) {
             controller.enqueue(new Uint8Array(await value.arrayBuffer()));
-          } else if (value) {
+          } else {
             controller.enqueue(value);
           }
         } catch (error) {

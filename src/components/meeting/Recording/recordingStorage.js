@@ -243,7 +243,12 @@ export function createIndexedDbExportStream({ sessionId, filename, chunks }) {
         recordingExportChunkKey(sessionId, filename, index),
       );
       index += 1;
-      if (!value) return;
+      if (!value) {
+        controller.error(
+          new Error(`Recording export chunk ${index - 1} is missing.`),
+        );
+        return;
+      }
       if (value instanceof Blob) {
         for await (const bytes of value.stream()) controller.enqueue(bytes);
         return;

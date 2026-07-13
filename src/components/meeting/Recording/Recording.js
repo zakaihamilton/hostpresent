@@ -88,6 +88,7 @@ export function Recording({
   const stopForStorageRef = useRef(null);
   const persistedStopRef = useRef(null);
   const liveCaptureStopTimerRef = useRef(null);
+  const captureSaveCompletionRef = useRef(null);
   const storageStopRequestedRef = useRef(false);
 
   const publishRecordingState = useCallback(
@@ -137,7 +138,7 @@ export function Recording({
   sessionNameRef.current = sessionName;
 
   const finalizeRecordingDownload = useCallback(async () => {
-    await finalizePersistedRecording({
+    return finalizePersistedRecording({
       exportDirectoryRef,
       recordingSessionRef,
       sessionName: sessionNameRef.current,
@@ -145,6 +146,15 @@ export function Recording({
       workerRef: webCodecsWorkerRef,
     });
   }, [updateDownloadProgress]);
+
+  const resolveCaptureSaveCompletion = useCallback(() => {
+    if (liveCaptureStopTimerRef.current) {
+      clearTimeout(liveCaptureStopTimerRef.current);
+      liveCaptureStopTimerRef.current = null;
+    }
+    captureSaveCompletionRef.current?.();
+    captureSaveCompletionRef.current = null;
+  }, []);
 
   const rebuildRecorder = useCallback(async () => {
     if (!canvasRendererRef.current) {
@@ -223,6 +233,7 @@ export function Recording({
             await (persistedStopRef.current ?? flushRecordingWrites());
             persistedStopRef.current = null;
             await finalizeRecordingDownload();
+            resolveCaptureSaveCompletion();
             return;
           }
           Promise.all([
@@ -232,6 +243,7 @@ export function Recording({
           webCodecsWorkerRef.current?.terminate();
           webCodecsWorkerRef.current = null;
           updateDownloadProgress("warning", 0, data.error);
+          resolveCaptureSaveCompletion();
           return;
         }
         if (data.type === "cancelled") {
@@ -239,6 +251,7 @@ export function Recording({
           webCodecsWorkerRef.current?.terminate();
           webCodecsWorkerRef.current = null;
           updateDownloadProgress("cancelled", 0, "Recording export cancelled.");
+          resolveCaptureSaveCompletion();
           return;
         }
         if (data.type === "complete") {
@@ -293,12 +306,14 @@ export function Recording({
                 ? error.message
                 : "Could not deliver recording files.",
             );
+            resolveCaptureSaveCompletion();
             return;
           }
           await updateRecordingSession({ status: "exported" });
           updateDownloadProgress("complete", 100, videoName);
           webCodecsWorkerRef.current?.terminate();
           webCodecsWorkerRef.current = null;
+          resolveCaptureSaveCompletion();
         }
       };
       const videoReadable = new MediaStreamTrackProcessor({
@@ -426,6 +441,7 @@ export function Recording({
     recorder.start(5000);
   }, [
     finalizeRecordingDownload,
+    resolveCaptureSaveCompletion,
     monitorStorageEstimate,
     updateDownloadProgress,
   ]);
@@ -744,7 +760,12 @@ export function Recording({
 
     if (webCodecsWorkerRef.current) {
       updateDownloadProgress("preparing", 5);
-      webCodecsWorkerRef.current.postMessage({ type: "stop" });
+      const captureWorker = webCodecsWorkerRef.current;
+      const saving = new Promise((resolve) => {
+        captureSaveCompletionRef.current = resolve;
+      });
+      isRecordingRef.current = false;
+      captureWorker.postMessage({ type: "stop" });
       await stopActiveRecorders(
         mediaRecorderRef.current,
         audioRecorderRef.current,
@@ -760,6 +781,13 @@ export function Recording({
       resetRecordingTimer();
       publishRecordingState(false, false);
       await closeActiveRecordingSegment("stopped");
+      liveCaptureStopTimerRef.current = setTimeout(() => {
+        if (webCodecsWorkerRef.current !== captureWorker) return;
+        captureWorker.terminate();
+        webCodecsWorkerRef.current = null;
+        void finalizeRecordingDownload().then(resolveCaptureSaveCompletion);
+      }, LIVE_CAPTURE_STOP_TIMEOUT_MS);
+      await saving;
       return;
     }
 
@@ -808,6 +836,7 @@ export function Recording({
     updateDownloadProgress,
     setIsRecording,
     setIsRecordingPaused,
+    resolveCaptureSaveCompletion,
   ]);
 
   useEffect(() => {
