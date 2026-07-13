@@ -62,6 +62,8 @@ HostPresent deliberately has no database, Redis instance, or server-persistent r
 
 Before deploying on Vercel, configure the Firewall rate rules documented in [Vercel security setup](docs/vercel-security.md). These rules are required because the app has no in-process rate limiter. Rotate `ROOM_TOKEN_SECRET` during this rollout; that intentionally invalidates legacy room links and locally saved room tokens.
 
+Use the [production release checklist](docs/production-release-checklist.md) for Preview and Production verification, including confirmation that each Firewall rule returns `429` once its limit is exceeded.
+
 ## Scripts
 
 | Command | Description |

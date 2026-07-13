@@ -9,10 +9,49 @@ const mediabunnyBrowserEntry = fileURLToPath(
   ),
 );
 
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  // Next.js and the early theme bootstrap both emit inline code. A nonce-based
+  // policy would make this statically rendered app dynamic, so keep this
+  // compatibility policy narrowly focused on trusted origins and capabilities.
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "worker-src 'self' blob:",
+  // PeerJS and TURN endpoints are deployment-configured, so permit secure
+  // HTTPS/WebSocket origins without baking a particular signaling host in.
+  "connect-src 'self' https: wss:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), microphone=(self), display-capture=(self)",
+  },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
   reactCompiler: true,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ];
+  },
   turbopack: {
     root: projectRoot,
     resolveAlias: {

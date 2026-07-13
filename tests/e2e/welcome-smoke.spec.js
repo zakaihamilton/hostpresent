@@ -16,6 +16,28 @@ async function readJoinCode(page) {
   return readCode();
 }
 
+test("the app document carries the production browser security policy", async ({
+  page,
+}) => {
+  const response = await page.goto("/");
+  expect(response).not.toBeNull();
+
+  const headers = response.headers();
+  expect(headers["content-security-policy"]).toContain("default-src 'self'");
+  expect(headers["content-security-policy"]).toContain(
+    "connect-src 'self' https: wss:",
+  );
+  expect(headers["content-security-policy"]).toContain(
+    "frame-ancestors 'none'",
+  );
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(headers["permissions-policy"]).toBe(
+    "camera=(self), microphone=(self), display-capture=(self)",
+  );
+});
+
 test("host welcome creates a shareable room without joining media", async ({
   page,
 }) => {

@@ -11,6 +11,8 @@ HostPresent is stateless. Configure these Vercel Firewall rate rules before prom
 
 Apply the rules to Preview and Production. Verify that a request above each limit receives `429` with Vercel's standard rate-limit response.
 
+Every release must also complete the [production release checklist](production-release-checklist.md). The application intentionally does not provide an in-memory fallback limiter: that would be inconsistent across Vercel function instances and would create a false sense of protection.
+
 Required environment variables:
 
 - `ROOM_TOKEN_SECRET`: a unique, randomly generated secret with at least 32 bytes of entropy. It must not use a `NEXT_PUBLIC_` prefix.
