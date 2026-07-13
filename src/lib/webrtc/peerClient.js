@@ -160,7 +160,10 @@ export function buildPeerJsConfig(host = getSignalingServerHost()) {
     port: readSignalingPortFromEnv(resolvedHost),
     path: getSignalingServerPath(),
     secure: readSignalingSecureFromEnv(resolvedHost),
-    debug: 3,
+    // Application-level handlers surface actionable PeerJS failures. Keep the
+    // library logger quiet so expected peer-unavailable retries do not pollute
+    // browser and CI stderr.
+    debug: 0,
     config: {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -182,7 +185,7 @@ export function getPeerJsConfigFromApi(payload) {
     port: Number(payload?.port ?? (isLocal ? 9000 : DEFAULT_SIGNALING_PORT)),
     path: normalizeSignalingPath(payload?.path),
     secure: payload?.secure !== undefined ? payload.secure !== false : !isLocal,
-    debug: 3,
+    debug: 0,
     config: payload?.config ?? undefined,
   };
 }

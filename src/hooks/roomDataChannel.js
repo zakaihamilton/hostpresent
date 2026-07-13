@@ -1219,13 +1219,14 @@ export function useRoomDataChannel({
 
       peer.on("error", (error) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
-        console.warn("[peer] participant error", error);
 
         if (error?.type === "peer-unavailable") {
           setConnectionError(peerErrorMessage(error, { isHost: false }));
           scheduleReconnectToHost();
           return;
         }
+
+        console.warn("[peer] participant error", error);
 
         if (isRetryablePeerError(error)) {
           setConnectionError(peerErrorMessage(error, { isHost: false }));

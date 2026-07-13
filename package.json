@@ -11,9 +11,9 @@
     "test": "jest",
     "test:unit": "jest",
     "test:automated": "npm run test:unit -- --runInBand && npm run build && npm run test:e2e:smoke",
-    "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test tests/e2e/welcome-smoke.spec.js --project=chromium",
-    "test:e2e:webrtc": "RUN_WEBRTC_E2E=1 playwright test tests/e2e/meeting-webrtc.spec.js --project=chromium",
+    "test:e2e": "env -u FORCE_COLOR -u NO_COLOR playwright test",
+    "test:e2e:smoke": "env -u FORCE_COLOR -u NO_COLOR playwright test tests/e2e/welcome-smoke.spec.js --project=chromium",
+    "test:e2e:webrtc": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/meeting-webrtc.spec.js --project=chromium",
     "test:watch": "jest --watch"
   },
   "dependencies": {

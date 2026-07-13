@@ -9,12 +9,19 @@ const mediabunnyBrowserEntry = fileURLToPath(
   ),
 );
 
+const scriptSecurityPolicy = [
+  "'self'",
+  "'unsafe-inline'",
+  "'wasm-unsafe-eval'",
+  ...(process.env.NODE_ENV === "development" ? ["'unsafe-eval'"] : []),
+].join(" ");
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   // Next.js and the early theme bootstrap both emit inline code. A nonce-based
   // policy would make this statically rendered app dynamic, so keep this
   // compatibility policy narrowly focused on trusted origins and capabilities.
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+  `script-src ${scriptSecurityPolicy}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob:",

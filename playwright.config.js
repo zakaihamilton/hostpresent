@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT || "3000";
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${PORT}`;
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${PORT}`;
+const { FORCE_COLOR: _forceColor, NO_COLOR: _noColor, ...cleanEnv } =
+  process.env;
 const crossBrowserProjects = [
   ...(process.env.PLAYWRIGHT_CROSS_BROWSER
     ? [
@@ -67,13 +70,16 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
     ? undefined
     : {
-        command: `npm run dev -- -p ${PORT}`,
+        command: `npm run dev -- -H 127.0.0.1 -p ${PORT}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         env: {
-          ...process.env,
+          ...cleanEnv,
           NEXT_PUBLIC_APP_URL: baseURL,
+          ROOM_TOKEN_SECRET:
+            process.env.ROOM_TOKEN_SECRET ||
+            "playwright-local-room-token-secret",
         },
       },
 });
