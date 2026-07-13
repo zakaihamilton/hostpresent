@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import { formatJoinCode, JOIN_CODE_LENGTH } from "@/lib/room/joinCodeFormat";
 import styles from "./JoinCodeBoxes.module.css";
 
-const TOTAL = 6;
-const GROUP = 3;
+const TOTAL = JOIN_CODE_LENGTH;
+const GROUP = 4;
 
 function charAt(code, index) {
   const raw = (code ?? "").replace(/-/g, "");
@@ -33,7 +33,7 @@ export function JoinCodeBoxes({
 
   const handleChange = (index, char) => {
     if (readOnly) return;
-    const upper = char.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const upper = char.toUpperCase().replace(/[^A-Z]/g, "");
     const chars = Array.from({ length: TOTAL }, (_, i) => charAt(value, i));
     if (!upper && char) return;
     chars[index] = upper;
@@ -95,7 +95,7 @@ export function JoinCodeBoxes({
     const ch = charAt(value, index);
     return (
       <input
-        // biome-ignore lint/suspicious/noArrayIndexKey: stable 8-item array, never reordered
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable code boxes, never reordered
         key={index}
         id={index === 0 ? "join-code-box-0" : undefined}
         ref={(el) => {

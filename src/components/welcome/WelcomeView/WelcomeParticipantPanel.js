@@ -10,7 +10,6 @@ import {
   resolveJoinCode,
 } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
-import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -18,6 +17,7 @@ import {
   saveDisplayName,
   saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
+import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import {
   clearParticipantRooms,
   formatParticipantRoomLabel,

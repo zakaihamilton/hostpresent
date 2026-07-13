@@ -9,5 +9,4 @@ export {
 } from "./roomSession.js";
 export { useRouteToken } from "./routeToken.js";
 export { useSessionTimers } from "./sessionTimers.js";
-export { useSignaling } from "./signaling.js";
 export { useTheme } from "./useTheme.js";

@@ -5,12 +5,6 @@ const removeParticipantRoomByToken = jest.fn();
 const removeHostRoomByToken = jest.fn();
 const saveRoom = jest.fn();
 const setActiveHostToken = jest.fn();
-const renewSavedHostRoom = jest.fn();
-
-jest.mock("@/lib/settings/renewRoomTokens", () => ({
-  renewSavedHostRoom: (...args) => renewSavedHostRoom(...args),
-}));
-
 jest.mock("@/lib/settings/participantRoomSettings", () => ({
   removeParticipantRoomByToken: (...args) =>
     removeParticipantRoomByToken(...args),
@@ -138,15 +132,12 @@ describe("useRoomSession", () => {
     );
   });
 
-  it("persists renewed host tokens returned by the state API", async () => {
+  it("uses state claims without renewing tokens", async () => {
     fetch.mockResolvedValue(
       jsonResponse({
         roomId: "room-1",
         role: "host",
-        status: "open",
-        hostToken: "renewed-host-token",
-        participantToken: "renewed-participant-token",
-        joinCode: "ABCDEF",
+        joinCode: "ABCDEFGH",
       }),
     );
 
@@ -160,10 +151,6 @@ describe("useRoomSession", () => {
     await waitFor(() => {
       expect(result.current.status).toBe(ROOM_SESSION_STATUS.OPEN);
     });
-    expect(renewSavedHostRoom).toHaveBeenCalledWith(
-      "expired-host-token",
-      expect.objectContaining({ hostToken: "renewed-host-token" }),
-    );
   });
 
   it("surfaces room missing errors on 404", async () => {
@@ -188,8 +175,7 @@ describe("useRoomSession", () => {
     const created = {
       roomId: "room-new",
       hostToken: "host-token",
-      participantToken: "participant-token",
-      joinCode: "ABC123",
+      joinCode: "ABCDEFGH",
     };
     fetch.mockResolvedValue(jsonResponse(created));
 
@@ -210,8 +196,7 @@ describe("useRoomSession", () => {
       expect.objectContaining({
         roomId: "room-new",
         hostToken: "host-token",
-        participantToken: "participant-token",
-        joinCode: "ABC123",
+        joinCode: "ABCDEFGH",
       }),
     );
     expect(setActiveHostToken).toHaveBeenCalledWith("host-token");

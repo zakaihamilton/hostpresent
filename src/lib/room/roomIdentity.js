@@ -4,8 +4,10 @@ import { getSigningSecret } from "./tokens.js";
 
 export function deriveRoomIdFromJoinCode(joinCode) {
   const normalized = normalizeJoinCode(joinCode);
+  const secret = getSigningSecret();
+  if (!secret || !normalized) return null;
   const hash = createHash("sha256")
-    .update(`${getSigningSecret()}:join:${normalized}`)
+    .update(`${secret}:join:${normalized}`)
     .digest();
   const bytes = Buffer.from(hash.subarray(0, 16));
   bytes[6] = (bytes[6] & 0x0f) | 0x40;

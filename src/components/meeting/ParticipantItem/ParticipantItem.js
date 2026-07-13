@@ -6,7 +6,6 @@ import {
   ScreenShare,
   Video,
   VideoOff,
-  X,
 } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./ParticipantItem.module.css";
@@ -104,7 +103,6 @@ export const ParticipantItem = memo(function ParticipantItem({
   onMuteVideo,
   onMuteAudio,
   onFocus,
-  onRemove,
 }) {
   return (
     <div className={`${styles.item} ${isFocused ? styles.itemFocused : ""}`}>
@@ -167,18 +165,6 @@ export const ParticipantItem = memo(function ParticipantItem({
           isSpeaking={isSpeaking}
           onMuteAudio={onMuteAudio}
         />
-        {onRemove
-          ? <Tooltip text="Remove from meeting" placement="left">
-              <button
-                type="button"
-                className={`${styles.statusBtn} ${styles.removeBtn}`}
-                onClick={onRemove}
-                aria-label={`Remove ${name} from meeting`}
-              >
-                <X size={16} />
-              </button>
-            </Tooltip>
-          : null}
       </div>
     </div>
   );

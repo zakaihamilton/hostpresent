@@ -1,5 +1,4 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { getSignalingServerHost } from "../webrtc/peerClient.js";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
 import { ROOM_ROLE } from "./roles.js";
 
@@ -7,14 +6,12 @@ const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 export { ROOM_ROLE } from "./roles.js";
 
-const DEV_FALLBACK_SECRET = "hostpresent-dev-signing-secret";
-
 export function getSigningSecret() {
-  return getSignalingServerHost() || DEV_FALLBACK_SECRET;
+  return process.env.ROOM_TOKEN_SECRET?.trim() || null;
 }
 
 export function isRoomSigningEncrypted() {
-  return Boolean(getSignalingServerHost());
+  return Boolean(getSigningSecret());
 }
 
 function toBase64Url(value) {
@@ -32,6 +29,7 @@ function fromBase64Url(value) {
 
 function signPayload(payload) {
   const secret = getSigningSecret();
+  if (!secret) return null;
   return createHmac("sha256", secret).update(payload).digest();
 }
 
@@ -40,10 +38,13 @@ function verifySignedPayload(token) {
     return null;
   }
 
-  const [payloadPart, signaturePart] = token.split(".");
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payloadPart, signaturePart] = parts;
   if (!payloadPart || !signaturePart) return null;
 
   const expectedSignature = signPayload(payloadPart);
+  if (!expectedSignature) return null;
   const actualSignature = fromBase64Url(signaturePart);
 
   if (
@@ -61,6 +62,7 @@ function verifySignedPayload(token) {
 }
 
 export function signRoomToken({ roomId, role, joinCode = null }) {
+  if (!getSigningSecret()) return null;
   const iat = Date.now();
   const exp = iat + TOKEN_TTL_MS;
   const payload = {
@@ -130,13 +132,15 @@ export function verifyRoomToken(token) {
 }
 
 export function createRoomTokens(roomId, joinCode = null) {
+  const hostToken = signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode });
+  const participantToken = signRoomToken({
+    roomId,
+    role: ROOM_ROLE.PARTICIPANT,
+    joinCode,
+  });
   return {
     roomId,
-    hostToken: signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode }),
-    participantToken: signRoomToken({
-      roomId,
-      role: ROOM_ROLE.PARTICIPANT,
-      joinCode,
-    }),
+    hostToken,
+    participantToken,
   };
 }

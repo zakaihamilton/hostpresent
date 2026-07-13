@@ -1,7 +1,7 @@
 import { formatJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { dedupeRoomsByJoinCode } from "@/lib/settings/recentRoomDedup";
 
-const STORAGE_KEY = "hostpresent.participantRooms";
+const STORAGE_KEY = "hostpresent.participantRooms.v2";
 const MAX_RECENT_ROOMS = 10;
 
 const EMPTY_SETTINGS = {

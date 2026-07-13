@@ -11,7 +11,6 @@ export const SIGNALING_MESSAGE = {
   HOST_FOCUS_CHANGED: "host_focus_changed",
   RECORDING_STATE: "recording_state",
   MEETING_ENDED: "meeting_ended",
-  KICK_PARTICIPANT: "kick_participant",
   PARTICIPANT_AUDIO_MUTED: "participant_audio_muted",
   PARTICIPANT_VIDEO_MUTED: "participant_video_muted",
   PARTICIPANT_AUDIO_UNMUTED: "participant_audio_unmuted",
@@ -137,13 +136,6 @@ export function createMeetingEndedMessage() {
   };
 }
 
-export function createKickParticipantMessage() {
-  return {
-    type: SIGNALING_MESSAGE.KICK_PARTICIPANT,
-    timestamp: Date.now(),
-  };
-}
-
 export function createParticipantAudioMutedMessage({
   participantId,
   participantType,
@@ -196,8 +188,7 @@ export function createParticipantProfileMessage({
     displayName:
       typeof displayName === "string" ? displayName.trim().slice(0, 32) : "",
     mode: mode === "listening" ? "listening" : "available",
-    deviceId:
-      typeof deviceId === "string" ? deviceId.trim().slice(0, 128) : "",
+    deviceId: typeof deviceId === "string" ? deviceId.trim().slice(0, 128) : "",
     timestamp: Date.now(),
   };
 }

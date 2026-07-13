@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
 import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
-import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
 import {
   getActiveRoom,
   getRoomByHostToken,
@@ -69,7 +68,6 @@ async function fetchRoomState(token) {
     );
   }
   const state = await response.json();
-  renewSavedHostRoom(token, state);
   return state;
 }
 
@@ -93,7 +91,6 @@ export function useRoomSettings() {
     saveRoom({
       roomId: room.roomId,
       hostToken: room.hostToken,
-      participantToken: room.participantToken,
       joinCode: room.joinCode ?? null,
       createdAt: room.createdAt ?? Date.now(),
     });
@@ -131,7 +128,6 @@ export function useRoomSession({ role: _role, token, enabled = true }) {
       saveRoom({
         roomId: created.roomId,
         hostToken: created.hostToken,
-        participantToken: created.participantToken,
         joinCode: created.joinCode,
         createdAt: Date.now(),
       });

@@ -19,11 +19,7 @@ import {
 } from "@/hooks";
 import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import {
-  buildParticipantInviteLink,
-  kickParticipantDevice,
-  openHostRoom,
-} from "@/lib/room/inviteLink";
+import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
@@ -41,14 +37,12 @@ import {
   saveGalleryVisible,
   saveSidebarVisible,
 } from "@/lib/settings/layoutSettings";
-import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import {
   getRoomTitleByHostToken,
   updateRoomTitle,
 } from "@/lib/settings/roomSettings";
 import {
   createHostFocusChangedMessage,
-  createKickParticipantMessage,
   createMeetingEndedMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
@@ -252,14 +246,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   });
 
   roomConnectionRef.current = roomConnection;
-
-  useEffect(() => {
-    if (!isHost || !token) return undefined;
-    void openHostRoom(token).catch((error) => {
-      console.warn("[host] failed to open room on meeting enter", error);
-    });
-    return undefined;
-  }, [isHost, token]);
 
   onChatMessageRef.current = (message) => {
     const localId = isHost
@@ -586,38 +572,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     handleBack();
   }, [confirm, isHost, isRecording, stopRecordingAsync, handleBack]);
 
-  const handleKickParticipant = useCallback(
-    async (participantId) => {
-      if (!isHost) return;
-      const participant = videoParticipants.find((p) => p.id === participantId);
-      const name = participant?.name ?? "this participant";
-      const confirmed = await confirm({
-        title: "Remove participant",
-        message: `Remove ${name} from the meeting? They will not be able to rejoin.`,
-        confirmLabel: "Remove",
-        cancelLabel: "Cancel",
-        variant: "danger",
-      });
-      if (!confirmed) return;
-      const deviceId =
-        roomConnectionRef.current?.getParticipantDeviceId?.(participantId) ??
-        "";
-      roomConnectionRef.current?.sendToParticipant(
-        participantId,
-        createKickParticipantMessage(),
-      );
-      onRemoteParticipantRef.current?.({ id: participantId, stream: null });
-      if (token && deviceId) {
-        void kickParticipantDevice({ hostToken: token, deviceId }).catch(
-          (error) => {
-            console.warn("[host] failed to record kick denylist entry", error);
-          },
-        );
-      }
-    },
-    [confirm, isHost, token, videoParticipants],
-  );
-
   useEffect(() => {
     if (isHost) return undefined;
     return roomConnectionRef.current?.subscribe((message) => {
@@ -635,19 +589,12 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         setMeetingDisconnectReason("ended");
         roomConnectionRef.current?.disconnect();
       }
-      if (message.type === SIGNALING_MESSAGE.KICK_PARTICIPANT) {
-        setMeetingDisconnectReason("kicked");
-        if (token) {
-          removeParticipantRoomByToken(token);
-        }
-        roomConnectionRef.current?.disconnect();
-      }
       if (message.type === SIGNALING_MESSAGE.ROOM_FULL) {
         setMeetingDisconnectReason("full");
         roomConnectionRef.current?.disconnect();
       }
     });
-  }, [isHost, meetingDisconnectReason, token]);
+  }, [isHost, meetingDisconnectReason]);
 
   useEffect(() => {
     if (!isHost || !focusedParticipantId || focusedParticipantId === "host")
@@ -921,16 +868,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     );
   }
 
-  if (meetingDisconnectReason === "kicked") {
-    return (
-      <MeetingJoinError
-        title="You were removed"
-        message="You were removed from the meeting by the host."
-        onBack={handleDisconnectBack}
-      />
-    );
-  }
-
   if (meetingDisconnectReason === "full") {
     return (
       <MeetingJoinError
@@ -1065,7 +1002,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
           onMuteAllAudio: muteAllAudio,
           canMuteAllVideo,
           canMuteAllAudio,
-          onRemoveParticipant: isHost ? handleKickParticipant : undefined,
         }}
         pipProps={{
           stream: localStream,

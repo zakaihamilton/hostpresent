@@ -1,15 +1,18 @@
 import { expect, test } from "@playwright/test";
 
 async function readJoinCode(page) {
-  const boxes = Array.from({ length: 6 }, (_, index) =>
-    page.getByRole("textbox", { name: `Character ${index + 1}` }),
+  const boxes = Array.from({ length: 8 }, (_, index) =>
+    page.getByRole("textbox", {
+      name: `Character ${index + 1}`,
+      exact: true,
+    }),
   );
   for (const box of boxes) {
     await expect(box).toBeVisible();
   }
   const readCode = async () =>
     (await Promise.all(boxes.map((box) => box.inputValue()))).join("");
-  await expect.poll(readCode).toMatch(/^[A-Z]{6}$/);
+  await expect.poll(readCode).toMatch(/^[A-Z]{8}$/);
   return readCode();
 }
 
@@ -27,7 +30,7 @@ test("host welcome creates a shareable room without joining media", async ({
 
   const joinCode = await readJoinCode(page);
   await expect(page.getByLabel("Invite link")).toHaveValue(
-    new RegExp(`#/j/${joinCode.slice(0, 3)}-${joinCode.slice(3)}`),
+    new RegExp(`#/j/${joinCode.slice(0, 4)}-${joinCode.slice(4)}`),
   );
   await expect(
     page.getByRole("button", { name: "Copy room code" }),
@@ -53,10 +56,10 @@ test("participant join button stays disabled until a complete code is entered", 
 });
 
 test("invite route joins the participant flow", async ({ page }) => {
-  await page.goto("/#/j/ABC-DEF");
+  await page.goto("/#/j/ABCD-EFGH");
 
   await expect(
-    page.getByRole("button", { name: "Copy join code ABC-DEF" }),
+    page.getByRole("button", { name: "Copy join code ABCD-EFGH" }),
   ).toBeVisible();
   await expect(
     page.getByText("[E011] Waiting for the host to join…"),

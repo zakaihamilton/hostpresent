@@ -293,11 +293,6 @@ describe("MeetingView", () => {
       "The host has ended this meeting.",
     ],
     [
-      SIGNALING_MESSAGE.KICK_PARTICIPANT,
-      "You were removed",
-      "You were removed from the meeting by the host.",
-    ],
-    [
       SIGNALING_MESSAGE.ROOM_FULL,
       "Meeting is full",
       "This meeting has reached the maximum capacity of 30 participants.",

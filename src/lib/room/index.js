@@ -1,10 +1,6 @@
 export {
   applySecurityHeaders,
-  enforceRateLimit,
-  getClientIp,
-  guardGetRequest,
   guardPostRequest,
-  RATE_LIMITS,
   validateJsonPost,
   validateTokenParam,
 } from "./apiSecurity.js";
@@ -24,18 +20,8 @@ export {
   verifyRequestToken,
 } from "./routeHelpers.js";
 export {
-  createRoomRecord,
-  getRoomById,
-  getRoomByJoinCode,
-  isDeviceKickedFromRoom,
-  kickDeviceFromRoom,
-  openRoom,
-  ROOM_STATUS,
-  relayRoomMessage,
-} from "./store.js";
-export {
   createRoomTokens,
-  isRoomSigningEncrypted,
+  getSigningSecret,
   ROOM_ROLE,
   signRoomToken,
   verifyRoomToken,

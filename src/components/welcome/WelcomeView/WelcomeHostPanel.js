@@ -5,14 +5,13 @@ import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { buildParticipantInviteLink, openHostRoom } from "@/lib/room/inviteLink";
+import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   normalizeDisplayNameInput,
   saveDisplayName,
 } from "@/lib/settings/displayNameSettings";
-import { renewSavedHostRoom } from "@/lib/settings/renewRoomTokens";
 import {
   clearHostRooms,
   formatRoomLabel,
@@ -25,18 +24,6 @@ import { JoinCodeBoxes } from "./JoinCodeBoxes";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import hs from "./WelcomeHostPanel.module.css";
 import shared from "./WelcomeShared.module.css";
-
-async function fetchHostRoomDetails(hostToken) {
-  const response = await fetch(
-    `/api/rooms/state?token=${encodeURIComponent(hostToken)}`,
-  );
-  if (!response.ok) {
-    throw new Error("[E050] Could not load room");
-  }
-  const state = await response.json();
-  renewSavedHostRoom(hostToken, state);
-  return state;
-}
 
 export function WelcomeHostPanel({ legacyToken, navigate }) {
   const { getSavedRoom, persistRoom, markHostRoomUsed } = useRoomSettings();
@@ -80,27 +67,6 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   }, [roomState?.joinCode]);
 
   useEffect(() => {
-    if (!roomState?.hostToken || roomState.hostToken === hostToken) return;
-    setHostToken(roomState.hostToken);
-    persistRoom({
-      roomId: roomState.roomId,
-      hostToken: roomState.hostToken,
-      participantToken: roomState.participantToken,
-      joinCode: roomState.joinCode ?? joinCode,
-      createdAt: roomState.createdAt ?? Date.now(),
-    });
-  }, [
-    hostToken,
-    joinCode,
-    persistRoom,
-    roomState?.createdAt,
-    roomState?.hostToken,
-    roomState?.joinCode,
-    roomState?.participantToken,
-    roomState?.roomId,
-  ]);
-
-  useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
 
@@ -115,28 +81,6 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
               role: APP_ROLE.HOST,
             });
             return;
-          }
-
-          try {
-            const details = await fetchHostRoomDetails(legacyToken);
-            if (details.participantToken) {
-              const restored = {
-                roomId: details.roomId,
-                hostToken: details.hostToken ?? legacyToken,
-                participantToken: details.participantToken,
-                joinCode: details.joinCode ?? null,
-                createdAt: details.createdAt ?? Date.now(),
-              };
-              persistRoom(restored);
-              applyRoom(restored);
-              navigate({
-                view: APP_VIEW.WELCOME,
-                role: APP_ROLE.HOST,
-              });
-              return;
-            }
-          } catch {
-            // fall through to active room or create
           }
         }
 
@@ -233,18 +177,12 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     if (sessionTitle) updateRoomTitle(hostToken, sessionTitle);
     refreshRecentRooms();
 
-    void openHostRoom(hostToken)
-      .catch((err) => {
-        console.warn("[host] failed to open room before meeting", err);
-      })
-      .finally(() => {
-        setIsActionPending(false);
-        navigate({
-          view: APP_VIEW.MEETING,
-          role: APP_ROLE.HOST,
-          token: hostToken,
-        });
-      });
+    setIsActionPending(false);
+    navigate({
+      view: APP_VIEW.MEETING,
+      role: APP_ROLE.HOST,
+      token: hostToken,
+    });
   };
 
   const handleRemoveRoom = (room) => {

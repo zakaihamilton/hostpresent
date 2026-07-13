@@ -1,8 +1,8 @@
 import {
   getSignalingErrorHint,
+  HOST_ID_RETRY_DELAY_MS,
   HOST_SIGNING_REACHABILITY_HINT,
   hostIdRetryDelayMs,
-  HOST_ID_RETRY_DELAY_MS,
   isFatalSignalingError,
   isSignalingConfigError,
   isSignalingRetryMessage,

@@ -13,7 +13,7 @@ describe("roomSettings", () => {
 
   it("dedupes recent rooms by join code when listing", () => {
     window.localStorage.setItem(
-      "hostpresent.rooms",
+      "hostpresent.rooms.v2",
       JSON.stringify({
         activeHostToken: "token-new",
         rooms: [
@@ -64,7 +64,7 @@ describe("roomSettings", () => {
 
   it("dedupes stored rooms when touching a host room", () => {
     window.localStorage.setItem(
-      "hostpresent.rooms",
+      "hostpresent.rooms.v2",
       JSON.stringify({
         activeHostToken: "token-old",
         rooms: [

@@ -1,7 +1,9 @@
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { dedupeRoomsByJoinCode } from "@/lib/settings/recentRoomDedup";
 
-const STORAGE_KEY = "hostpresent.rooms";
+// Version the storage key so tokens signed with the retired public secret are
+// never reused after the stateless credential cutover.
+const STORAGE_KEY = "hostpresent.rooms.v2";
 const MAX_RECENT_ROOMS = 10;
 
 const EMPTY_SETTINGS = {
@@ -79,7 +81,6 @@ export function saveRoom(settings) {
   const nextEntry = {
     roomId: settings.roomId,
     hostToken: settings.hostToken,
-    participantToken: settings.participantToken,
     joinCode: settings.joinCode ?? null,
     title: settings.title ?? existing?.title ?? "",
     createdAt: existing?.createdAt ?? settings.createdAt ?? now,

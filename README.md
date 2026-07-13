@@ -1,6 +1,6 @@
 # Host Present
 
-Browser-based meetings built around a single presenter. A **host** runs the session—camera, microphone, and screen share—while **participants** join with a room ID or invite link. Media flows peer-to-peer over WebRTC (PeerJS); the Next.js app handles rooms, signed tokens, and meeting UI.
+Browser-based meetings built around a single presenter. A **host** runs the session—camera, microphone, and screen share—while **participants** join with an 8-character room code or invite link. Media and live meeting controls flow peer-to-peer over WebRTC (PeerJS); the Next.js app issues stateless, signed credentials and serves the meeting UI.
 
 ## Features
 
@@ -8,7 +8,7 @@ Browser-based meetings built around a single presenter. A **host** runs the sess
 - **Primary presenter view** — Large stage for the host feed (camera or screen share) with optional participant gallery.
 - **Screen sharing** — Share the screen with optional system/tab audio.
 - **Recording** — Record the meeting locally in the browser; pause, resume, and download when finished.
-- **Host controls** — Mute individual participants or everyone; manage who appears on video vs. audio-only.
+- **Host controls** — Mute individual participants or everyone; manage who appears on video vs. audio-only during the live session.
 - **Participant modes** — *Available* (can send media) or *Listening only* (observe without publishing).
 - **Participants sidebar** — Roster with mute/video status and host actions.
 - **Recent rooms** — Hosts can reopen rooms from local storage; participants can save rooms they have joined.
@@ -17,10 +17,10 @@ Browser-based meetings built around a single presenter. A **host** runs the sess
 
 ## How it works
 
-1. **Host** opens the app, sets a display name, and creates or resumes a room. They receive a join code and participant invite link.
-2. **Participants** enter the room ID or follow the invite link, then join the meeting once the host is present.
+1. **Host** opens the app, sets a display name, and creates a room. They receive an 8-character join code and participant invite link.
+2. **Participants** enter the room code or follow the invite link. The code is a bearer credential and is converted into a short-lived participant token.
 3. **Signaling** uses a separate [PeerJS](https://peerjs.com/) server (`SIGNALING_SERVER_URL`) so browsers can discover each other and negotiate WebRTC.
-4. **Room API** (`/api/rooms`) creates rooms, issues signed host/participant tokens, and streams lightweight room state. Message payloads on the data channel are authenticated when room signing is enabled.
+4. **Room API** (`/api/rooms`) issues signed host/participant tokens and TURN configuration without retaining room state. Live control messages stay on authenticated WebRTC data channels.
 
 Routing is hash-based (`#/welcome`, `#/meeting/...`, `#/j/...`) so the SPA can run on static hosting without server-side path rules.
 
@@ -45,7 +45,8 @@ Create `.env.local` for local development (or set the same keys in your host’s
 
 | Variable | Description |
 |----------|-------------|
-| `SIGNALING_SERVER_URL` | PeerJS hostname only—no `https://` (e.g. `peer.example.com`). Required for WebRTC and production-grade room token signing. |
+| `ROOM_TOKEN_SECRET` | Required private, high-entropy HMAC secret for room tokens and room-ID derivation. Rotate it to invalidate all existing room links and saved rooms. |
+| `SIGNALING_SERVER_URL` | PeerJS hostname only—no `https://` (e.g. `peer.example.com`). Required for WebRTC. |
 | `SIGNALING_SERVER_PATH` | PeerJS path prefix (default: `/myapp`). |
 | `SIGNALING_SERVER_PORT` | PeerJS port (default: `443`). |
 | `NEXT_PUBLIC_APP_URL` | Public app origin for participant invite links (e.g. `https://present.example.com`). |
@@ -53,7 +54,13 @@ Create `.env.local` for local development (or set the same keys in your host’s
 | `TURN_SECRET_KEY` | Shared secret for CoTurn ephemeral credentials. |
 | `TURN_DOMAIN` | TURN/TURNS hostname (default: `hostpresent.duckdns.org`). |
 
-When `SIGNALING_SERVER_URL` is unset, room tokens use a development fallback secret. Set the signaling URL before deploying to production.
+There is no fallback room-token secret. Missing `ROOM_TOKEN_SECRET` causes room creation and code resolution to fail closed. Never expose it as a `NEXT_PUBLIC_` variable.
+
+## Production deployment
+
+HostPresent deliberately has no database, Redis instance, or server-persistent room state. A restart does not end an active peer-to-peer meeting, but it also cannot preserve server-side waiting rooms, participant removals, or token renewal.
+
+Before deploying on Vercel, configure the Firewall rate rules documented in [Vercel security setup](docs/vercel-security.md). These rules are required because the app has no in-process rate limiter. Rotate `ROOM_TOKEN_SECRET` during this rollout; that intentionally invalidates legacy room links and locally saved room tokens.
 
 ## Scripts
 

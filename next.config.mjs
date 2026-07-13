@@ -3,7 +3,10 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
 const mediabunnyBrowserEntry = fileURLToPath(
-  new URL("./node_modules/mediabunny/dist/modules/src/index.js", import.meta.url),
+  new URL(
+    "./node_modules/mediabunny/dist/modules/src/index.js",
+    import.meta.url,
+  ),
 );
 
 /** @type {import('next').NextConfig} */

@@ -1,4 +1,5 @@
-const GROUP_SIZE = 3;
+const GROUP_SIZE = 4;
+const JOIN_CODE_LENGTH = 8;
 
 export function normalizeJoinCode(code) {
   if (typeof code !== "string") return "";
@@ -16,6 +17,9 @@ export function formatJoinCode(code) {
 
 export function isValidJoinCode(code) {
   const normalized = normalizeJoinCode(code);
-  if (/^[A-Z]{6,8}$/.test(normalized)) return true;
-  return /^[23456789A-Z]{6,12}$/.test(normalized);
+  return new RegExp(`^[ABCDEFGHJKLMNPQRSTUVWXYZ]{${JOIN_CODE_LENGTH}}$`).test(
+    normalized,
+  );
 }
+
+export { JOIN_CODE_LENGTH };

@@ -46,7 +46,9 @@ export function verifyIceRoomToken(token) {
     return null;
   }
 
-  const [payloadPart, signaturePart] = token.split(".");
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payloadPart, signaturePart] = parts;
   if (!payloadPart || !signaturePart) return null;
 
   const expectedSignature = signPayload(payloadPart, secret);

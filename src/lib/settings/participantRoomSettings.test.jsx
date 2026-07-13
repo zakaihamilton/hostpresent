@@ -11,7 +11,7 @@ describe("participantRoomSettings", () => {
 
   it("dedupes recent rooms by join code when listing", () => {
     window.localStorage.setItem(
-      "hostpresent.participantRooms",
+      "hostpresent.participantRooms.v2",
       JSON.stringify({
         activeParticipantToken: "token-new",
         rooms: [

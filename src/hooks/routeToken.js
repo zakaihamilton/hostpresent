@@ -5,7 +5,6 @@ import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { resolveJoinCode } from "@/lib/room/inviteLink";
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
-import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import { getActiveRoom, getRoomByJoinCode } from "@/lib/settings/roomSettings";
 
 const HOST_ROOM_MISSING_ERROR =
@@ -16,8 +15,6 @@ const PARTICIPANT_LINK_ON_HOST_ERROR =
 
 const HOST_LINK_ON_PARTICIPANT_ERROR =
   "[E027] This link is for hosts only. Use a participant join code or invite link to join.";
-
-const WAITING_POLL_MS = 2000;
 
 function roleMismatchError(routeRole, tokenRole) {
   if (routeRole === APP_ROLE.HOST && tokenRole === APP_ROLE.PARTICIPANT) {
@@ -73,7 +70,6 @@ export function useRouteToken({ role, token, joinCode, view }) {
     token: null,
     loading: false,
     error: "",
-    waiting: false,
   });
 
   useEffect(() => {
@@ -82,27 +78,14 @@ export function useRouteToken({ role, token, joinCode, view }) {
         token: null,
         loading: false,
         error: "",
-        waiting: false,
       });
       return undefined;
     }
 
     let cancelled = false;
-    let pollTimer = null;
     const normalized = normalizeJoinCode(joinCode);
-    const deviceId = getOrCreateParticipantDeviceId();
 
     const applyResolved = (resolved) => {
-      if (resolved?.waiting) {
-        setParticipantState({
-          token: null,
-          loading: true,
-          error: "",
-          waiting: true,
-        });
-        pollTimer = window.setTimeout(resolve, WAITING_POLL_MS);
-        return;
-      }
       if (resolved?.participantToken) {
         const verified = verifyTokenForRole(
           resolved.participantToken,
@@ -112,7 +95,6 @@ export function useRouteToken({ role, token, joinCode, view }) {
           token: verified.token,
           loading: false,
           error: verified.error,
-          waiting: false,
         });
         return;
       }
@@ -120,7 +102,6 @@ export function useRouteToken({ role, token, joinCode, view }) {
         token: null,
         loading: false,
         error: "[E029] Could not get a participant token for this room.",
-        waiting: false,
       });
     };
 
@@ -129,10 +110,10 @@ export function useRouteToken({ role, token, joinCode, view }) {
         token: null,
         loading: !prev.waiting,
         error: "",
-        waiting: prev.waiting,
+        waiting: false,
       }));
 
-      void resolveJoinCode(normalized, { deviceId })
+      void resolveJoinCode(normalized)
         .then((resolved) => {
           if (cancelled) return;
           applyResolved(resolved);
@@ -142,7 +123,6 @@ export function useRouteToken({ role, token, joinCode, view }) {
           setParticipantState({
             token: null,
             loading: false,
-            waiting: false,
             error:
               resolveError instanceof Error
                 ? resolveError.message
@@ -151,13 +131,10 @@ export function useRouteToken({ role, token, joinCode, view }) {
         });
     };
 
-    // Always re-resolve so kicked devices and waiting rooms are enforced
-    // even when a participant token is cached locally.
     resolve();
 
     return () => {
       cancelled = true;
-      if (pollTimer) window.clearTimeout(pollTimer);
     };
   }, [joinCode, role, token]);
 

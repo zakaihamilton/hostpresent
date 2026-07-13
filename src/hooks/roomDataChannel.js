@@ -9,6 +9,7 @@ import {
   resolveParticipantStatusMessage,
 } from "@/lib/room/messageAuth";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import {
   createChatMessage,
   createChatPrivateMessage,
@@ -21,7 +22,6 @@ import {
   parseSignalingMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import {
   buildOutboundMediaStream,
   destroyOutboundAudioMixer,
@@ -89,7 +89,7 @@ export function useRoomDataChannel({
   const [connectionError, setConnectionError] = useState(null);
   const [peerConfig, setPeerConfig] = useState(null);
   const [configReady, setConfigReady] = useState(false);
-  const [reconnectTrigger, setReconnectTrigger] = useState(0);
+  const [, setReconnectTrigger] = useState(0);
   const iceServers = useIceServers();
 
   const peerRef = useRef(null);
@@ -599,10 +599,7 @@ export function useRoomDataChannel({
       const hostId = hostPeerId(roomIdRef.current);
       const existing = mediaCallsRef.current.get(hostId);
       const hasVideoTrack = Boolean(
-        pickOutboundVideoTrack(
-          localStreamRef.current,
-          screenStreamRef.current,
-        ),
+        pickOutboundVideoTrack(localStreamRef.current, screenStreamRef.current),
       );
       const hasAudioTrack = Boolean(
         await resolveOutboundAudioTrack(
@@ -649,7 +646,7 @@ export function useRoomDataChannel({
     enqueueSync().catch((error) => {
       console.warn("[peer] syncAllOutboundTracks failed", error);
     });
-  }, [enqueueSync, localStream, screenStream]);
+  }, [enqueueSync]);
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
@@ -1272,7 +1269,6 @@ export function useRoomDataChannel({
     iceServers,
     isHost,
     peerConfig,
-    reconnectTrigger,
     roomId,
     scheduleConnectTimeout,
     schedulePeerRetry,
