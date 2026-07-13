@@ -1,6 +1,6 @@
 .tile {
-  width: 214px;
-  flex: 0 0 214px;
+  flex: 0 0 auto;
+  aspect-ratio: 16 / 9;
   height: 100%;
   background: var(--bg-panel);
   border-radius: calc(var(--radius) - 2px);
@@ -31,11 +31,6 @@
 }
 
 @media (max-width: 900px) {
-  .tile {
-    width: 156px;
-    flex-basis: 156px;
-  }
-
   .placeholder {
     font-size: 1.75rem;
   }
@@ -48,22 +43,12 @@
 }
 
 @media (max-width: 480px) {
-  .tile {
-    width: 128px;
-    flex-basis: 128px;
-  }
-
   .placeholder {
     font-size: 1.5rem;
   }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
-  .tile {
-    width: 102px;
-    flex-basis: 102px;
-  }
-
   .placeholder {
     font-size: 1.25rem;
   }

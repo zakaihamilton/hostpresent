@@ -1,15 +1,25 @@
 .primaryView {
-  flex: 1;
+  flex: 0 1 auto;
+  width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
   background: #000;
   border-radius: var(--radius);
   overflow: hidden;
   position: relative;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  min-height: min(400px, 45dvh);
   transition:
     border-color 0.3s ease,
     box-shadow 0.3s ease;
+}
+
+@container (max-aspect-ratio: 16 / 9) {
+  .primaryView {
+    width: auto;
+    height: 100%;
+  }
 }
 
 .media {
@@ -31,11 +41,6 @@
 
 @media (max-width: 1024px) {
   .primaryView {
-    flex: 1 1 auto;
-    align-self: stretch;
-    width: 100%;
-    min-height: 0;
-    max-height: none;
     border-radius: 0;
     border-left: none;
     border-right: none;
@@ -63,10 +68,7 @@
 
 @media (max-height: 500px) and (orientation: landscape) {
   .primaryView {
-    aspect-ratio: auto;
-    max-height: none;
-    min-height: 0;
-    flex: 1 1 auto;
+    border-radius: 0;
   }
 
   .recordingStatus {
