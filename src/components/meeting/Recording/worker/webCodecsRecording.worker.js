@@ -347,6 +347,16 @@ async function* persistedFragmentBytes(manifest, stream, start, end) {
   }
 }
 
+async function readPersistedSegment(manifest, stream, start, end) {
+  const fragments = [];
+  for (let index = start; index < end; index += 1) {
+    if (cancelled) throw new Error("Recording export was cancelled.");
+    const fragment = await readPersistedFragment(manifest, stream, index);
+    if (fragment?.size) fragments.push(fragment);
+  }
+  return fragments.length ? new Blob(fragments) : null;
+}
+
 function sourceFromPersistedFragments(manifest, stream, start, end) {
   const iterator = persistedFragmentBytes(manifest, stream, start, end);
   return new ReadableStreamSource(
@@ -497,20 +507,20 @@ async function exportPersistedTrack({ manifest, stream, outputHandle }) {
       const end = segment[endKey] ?? track.chunkCount;
       if (end <= start) continue;
       timeline += (segment.gapDurationMs ?? 0) / 1000;
-      for (let fragmentIndex = start; fragmentIndex < end; fragmentIndex += 1) {
+      const persistedSegment = useFfmpegFallback
+        ? await readPersistedSegment(manifest, stream, start, end)
+        : null;
+      const fragmentIndexes = useFfmpegFallback
+        ? [null]
+        : Array.from({ length: end - start }, (_, offset) => start + offset);
+      for (const fragmentIndex of fragmentIndexes) {
         if (cancelled) throw new Error("Recording export was cancelled.");
-        const fragment = await readPersistedFragment(
-          manifest,
-          stream,
-          fragmentIndex,
-        );
+        const fragment = useFfmpegFallback
+          ? persistedSegment
+          : await readPersistedFragment(manifest, stream, fragmentIndex);
         if (!fragment?.size) continue;
         const sourceFile = useFfmpegFallback
-          ? await transcodeFragment(
-              fragment,
-              stream,
-              `${segment.id}-${fragmentIndex}`,
-            )
+          ? await transcodeFragment(fragment, stream, `${segment.id}`)
           : fragment;
         const input = new Input({
           formats: useFfmpegFallback ? [MP4] : ALL_FORMATS,
