@@ -4,8 +4,11 @@ import { useEffect } from "react";
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {
+    const keepWorkerInDevelopment =
+      window.__HOSTPRESENT_ENABLE_SERVICE_WORKER__ === true;
     if (
       process.env.NODE_ENV === "development" &&
+      !keepWorkerInDevelopment &&
       "serviceWorker" in navigator
     ) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {

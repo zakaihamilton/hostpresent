@@ -1,4 +1,4 @@
-import { ROOM_ROLE } from "@/lib/room/tokens";
+import { ROOM_ROLE } from "@/lib/room/roles";
 import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 
 const HOST_COMMAND_TYPES = new Set([

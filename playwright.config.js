@@ -2,6 +2,36 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT || "3000";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${PORT}`;
+const crossBrowserProjects = [
+  ...(process.env.PLAYWRIGHT_CROSS_BROWSER
+    ? [
+        {
+          name: "firefox",
+          use: {
+            ...devices["Desktop Firefox"],
+            permissions: [],
+            launchOptions: {
+              firefoxUserPrefs: {
+                "media.navigator.permission.disabled": true,
+                "media.navigator.streams.fake": true,
+              },
+            },
+          },
+        },
+      ]
+    : []),
+  ...(process.env.PLAYWRIGHT_WEBKIT
+    ? [
+        {
+          name: "webkit",
+          use: {
+            ...devices["Desktop Safari"],
+            permissions: [],
+          },
+        },
+      ]
+    : []),
+];
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -32,6 +62,7 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    ...crossBrowserProjects,
   ],
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
     ? undefined
