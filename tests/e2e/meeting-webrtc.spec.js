@@ -147,6 +147,7 @@ async function expectFinalRecordingDownloads(
   expect(videoFile?.streams).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ codec_type: "video", codec_name: "h264" }),
+      expect.objectContaining({ codec_type: "audio", codec_name: "aac" }),
     ]),
   );
   const audioFile = inspection.find((file) =>

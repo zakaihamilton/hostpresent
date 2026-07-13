@@ -9,13 +9,14 @@ import {
   VideoSampleSink,
 } from "mediabunny";
 import {
+  createMp4CombinedEncodedMuxer,
   createMp4EncodedMuxer,
   createMp4SampleMuxer,
   createMp4TrackMuxer,
 } from "../mediaMuxer";
 import { hasCompleteDirectSegmentExport } from "./exportSelection";
 import { createFfmpegBridge } from "./ffmpegBridge";
-import { getSafeSampleDuration } from "./sampleTiming";
+import { getSafeSampleDuration, needsAudioSampleTrim } from "./sampleTiming";
 
 let cancelled = false;
 let stopping = false;
@@ -151,12 +152,24 @@ async function validateMp4(output, stream) {
     if (!(await input.canRead())) {
       throw new Error("The encoded output cannot be read as MP4.");
     }
-    const tracks =
-      stream === "video"
-        ? await input.getVideoTracks()
-        : await input.getAudioTracks();
-    if (tracks.length === 0) {
-      throw new Error(`The encoded ${stream} output has no playable track.`);
+    if (stream === "recording") {
+      const [videoTracks, audioTracks] = await Promise.all([
+        input.getVideoTracks(),
+        input.getAudioTracks(),
+      ]);
+      if (videoTracks.length === 0 || audioTracks.length === 0) {
+        throw new Error(
+          "The encoded recording output is missing a playable track.",
+        );
+      }
+    } else {
+      const tracks =
+        stream === "video"
+          ? await input.getVideoTracks()
+          : await input.getAudioTracks();
+      if (tracks.length === 0) {
+        throw new Error(`The encoded ${stream} output has no playable track.`);
+      }
     }
   } finally {
     input.dispose();
@@ -398,15 +411,23 @@ async function appendInputSamples({ source, stream, muxer, timeline }) {
     let normalizedTimestamp = timeline;
     for await (const sample of sink.samples()) {
       const duration = getSafeSampleDuration(stream, sample.duration);
-      sample.setTimestamp(normalizedTimestamp);
+      const muxSample =
+        stream === "audio" && needsAudioSampleTrim(sample.duration)
+          ? sample.trim(
+              0,
+              Math.max(1, Math.floor(sample.sampleRate * duration)),
+            )
+          : sample;
+      muxSample.setTimestamp(normalizedTimestamp);
       // Audio samples derive their duration from their frame count and expose
       // no mutator. Video samples can carry corrupt container tail durations,
       // so normalize those before muxing.
-      if (typeof sample.setDuration === "function") {
-        sample.setDuration(duration);
+      if (typeof muxSample.setDuration === "function") {
+        muxSample.setDuration(duration);
       }
-      await muxer.add(sample);
-      sample.close();
+      await muxer.add(muxSample);
+      muxSample.close();
+      if (muxSample !== sample) sample.close();
       samples += 1;
       normalizedTimestamp += duration;
     }
@@ -450,6 +471,84 @@ async function appendEncodedPackets({ source, stream, muxer, timeline }) {
     return { timeline, packets, decoderConfig };
   } finally {
     input.dispose();
+  }
+}
+
+async function getEncodedTrackConfig({ source, stream }) {
+  const input = new Input({ formats: [MP4], source });
+  try {
+    if (!(await input.canRead())) {
+      throw new Error(`Final ${stream} track is unreadable.`);
+    }
+    const track =
+      stream === "video"
+        ? await input.getPrimaryVideoTrack()
+        : await input.getPrimaryAudioTrack();
+    const expectedCodec = stream === "video" ? "avc" : "aac";
+    if (!track || (await track.getCodec()) !== expectedCodec) {
+      throw new Error(`Final ${stream} track is not ${expectedCodec}.`);
+    }
+    const decoderConfig = await track.getDecoderConfig();
+    if (!decoderConfig) {
+      throw new Error(`Final ${stream} track has no decoder metadata.`);
+    }
+    return decoderConfig;
+  } finally {
+    input.dispose();
+  }
+}
+
+async function appendFinalTrackToRecording({ source, stream, muxer }) {
+  const input = new Input({ formats: [MP4], source });
+  try {
+    if (!(await input.canRead())) {
+      throw new Error(`Final ${stream} track is unreadable.`);
+    }
+    const track =
+      stream === "video"
+        ? await input.getPrimaryVideoTrack()
+        : await input.getPrimaryAudioTrack();
+    if (!track) throw new Error(`Final ${stream} track is missing.`);
+    const sink = new EncodedPacketSink(track);
+    for await (const packet of sink.packets()) {
+      await muxer.add(stream, packet);
+    }
+  } finally {
+    input.dispose();
+  }
+}
+
+async function muxFinalRecording({ videoOutput, audioOutput, outputHandle }) {
+  const [videoDecoderConfig, audioDecoderConfig] = await Promise.all([
+    getEncodedTrackConfig({
+      source: await videoOutput.createSource(),
+      stream: "video",
+    }),
+    getEncodedTrackConfig({
+      source: await audioOutput.createSource(),
+      stream: "audio",
+    }),
+  ]);
+  const muxer = await createMp4CombinedEncodedMuxer({
+    writable: await outputHandle.createWritable(),
+    videoDecoderConfig,
+    audioDecoderConfig,
+  });
+  try {
+    await appendFinalTrackToRecording({
+      source: await videoOutput.createSource(),
+      stream: "video",
+      muxer,
+    });
+    await appendFinalTrackToRecording({
+      source: await audioOutput.createSource(),
+      stream: "audio",
+      muxer,
+    });
+    await muxer.finalize();
+  } catch (error) {
+    await muxer.cancel().catch(() => {});
+    throw error;
   }
 }
 
@@ -677,6 +776,7 @@ async function exportPersistedRecording(sessionId) {
   let session = null;
   let videoOutput;
   let audioOutput;
+  let recordingOutput;
   if (isOpfs) {
     const root = await navigator.storage.getDirectory();
     const recordings = await root.getDirectoryHandle("hostpresent-recordings");
@@ -689,6 +789,9 @@ async function exportPersistedRecording(sessionId) {
     );
     audioOutput = createOpfsOutput(
       await exports.getFileHandle("final-audio.m4a", { create: true }),
+    );
+    recordingOutput = createOpfsOutput(
+      await exports.getFileHandle("final-recording.mp4", { create: true }),
     );
   } else {
     const previous = manifest.export?.files ?? [];
@@ -704,9 +807,20 @@ async function exportPersistedRecording(sessionId) {
       previousChunks:
         previous.find((file) => file.path === "final-audio.m4a")?.chunks ?? 0,
     });
-    await Promise.all([videoOutput.prepare(), audioOutput.prepare()]);
+    recordingOutput = createIndexedDbOutput({
+      sessionId,
+      filename: "final-recording.mp4",
+      previousChunks:
+        previous.find((file) => file.path === "final-recording.mp4")?.chunks ??
+        0,
+    });
+    await Promise.all([
+      videoOutput.prepare(),
+      audioOutput.prepare(),
+      recordingOutput.prepare(),
+    ]);
   }
-  activeExportOutputs = [videoOutput, audioOutput];
+  activeExportOutputs = [videoOutput, audioOutput, recordingOutput];
   await updateExportCheckpoint(sessionId, "remuxing");
   post("progress", { phase: "remuxing" });
   // A completed WebCodecs segment is already a timestamped MP4. Prefer it to
@@ -729,20 +843,27 @@ async function exportPersistedRecording(sessionId) {
     outputHandle: audioOutput,
   });
   await updateExportCheckpoint(sessionId, "audio-export");
+  await muxFinalRecording({
+    videoOutput,
+    audioOutput,
+    outputHandle: recordingOutput,
+  });
+  await updateExportCheckpoint(sessionId, "recording-export");
   await updateExportCheckpoint(sessionId, "validating");
   post("progress", { phase: "validating" });
   await Promise.all([
     validateMp4(videoOutput, "video"),
     validateMp4(audioOutput, "audio"),
+    validateMp4(recordingOutput, "recording"),
   ]);
   await updateExportCheckpoint(sessionId, "writing");
   post("progress", { phase: "writing" });
   const files = [
     {
       stream: "video",
-      path: isOpfs ? "exports/final-video.mp4" : "final-video.mp4",
+      path: isOpfs ? "exports/final-recording.mp4" : "final-recording.mp4",
       storage: manifest.storage,
-      chunks: videoOutput.getChunks(),
+      chunks: recordingOutput.getChunks(),
     },
     {
       stream: "audio",

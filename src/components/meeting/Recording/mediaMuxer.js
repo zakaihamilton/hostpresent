@@ -127,3 +127,41 @@ export async function createMp4EncodedMuxer({
     },
   };
 }
+
+export async function createMp4CombinedEncodedMuxer({
+  writable,
+  videoDecoderConfig,
+  audioDecoderConfig,
+}) {
+  const videoSource = new EncodedVideoPacketSource("avc");
+  const audioSource = new EncodedAudioPacketSource("aac");
+  const output = new Output({
+    format: new Mp4OutputFormat(),
+    target: createSeekableTarget(writable),
+  });
+  output.addVideoTrack(videoSource);
+  output.addAudioTrack(audioSource);
+  await output.start();
+
+  const needsDecoderConfig = { video: true, audio: true };
+  return {
+    add(stream, packet) {
+      const metadata = needsDecoderConfig[stream]
+        ? {
+            decoderConfig:
+              stream === "video" ? videoDecoderConfig : audioDecoderConfig,
+          }
+        : undefined;
+      needsDecoderConfig[stream] = false;
+      return stream === "video"
+        ? videoSource.add(packet, metadata)
+        : audioSource.add(packet, metadata);
+    },
+    finalize() {
+      return output.finalize();
+    },
+    cancel() {
+      return output.cancel();
+    },
+  };
+}

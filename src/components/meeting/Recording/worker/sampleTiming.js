@@ -8,6 +8,10 @@ const MAX_DURATION = {
   audio: 0.1,
 };
 
+export function needsAudioSampleTrim(duration) {
+  return Number.isFinite(duration) && duration > MAX_DURATION.audio;
+}
+
 export function getSafeSampleDuration(stream, duration) {
   if (!Number.isFinite(duration) || duration <= 0) {
     return FALLBACK_DURATION[stream];

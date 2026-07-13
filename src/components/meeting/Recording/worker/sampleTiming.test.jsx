@@ -1,4 +1,4 @@
-import { getSafeSampleDuration } from "./sampleTiming";
+import { getSafeSampleDuration, needsAudioSampleTrim } from "./sampleTiming";
 
 describe("getSafeSampleDuration", () => {
   it("keeps normal packet durations", () => {
@@ -11,5 +11,7 @@ describe("getSafeSampleDuration", () => {
     expect(getSafeSampleDuration("audio", Number.NaN)).toBe(0.02);
     expect(getSafeSampleDuration("video", 1_000)).toBe(0.25);
     expect(getSafeSampleDuration("audio", 1_000)).toBe(0.1);
+    expect(needsAudioSampleTrim(0.02)).toBe(false);
+    expect(needsAudioSampleTrim(1_000)).toBe(true);
   });
 });
