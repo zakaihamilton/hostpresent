@@ -44,6 +44,7 @@ export const VideoGallery = memo(function VideoGallery({
               name={localDisplayName}
               overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
               isMuted
+              isMirrored={!screenStream}
               isFocused={focusedParticipantId === "host"}
               isManualFocused={manualFocusedId === "host"}
               isSpeaking={localIsSpeaking}

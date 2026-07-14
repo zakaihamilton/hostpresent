@@ -22,6 +22,7 @@ export const VideoTile = memo(function VideoTile({
   audioOutputDeviceId = "",
   connectionStatus = null,
   compactOverlay = false,
+  isMirrored = false,
 }) {
   const showVideo = Boolean(stream) && !isVideoOff;
   const Wrapper = onFocus ? "button" : "div";
@@ -43,7 +44,7 @@ export const VideoTile = memo(function VideoTile({
             stream={stream}
             isMuted={isMuted}
             audioOutputDeviceId={audioOutputDeviceId}
-            className={showVideo ? "" : styles.audioOnlyVideo}
+            className={`${showVideo ? "" : styles.audioOnlyVideo} ${isMirrored ? styles.mirroredVideo : ""}`}
           />
         : null}
       {!showVideo && (

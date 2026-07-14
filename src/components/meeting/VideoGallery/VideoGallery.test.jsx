@@ -3,8 +3,12 @@ import { createMediaStream } from "@/test/helpers";
 import { VideoGallery } from "./VideoGallery";
 
 jest.mock("@/components/meeting/VideoTile", () => ({
-  VideoTile: ({ name, isMuted }) => (
-    <div data-muted={String(isMuted)} data-testid="video-tile">
+  VideoTile: ({ name, isMuted, isMirrored }) => (
+    <div
+      data-mirrored={String(isMirrored)}
+      data-muted={String(isMuted)}
+      data-testid="video-tile"
+    >
       {name}
     </div>
   ),
@@ -88,6 +92,38 @@ describe("VideoGallery", () => {
 
     const tiles = screen.getAllByTestId("video-tile");
     expect(tiles[0]).toHaveAttribute("data-muted", "true");
+  });
+
+  it("mirrors the local camera tile but not a local screen share", () => {
+    const { rerender } = render(
+      <VideoGallery
+        visible
+        screenStream={null}
+        localStream={createMediaStream()}
+        participants={[]}
+        isAudioMuted={false}
+      />,
+    );
+
+    expect(screen.getByTestId("video-tile")).toHaveAttribute(
+      "data-mirrored",
+      "true",
+    );
+
+    rerender(
+      <VideoGallery
+        visible
+        screenStream={createMediaStream()}
+        localStream={createMediaStream()}
+        participants={[]}
+        isAudioMuted={false}
+      />,
+    );
+
+    expect(screen.getByTestId("video-tile")).toHaveAttribute(
+      "data-mirrored",
+      "false",
+    );
   });
 
   it("only shows up to 4 video tiles including host", () => {

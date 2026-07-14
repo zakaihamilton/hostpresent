@@ -15,6 +15,7 @@ import styles from "./Tooltip.module.css";
 const GAP = 12;
 const VIEWPORT_PADDING = 8;
 const LONG_PRESS_MS = 450;
+const tooltipDismissListeners = new Set();
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -139,15 +140,29 @@ export function Tooltip({
     }
   }, []);
 
-  const show = useCallback(() => {
-    if (suppressUntilLeaveRef.current) return;
-    setVisible(true);
-  }, []);
-
   const hide = useCallback(() => {
     setVisible(false);
     setPositioned(false);
   }, []);
+
+  const show = useCallback(() => {
+    if (suppressUntilLeaveRef.current) return;
+    for (const dismiss of tooltipDismissListeners) {
+      dismiss(tooltipId);
+    }
+    setVisible(true);
+  }, [tooltipId]);
+
+  useEffect(() => {
+    const dismiss = (activeTooltipId) => {
+      if (activeTooltipId !== tooltipId) {
+        hide();
+      }
+    };
+
+    tooltipDismissListeners.add(dismiss);
+    return () => tooltipDismissListeners.delete(dismiss);
+  }, [hide, tooltipId]);
 
   const handleMouseLeave = useCallback(() => {
     suppressUntilLeaveRef.current = false;

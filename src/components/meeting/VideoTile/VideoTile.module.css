@@ -76,6 +76,10 @@
   object-fit: cover;
 }
 
+.tile video.mirroredVideo {
+  transform: scaleX(-1);
+}
+
 .audioOnlyVideo {
   position: absolute;
   width: 1px;

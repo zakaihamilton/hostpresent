@@ -36,6 +36,28 @@ describe("Tooltip", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  it("shows only one tooltip at a time", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <>
+        <Tooltip text="First hint">
+          <button type="button">First action</button>
+        </Tooltip>
+        <Tooltip text="Second hint">
+          <button type="button">Second action</button>
+        </Tooltip>
+      </>,
+    );
+
+    await user.hover(screen.getByRole("button", { name: "First action" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("First hint");
+
+    await user.hover(screen.getByRole("button", { name: "Second action" }));
+    expect(screen.getAllByRole("tooltip")).toHaveLength(1);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Second hint");
+  });
+
   it("does not show the tooltip while forceHidden is true", async () => {
     const user = userEvent.setup();
 
