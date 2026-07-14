@@ -60,6 +60,10 @@ describe("WebCodecs recording capabilities", () => {
     await expect(
       supportsWebCodecsRecordingCodecs({ width: 1280, height: 720 }),
     ).resolves.toBe(true);
+
+    expect(global.VideoEncoder.isConfigSupported).toHaveBeenLastCalledWith(
+      expect.objectContaining({ codec: "avc1.42E01F" }),
+    );
   });
 
   it("falls back when probing a WebCodecs configuration throws", async () => {

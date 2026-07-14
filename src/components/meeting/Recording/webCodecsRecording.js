@@ -13,7 +13,10 @@ export async function supportsWebCodecsRecordingCodecs({ width, height }) {
   try {
     const [video, audio] = await Promise.all([
       VideoEncoder.isConfigSupported({
-        codec: "avc1.42001E",
+        // Baseline Level 3.1 is the portable H.264 profile for 720p30.
+        // Level 3.0 is too low for 1280×720 and can be rejected by Samsung
+        // players even when the frames themselves are otherwise decodable.
+        codec: "avc1.42E01F",
         width,
         height,
         bitrate: 2_500_000,

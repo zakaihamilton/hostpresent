@@ -76,6 +76,10 @@ async function transcodeFragment(fragment, stream, id) {
             "libx264",
             "-preset",
             "ultrafast",
+            "-profile:v",
+            "baseline",
+            "-level:v",
+            "3.1",
             "-pix_fmt",
             "yuv420p",
             "-movflags",
@@ -117,7 +121,7 @@ async function supportsNativeFinalization(stream) {
     if (stream === "video") {
       if (typeof VideoEncoder === "undefined") return false;
       const support = await VideoEncoder.isConfigSupported({
-        codec: "avc1.42001E",
+        codec: "avc1.42E01F",
         width: 1280,
         height: 720,
         bitrate: 2_500_000,
@@ -892,7 +896,7 @@ async function encodeVideo({ readable, writable, width, height }) {
     error: (error) => post("failed", { capture: true, error: error.message }),
   });
   encoder.configure({
-    codec: "avc1.42001E",
+    codec: "avc1.42E01F",
     width,
     height,
     bitrate: 2_500_000,
