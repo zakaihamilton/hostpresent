@@ -16,19 +16,15 @@ endpoints.
 ## Verify Preview firewall enforcement
 
 Set `APP_URL` to the deployed Preview origin, then send one more request than
-each configured limit. The final response for each command must be `429`.
+each configured limit. Each check must receive at least one `429` response.
 These requests intentionally use invalid credentials, so they do not join or
 change a real meeting.
 
 ```bash
-for _ in $(seq 1 11); do curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' "$APP_URL/api/rooms"; done
-for _ in $(seq 1 21); do curl -s -o /dev/null -w '%{http_code}\n' "$APP_URL/api/rooms/resolve?code=ABCDEFGH"; done
-for _ in $(seq 1 121); do curl -s -o /dev/null -w '%{http_code}\n' "$APP_URL/api/rooms/state?token=invalid"; done
-for _ in $(seq 1 121); do curl -s -o /dev/null -w '%{http_code}\n' "$APP_URL/api/media/ice-config?roomToken=invalid"; done
+APP_URL="$APP_URL" ./scripts/verify-vercel-firewall.sh
 ```
 
-If a command does not return `429`, correct the matching Vercel Firewall rule
-before promotion. Wait for each rule window to reset before repeating a command.
+If the script fails, correct the matching Vercel Firewall rule before promotion.
 
 ## After production promotion
 
