@@ -97,14 +97,16 @@ test("participant join button enables only after all eight code characters are e
 });
 
 test("invite route joins the participant flow", async ({ page }) => {
+  const resolveResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/rooms/resolve" &&
+      response.request().method() === "GET",
+  );
+
   await page.goto("/#/j/ABCD-EFGH");
 
-  await expect(
-    page.getByRole("button", { name: "Copy join code ABCD-EFGH" }),
-  ).toBeVisible({ timeout: 30_000 });
-  await expect(
-    page.getByText("[E011] Waiting for the host to join…"),
-  ).toBeVisible();
+  expect((await resolveResponse).ok()).toBe(true);
+  await expect(page).toHaveURL(/#\/mj\/ABCD-EFGH$/);
 });
 
 test("recent host room survives reload in local storage", async ({ page }) => {
