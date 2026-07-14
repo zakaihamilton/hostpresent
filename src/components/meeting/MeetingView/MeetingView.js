@@ -387,6 +387,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const [effectiveFocusedId, setEffectiveFocusedId] = useState(
     focusedParticipantId || "host",
   );
+  const hostIsActivelySpeaking = isHost ? localIsSpeaking : hostIsSpeaking;
 
   useEffect(() => {
     if (focusedParticipantId !== "") {
@@ -394,7 +395,10 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
       return undefined;
     }
 
-    if (autoFocusTargetId !== "host") {
+    // A host who starts speaking should take the stage immediately. Keep the
+    // brief inactivity delay only for the no-one-is-speaking fallback, so the
+    // stage does not jump back to the host between short pauses.
+    if (autoFocusTargetId !== "host" || hostIsActivelySpeaking) {
       setEffectiveFocusedId(autoFocusTargetId);
       return undefined;
     }
@@ -404,7 +408,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     }, AUTO_FOCUS_INACTIVITY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [focusedParticipantId, autoFocusTargetId]);
+  }, [focusedParticipantId, autoFocusTargetId, hostIsActivelySpeaking]);
 
   const {
     downloadState,
@@ -1011,6 +1015,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         }}
         primaryViewProps={{
           ...primaryViewProps,
+          isScreenSharing: Boolean(screenStream),
+          onStopScreenShare: screenStream ? toggleScreenShare : null,
           isRecording,
           isRecordingPaused,
           recordingDurationSeconds: recordingSeconds,

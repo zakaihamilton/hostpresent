@@ -66,6 +66,7 @@ export function MediaControls({
   const screenAudioRef = useRef(null);
   const initialAudioMutedRef = useRef(isAudioMuted);
   const initialVideoMutedRef = useRef(isVideoMuted);
+  const hadScreenStreamRef = useRef(Boolean(screenStream));
   const syncOutboundMediaRef = useRef(roomConnection?.syncOutboundMedia);
   syncOutboundMediaRef.current = roomConnection?.syncOutboundMedia;
 
@@ -106,8 +107,16 @@ export function MediaControls({
     localStreamRef.current = localStream;
   }, [localStream]);
 
+  // Wait for the screen-stream state to reach roomDataChannel before syncing.
+  // Calling sync directly after setScreenStream() uses the previous stream, so
+  // viewers keep receiving the camera when sharing starts (and the screen when
+  // it stops).
   useEffect(() => {
     screenStreamRef.current = screenStream;
+    if (!screenStream && !hadScreenStreamRef.current) return;
+
+    hadScreenStreamRef.current = Boolean(screenStream);
+    void syncOutboundMediaRef.current?.();
   }, [screenStream]);
 
   const enumerateMediaDevices = useCallback(async () => {
@@ -442,7 +451,6 @@ export function MediaControls({
       }
       setScreenStream(null);
       publishScreenShareStatus(false);
-      void roomConnection.syncOutboundMedia?.();
     } else {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -471,7 +479,6 @@ export function MediaControls({
           }
           setScreenStream(null);
           publishScreenShareStatus(false);
-          void roomConnection.syncOutboundMedia?.();
         };
 
         setScreenStream(stream);
@@ -498,7 +505,6 @@ export function MediaControls({
     }
   }, [
     publishScreenShareStatus,
-    roomConnection,
     screenStream,
     shareScreenAudio,
     setScreenStream,

@@ -367,7 +367,12 @@ export function useRoomDataChannel({
 
   useEffect(() => {
     screenStreamRef.current = screenStream;
-  }, [screenStream]);
+    if (!enabled || !isHost || !token) return;
+
+    // Do not make viewers wait for the periodic host-presence announcement to
+    // learn that the host has started or stopped sharing.
+    send(createHostPresencePayload());
+  }, [createHostPresencePayload, enabled, isHost, screenStream, send, token]);
 
   const closeRelayCallsForViewer = useCallback((viewerId) => {
     for (const [key, call] of relayCallsRef.current.entries()) {

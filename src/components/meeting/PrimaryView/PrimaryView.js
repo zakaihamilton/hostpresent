@@ -14,10 +14,12 @@ export const PrimaryView = memo(function PrimaryView({
   isMuted = true,
   isAudioMuted = false,
   isVideoMuted = false,
+  isScreenSharing = false,
   audioOutputDeviceId = "",
   isMirrored = false,
   connectionStatus = null,
   onShowDiagnostics = null,
+  onStopScreenShare = null,
 }) {
   return (
     <div
@@ -84,7 +86,16 @@ export const PrimaryView = memo(function PrimaryView({
         )}
         {isAudioMuted ? <MicOff aria-hidden /> : null}
         {isVideoMuted ? <VideoOff aria-hidden /> : null}
-        {label}
+        <span>{label}</span>
+        {isScreenSharing && onStopScreenShare
+          ? <button
+              type="button"
+              className={styles.stopSharingButton}
+              onClick={onStopScreenShare}
+            >
+              Stop sharing
+            </button>
+          : null}
       </div>
     </div>
   );

@@ -479,6 +479,11 @@ describe("MediaControls Hook", () => {
       { initialProps: props },
     );
 
+    await waitFor(() => {
+      expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    });
+    syncOutboundMedia.mockClear();
+
     await result.current.toggleScreenShare();
 
     expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledWith({
@@ -500,6 +505,10 @@ describe("MediaControls Hook", () => {
 
     rerender({ ...props, screenStream });
 
+    await waitFor(() => {
+      expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    });
+
     await result.current.toggleScreenShare();
 
     expect(screenTrack.stop).toHaveBeenCalledTimes(1);
@@ -510,7 +519,12 @@ describe("MediaControls Hook", () => {
         participantId: "p1",
       }),
     );
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
+
+    rerender({ ...props, screenStream: null });
+
+    await waitFor(() => {
+      expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("clears screen sharing when the browser ends capture", async () => {
@@ -556,7 +570,9 @@ describe("MediaControls Hook", () => {
         participantId: "p1",
       }),
     );
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
+    // The initial local-media setup syncs once; ending capture itself waits
+    // for the parent screen-stream state to update before replacing tracks.
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
     expect(screenAudioTrack.stop).toHaveBeenCalledTimes(1);
   });
 

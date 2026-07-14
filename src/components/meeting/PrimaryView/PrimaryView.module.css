@@ -190,6 +190,30 @@
   flex-shrink: 0;
 }
 
+.stopSharingButton {
+  appearance: none;
+  border: 1px solid rgba(254, 202, 202, 0.55);
+  border-radius: 999px;
+  background: rgba(153, 27, 27, 0.9);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 0.15rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.stopSharingButton:hover {
+  background: rgba(185, 28, 28, 0.95);
+}
+
+.stopSharingButton:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 @keyframes insetPulse {
   0%,
   100% {

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMediaStream } from "@/test/helpers";
 import { PrimaryView } from "./PrimaryView";
 
@@ -49,5 +50,23 @@ describe("PrimaryView", () => {
     );
 
     expect(screen.getByTestId("video-player")).toHaveClass("mirroredVideo");
+  });
+
+  it("keeps a stop-sharing control available to the presenter", async () => {
+    const user = userEvent.setup();
+    const onStopScreenShare = jest.fn();
+
+    render(
+      <PrimaryView
+        stream={createMediaStream()}
+        label="You are sharing your screen"
+        isScreenSharing
+        onStopScreenShare={onStopScreenShare}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+
+    expect(onStopScreenShare).toHaveBeenCalledTimes(1);
   });
 });
