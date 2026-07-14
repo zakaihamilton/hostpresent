@@ -1,10 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT || "3000";
-const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${PORT}`;
-const { FORCE_COLOR: _forceColor, NO_COLOR: _noColor, ...cleanEnv } =
-  process.env;
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${PORT}`;
+const {
+  FORCE_COLOR: _forceColor,
+  NO_COLOR: _noColor,
+  ...cleanEnv
+} = process.env;
 const crossBrowserProjects = [
   ...(process.env.PLAYWRIGHT_CROSS_BROWSER
     ? [

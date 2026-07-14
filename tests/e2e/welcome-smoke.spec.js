@@ -59,7 +59,7 @@ test("host welcome creates a shareable room without joining media", async ({
   ).toBeEnabled();
 });
 
-test("participant join button stays disabled until a complete code is entered", async ({
+test("participant join button enables only after all eight code characters are entered", async ({
   page,
 }) => {
   await page.goto("/#/j");
@@ -71,10 +71,29 @@ test("participant join button stays disabled until a complete code is entered", 
   await expect(
     page.getByRole("button", { name: "Join meeting" }),
   ).toBeDisabled();
-  await page.locator("#join-code-box-0").fill("A");
+  for (let index = 0; index < 6; index += 1) {
+    await page
+      .getByRole("textbox", {
+        name: `Character ${index + 1}`,
+        exact: true,
+      })
+      .fill(String.fromCharCode(65 + index));
+  }
   await expect(
     page.getByRole("button", { name: "Join meeting" }),
   ).toBeDisabled();
+
+  for (let index = 6; index < 8; index += 1) {
+    await page
+      .getByRole("textbox", {
+        name: `Character ${index + 1}`,
+        exact: true,
+      })
+      .fill(String.fromCharCode(65 + index));
+  }
+  await expect(
+    page.getByRole("button", { name: "Join meeting" }),
+  ).toBeEnabled();
 });
 
 test("invite route joins the participant flow", async ({ page }) => {

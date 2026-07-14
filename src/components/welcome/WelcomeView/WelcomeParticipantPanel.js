@@ -9,7 +9,7 @@ import {
   normalizeRoomIdInput,
   resolveJoinCode,
 } from "@/lib/room/inviteLink";
-import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import { formatJoinCode, JOIN_CODE_LENGTH } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -230,7 +230,8 @@ export function WelcomeParticipantPanel({
     />
   );
 
-  const allFilled = (roomIdInput ?? "").replace(/-/g, "").length === 6;
+  const allFilled =
+    (roomIdInput ?? "").replace(/-/g, "").length === JOIN_CODE_LENGTH;
 
   if (isResolving || waitingForHost) {
     return (
@@ -271,7 +272,7 @@ export function WelcomeParticipantPanel({
               />
             </div>
             <p className={ps.joinHint}>
-              Enter the 6-character code from the host.
+              Enter the {JOIN_CODE_LENGTH}-character code from the host.
             </p>
           </div>
         </div>
