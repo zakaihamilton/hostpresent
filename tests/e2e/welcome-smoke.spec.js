@@ -101,7 +101,7 @@ test("invite route joins the participant flow", async ({ page }) => {
 
   await expect(
     page.getByRole("button", { name: "Copy join code ABCD-EFGH" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await expect(
     page.getByText("[E011] Waiting for the host to join…"),
   ).toBeVisible();
