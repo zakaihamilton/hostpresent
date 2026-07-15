@@ -25,7 +25,15 @@ jobs:
       - run: npm run test:unit -- --runInBand
       - run: npm run build
       - run: npm run test:e2e:smoke
-      - run: curl --fail --retry 20 --retry-connrefused http://127.0.0.1:9000/myapp
+      - name: Wait for PeerJS signaling port
+        run: |
+          for attempt in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/9000) >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
       - run: npm run test:e2e:webrtc
         env:
           SIGNALING_SERVER_URL: 127.0.0.1
