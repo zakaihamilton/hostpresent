@@ -310,7 +310,7 @@ test("host records locally and focuses participants with auto-focus fallback", a
     await host.getByRole("button", { name: "Stop and save recording" }).click();
     await expect(
       host.getByText(
-        /Stopping recording|Preparing your file|Starting download|Download started/,
+        /Stopping recording|Preparing your file|Starting download|Download started|Download complete/,
       ),
     ).toBeVisible();
     await expect.poll(() => downloads.length, { timeout: 60_000 }).toBe(2);
@@ -352,7 +352,7 @@ test("host records while toggling screen share", async ({ browser }) => {
     await host.getByRole("button", { name: "Stop and save recording" }).click();
     await expect(
       host.getByText(
-        /Stopping recording|Preparing your file|Starting download|Download started/,
+        /Stopping recording|Preparing your file|Starting download|Download started|Download complete/,
       ),
     ).toBeVisible();
     await expect.poll(() => downloads.length, { timeout: 60_000 }).toBe(2);

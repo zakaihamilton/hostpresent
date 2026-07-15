@@ -25,7 +25,7 @@ test("the app document carries the production browser security policy", async ({
   const headers = response.headers();
   expect(headers["content-security-policy"]).toContain("default-src 'self'");
   expect(headers["content-security-policy"]).toContain(
-    "connect-src 'self' https: wss:",
+    "connect-src 'self' https: wss: http://127.0.0.1:9000 ws://127.0.0.1:9000 http://localhost:9000 ws://localhost:9000",
   );
   expect(headers["content-security-policy"]).toContain(
     "frame-ancestors 'none'",
