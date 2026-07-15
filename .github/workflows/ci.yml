@@ -6,6 +6,12 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      peerjs:
+        # Pin the signaling-server image used by the real-meeting suite.
+        image: peerjs/peerjs-server:1.0.2
+        ports:
+          - 9000:9000
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -19,3 +25,12 @@ jobs:
       - run: npm run test:unit -- --runInBand
       - run: npm run build
       - run: npm run test:e2e:smoke
+      - run: curl --fail --retry 20 --retry-connrefused http://127.0.0.1:9000/myapp
+      - run: npm run test:e2e:webrtc
+        env:
+          SIGNALING_SERVER_URL: 127.0.0.1
+          SIGNALING_SERVER_PORT: "9000"
+          SIGNALING_SERVER_PATH: /myapp
+          INTERNAL_AUTH_SECRET: ci-internal-auth-secret
+          TURN_SECRET_KEY: ci-turn-secret
+          TURN_DOMAIN: 127.0.0.1

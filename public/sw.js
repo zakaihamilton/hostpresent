@@ -1,5 +1,6 @@
-const CACHE_NAME = "hostpresent-v5";
+const CACHE_NAME = "hostpresent-v6";
 const SHELL_URLS = ["/", "/icons/icon.svg"];
+const MAX_RUNTIME_CACHE_ENTRIES = 100;
 const recordingDownloads = new Map();
 const RECORDING_DB = "HPRecording";
 const RECORDING_STORE = "data";
@@ -138,7 +139,10 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-  if (url.pathname.startsWith("/api/")) {
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/recording/")
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -148,11 +152,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Only Next's content-addressed build assets are safe to retain at runtime.
+  // In particular, do not duplicate the 31 MB FFmpeg fallback in Cache Storage.
+  if (!url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(
       (cached) =>
         cached ||
-        fetch(event.request).then((response) => {
+        fetch(event.request).then(async (response) => {
           if (
             !response ||
             response.status !== 200 ||
@@ -161,10 +172,14 @@ self.addEventListener("fetch", (event) => {
             return response;
           }
 
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, copy);
-          });
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone());
+          const keys = await cache.keys();
+          await Promise.all(
+            keys
+              .slice(0, Math.max(0, keys.length - MAX_RUNTIME_CACHE_ENTRIES))
+              .map((key) => cache.delete(key)),
+          );
           return response;
         }),
     ),

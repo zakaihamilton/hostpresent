@@ -2,7 +2,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
 import { ROOM_ROLE } from "./roles.js";
 
-const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+// Room tokens are deliberately shorter lived than the eight-character join
+// code. The code remains the durable, stateless participant credential; a
+// leaked token therefore has a bounded useful lifetime.
+export const ROOM_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 export { ROOM_ROLE } from "./roles.js";
 
@@ -64,7 +67,7 @@ function verifySignedPayload(token) {
 export function signRoomToken({ roomId, role, joinCode = null }) {
   if (!getSigningSecret()) return null;
   const iat = Date.now();
-  const exp = iat + TOKEN_TTL_MS;
+  const exp = iat + ROOM_TOKEN_TTL_MS;
   const payload = {
     roomId,
     role,
@@ -113,7 +116,10 @@ export function inspectRoomToken(token) {
     !payload.roomId ||
     (payload.role !== ROOM_ROLE.HOST &&
       payload.role !== ROOM_ROLE.PARTICIPANT) ||
-    typeof payload.exp !== "number"
+    typeof payload.exp !== "number" ||
+    typeof payload.iat !== "number" ||
+    payload.exp <= payload.iat ||
+    payload.exp - payload.iat > ROOM_TOKEN_TTL_MS
   ) {
     return { ok: false, reason: TOKEN_FAILURE.INVALID_CLAIMS };
   }

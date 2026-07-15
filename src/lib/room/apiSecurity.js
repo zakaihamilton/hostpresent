@@ -52,8 +52,8 @@ export function validateJsonPost(
   return { ok: true };
 }
 
-export function guardPostRequest(request) {
-  const validation = validateJsonPost(request);
+export function guardPostRequest(request, options) {
+  const validation = validateJsonPost(request, options);
   if (!validation.ok) {
     return applySecurityHeaders(
       Response.json({ error: validation.error }, { status: validation.status }),

@@ -2,7 +2,7 @@ import { memo } from "react";
 import styles from "./RecordingDownloadBanner.module.css";
 
 const PHASE_LABELS = {
-  initializing: "Preparing export worker…",
+  initializing: "Preparing export engine…",
   preparing: "Stopping recording…",
   building: "Preparing your file…",
   remuxing: "Preparing media timeline…",

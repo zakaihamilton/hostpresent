@@ -19,6 +19,8 @@ import {
 } from "@/hooks";
 import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
+import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode } from "@/lib/room/joinCodeFormat";
 import {
@@ -246,6 +248,29 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   });
 
   roomConnectionRef.current = roomConnection;
+
+  const sendDiagnosticReport = useCallback(() => {
+    const hasTurn = Boolean(
+      roomConnection?.iceServers?.some((server) =>
+        (Array.isArray(server.urls) ? server.urls : [server.urls]).some(
+          (url) => url?.startsWith("turn:") || url?.startsWith("turns:"),
+        ),
+      ),
+    );
+    return reportDiagnostic({
+      event: roomConnection?.connectionError
+        ? DIAGNOSTIC_EVENT.CONNECTION_FAILURE
+        : DIAGNOSTIC_EVENT.DIAGNOSTICS_REPORT,
+      code: roomConnection?.connectionError
+        ? "connection_error"
+        : "diagnostics_requested",
+      details: {
+        connectionStatus: roomConnection?.status ?? "unknown",
+        activeConnections: roomConnection?.activeConnectionsCount ?? 0,
+        hasTurn,
+      },
+    });
+  }, [roomConnection]);
 
   onChatMessageRef.current = (message) => {
     const localId = isHost
@@ -1052,6 +1077,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         activeConnectionsCount={roomConnection?.activeConnectionsCount}
         connectionError={roomConnection?.connectionError}
         onReconnect={roomConnection?.reconnect}
+        onSendDiagnosticReport={sendDiagnosticReport}
         isTurnActive={roomConnection?.isTurnActive}
       />
 

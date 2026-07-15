@@ -18,7 +18,7 @@ Browser-based meetings built around a single presenter. A **host** runs the sess
 ## How it works
 
 1. **Host** opens the app, sets a display name, and creates a room. They receive an 8-character join code and participant invite link.
-2. **Participants** enter the room code or follow the invite link. The code is a bearer credential and is converted into a short-lived participant token.
+2. **Participants** enter the room code or follow the invite link. The code is a durable bearer credential and is converted into a participant token that expires after seven days. Anyone with a saved code can request a new participant token; hosts create a new room after their host token expires.
 3. **Signaling** uses a separate [PeerJS](https://peerjs.com/) server (`SIGNALING_SERVER_URL`) so browsers can discover each other and negotiate WebRTC.
 4. **Room API** (`/api/rooms`) issues signed host/participant tokens and TURN configuration without retaining room state. Live control messages stay on authenticated WebRTC data channels.
 
@@ -58,7 +58,7 @@ There is no fallback room-token secret. Missing `ROOM_TOKEN_SECRET` causes room 
 
 ## Production deployment
 
-HostPresent deliberately has no database, Redis instance, or server-persistent room state. A restart does not end an active peer-to-peer meeting, but it also cannot preserve server-side waiting rooms, participant removals, or token renewal.
+HostPresent deliberately has no database, Redis instance, or server-persistent room state. A restart does not end an active peer-to-peer meeting, but it also cannot preserve server-side waiting rooms, participant removals, or host-token renewal. An eight-character join code remains a durable bearer credential, so do not share it beyond the intended meeting audience.
 
 Before deploying on Vercel, configure the Firewall rate rules documented in [Vercel security setup](docs/vercel-security.md). These rules are required because the app has no in-process rate limiter. Rotate `ROOM_TOKEN_SECRET` during this rollout; that intentionally invalidates legacy room links and locally saved room tokens.
 

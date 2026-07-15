@@ -29,6 +29,7 @@ import {
   resolveOutboundAudioTrack,
   syncOutboundTracks,
 } from "@/lib/webrtc/outboundMedia";
+import { needsMediaRenegotiation } from "@/lib/webrtc/outboundMediaReconciliation";
 import {
   connectionRetryDelayMs,
   hostIdRetryDelayMs,
@@ -46,6 +47,12 @@ import {
   SIGNALING_CONNECT_TIMEOUT_MS,
   SIGNALING_ERROR,
 } from "@/lib/webrtc/peerClient";
+import {
+  closeRelayCallsForSource as closeRelayCallsForSourceInMap,
+  closeRelayCallsForViewer as closeRelayCallsForViewerInMap,
+  ensureRelayCall as ensureRelayCallInMap,
+} from "@/lib/webrtc/relayCalls";
+import { clearWindowTimer } from "@/lib/webrtc/roomConnectionLifecycle";
 import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
 
 const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
@@ -53,9 +60,7 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
 
-const relayCallKey = (viewerId, sourceId) => `${viewerId}:${sourceId}`;
-
-function sendOnConnection(conn, message) {
+export function sendOnConnection(conn, message) {
   if (!conn?.open) return false;
   try {
     conn.send(JSON.stringify(message));
@@ -209,17 +214,11 @@ export function useRoomDataChannel({
   }, []);
 
   const clearRetryTimer = useCallback(() => {
-    if (retryTimerRef.current) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    clearWindowTimer(retryTimerRef);
   }, []);
 
   const clearConnectRetryTimer = useCallback(() => {
-    if (connectRetryTimerRef.current) {
-      window.clearTimeout(connectRetryTimerRef.current);
-      connectRetryTimerRef.current = null;
-    }
+    clearWindowTimer(connectRetryTimerRef);
   }, []);
 
   const scheduleReconnectToHost = useCallback(() => {
@@ -258,10 +257,7 @@ export function useRoomDataChannel({
   }, [clearConnectRetryTimer, isHost]);
 
   const clearConnectTimeout = useCallback(() => {
-    if (connectTimeoutRef.current) {
-      window.clearTimeout(connectTimeoutRef.current);
-      connectTimeoutRef.current = null;
-    }
+    clearWindowTimer(connectTimeoutRef);
   }, []);
 
   const scheduleConnectTimeout = useCallback(() => {
@@ -375,49 +371,29 @@ export function useRoomDataChannel({
   }, [createHostPresencePayload, enabled, isHost, screenStream, send, token]);
 
   const closeRelayCallsForViewer = useCallback((viewerId) => {
-    for (const [key, call] of relayCallsRef.current.entries()) {
-      if (key.startsWith(`${viewerId}:`)) {
-        call.close();
-        relayCallsRef.current.delete(key);
-      }
-    }
+    closeRelayCallsForViewerInMap(relayCallsRef.current, viewerId);
   }, []);
 
   const closeRelayCallsForSource = useCallback((sourceId) => {
-    for (const [key, call] of relayCallsRef.current.entries()) {
-      if (key.endsWith(`:${sourceId}`)) {
-        call.close();
-        relayCallsRef.current.delete(key);
-      }
-    }
-    inboundStreamsRef.current.delete(sourceId);
+    closeRelayCallsForSourceInMap(
+      relayCallsRef.current,
+      inboundStreamsRef.current,
+      sourceId,
+    );
   }, []);
 
   const ensureRelayCall = useCallback(
     (viewerId, sourceId) => {
       if (!isHost || viewerId === sourceId) return;
 
-      const stream = inboundStreamsRef.current.get(sourceId);
-      const peer = peerRef.current;
-      if (!stream || !peer) return;
-
-      const key = relayCallKey(viewerId, sourceId);
-      if (relayCallsRef.current.has(key)) return;
-
-      try {
-        const call = peer.call(viewerId, stream, {
-          metadata: { relayFrom: sourceId },
-        });
-        if (!call) return;
-        relayCallsRef.current.set(key, call);
-        call.on("close", () => {
-          if (relayCallsRef.current.get(key) === call) {
-            relayCallsRef.current.delete(key);
-          }
-        });
-      } catch (error) {
-        console.warn("[peer] relay call failed", error);
-      }
+      ensureRelayCallInMap({
+        relayCalls: relayCallsRef.current,
+        inboundStreams: inboundStreamsRef.current,
+        peer: peerRef.current,
+        viewerId,
+        sourceId,
+        onFailure: () => console.warn("[peer] relay call failed"),
+      });
     },
     [isHost],
   );
@@ -616,17 +592,8 @@ export function useRoomDataChannel({
       // Check senders before syncOutboundTracks — addTrack alone does not
       // renegotiate PeerJS SDP when the call was answered with no tracks.
       if (existing) {
-        const pc = existing.peerConnection;
-        const senders = pc ? pc.getSenders() : [];
-        const hasVideoSender = senders.some(
-          (s) => (s._hostPresentKind ?? s.track?.kind) === "video" && s.track,
-        );
-        const hasAudioSender = senders.some(
-          (s) => (s._hostPresentKind ?? s.track?.kind) === "audio" && s.track,
-        );
         if (
-          (hasVideoTrack && !hasVideoSender) ||
-          (hasAudioTrack && !hasAudioSender)
+          needsMediaRenegotiation(existing, { hasVideoTrack, hasAudioTrack })
         ) {
           send(createMediaRenegotiateMessage());
           return;
