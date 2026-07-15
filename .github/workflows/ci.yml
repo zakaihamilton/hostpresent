@@ -21,6 +21,7 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run lint
       - run: npm run test:unit -- --runInBand
       - run: npm run build
@@ -38,7 +39,7 @@ jobs:
         env:
           SIGNALING_SERVER_URL: 127.0.0.1
           SIGNALING_SERVER_PORT: "9000"
-          SIGNALING_SERVER_PATH: /myapp
+          SIGNALING_SERVER_PATH: /
           INTERNAL_AUTH_SECRET: ci-internal-auth-secret
           TURN_SECRET_KEY: ci-turn-secret
           TURN_DOMAIN: 127.0.0.1
