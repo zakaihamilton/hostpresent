@@ -465,10 +465,16 @@ async function appendEncodedPackets({ source, stream, muxer, timeline }) {
     let firstTimestamp = null;
     for await (const packet of sink.packets()) {
       firstTimestamp ??= packet.timestamp;
+      // Browser MediaRecorder fragments occasionally expose a corrupt final
+      // packet duration after FFmpeg remuxing. Normalize encoded packets just
+      // as we do decoded samples so one tail packet cannot extend a short
+      // recording into minutes of silent media.
+      const duration = getSafeSampleDuration(stream, packet.duration);
       const shifted = packet.clone({
         timestamp: timeline + packet.timestamp - firstTimestamp,
+        duration,
       });
-      timeline = Math.max(timeline, shifted.timestamp + shifted.duration);
+      timeline = Math.max(timeline, shifted.timestamp + duration);
       await muxer.add(shifted);
       packets += 1;
     }
