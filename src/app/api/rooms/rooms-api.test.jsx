@@ -1,6 +1,11 @@
 import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import { deriveRoomIdFromJoinCode } from "@/lib/room/roomIdentity";
-import { ROOM_ROLE, signRoomToken, verifyRoomToken } from "@/lib/room/tokens";
+import {
+  ROOM_ROLE,
+  ROOM_TOKEN_TTL_MS,
+  signRoomToken,
+  verifyRoomToken,
+} from "@/lib/room/tokens";
 
 jest.mock("@/lib/room/joinCode", () => ({
   createJoinCode: jest.fn(() => "ABCDEFGH"),
@@ -176,5 +181,18 @@ describe("stateless room API routes", () => {
       joinCode: "ABCDEFGH",
     });
     expect(verifyRoomToken(`${token}.forged`)).toBeNull();
+  });
+
+  it("issues room tokens that expire after one week", () => {
+    const now = Date.now();
+    const token = signRoomToken({
+      roomId: "room-1",
+      role: ROOM_ROLE.HOST,
+      joinCode: "ABCDEFGH",
+    });
+    const claims = verifyRoomToken(token);
+
+    expect(claims.exp - claims.iat).toBe(ROOM_TOKEN_TTL_MS);
+    expect(claims.exp).toBeGreaterThan(now);
   });
 });

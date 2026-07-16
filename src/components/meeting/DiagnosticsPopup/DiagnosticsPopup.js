@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Refresh, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./DiagnosticsPopup.module.css";
@@ -17,8 +17,10 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
   activeConnectionsCount,
   connectionError,
   onReconnect,
+  onSendDiagnosticReport,
   isTurnActive = false,
 }) {
+  const [reportState, setReportState] = useState("idle");
   if (!isOpen) return null;
 
   const isHost = role === "host";
@@ -50,6 +52,17 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
       mediaRoutingClass = styles.routeDirect;
     }
   }
+
+  const sendDiagnosticReport = async () => {
+    if (!onSendDiagnosticReport || reportState === "sending") return;
+    setReportState("sending");
+    try {
+      await onSendDiagnosticReport();
+      setReportState("sent");
+    } catch {
+      setReportState("failed");
+    }
+  };
 
   return (
     <>
@@ -219,6 +232,20 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
         </div>
 
         <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.closeAction}
+            onClick={sendDiagnosticReport}
+            disabled={!onSendDiagnosticReport || reportState === "sending"}
+          >
+            {reportState === "sending"
+              ? "Sending report…"
+              : reportState === "sent"
+                ? "Report sent"
+                : reportState === "failed"
+                  ? "Try sending again"
+                  : "Send diagnostic report"}
+          </button>
           <button
             type="button"
             className={styles.reconnectButton}

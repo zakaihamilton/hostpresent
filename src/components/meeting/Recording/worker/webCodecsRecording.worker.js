@@ -462,13 +462,17 @@ async function appendEncodedPackets({ source, stream, muxer, timeline }) {
       throw new Error(`FFmpeg did not provide ${stream} decoder metadata.`);
     }
     const sink = new EncodedPacketSink(track);
-    let firstTimestamp = null;
     for await (const packet of sink.packets()) {
-      firstTimestamp ??= packet.timestamp;
+      // Browser MediaRecorder fragments occasionally expose a corrupt final
+      // packet timestamp or duration after FFmpeg remuxing. Normalize encoded
+      // packets just as we do decoded samples so one tail packet cannot extend
+      // a short recording into minutes of silent media.
+      const duration = getSafeSampleDuration(stream, packet.duration);
       const shifted = packet.clone({
-        timestamp: timeline + packet.timestamp - firstTimestamp,
+        timestamp: timeline,
+        duration,
       });
-      timeline = Math.max(timeline, shifted.timestamp + shifted.duration);
+      timeline += duration;
       await muxer.add(shifted);
       packets += 1;
     }
@@ -514,8 +518,12 @@ async function appendFinalTrackToRecording({ source, stream, muxer }) {
         : await input.getPrimaryAudioTrack();
     if (!track) throw new Error(`Final ${stream} track is missing.`);
     const sink = new EncodedPacketSink(track);
+    let timeline = 0;
     for await (const packet of sink.packets()) {
-      await muxer.add(stream, packet);
+      const duration = getSafeSampleDuration(stream, packet.duration);
+      const normalized = packet.clone({ timestamp: timeline, duration });
+      timeline += duration;
+      await muxer.add(stream, normalized);
     }
   } finally {
     input.dispose();

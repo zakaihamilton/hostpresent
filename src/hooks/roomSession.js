@@ -29,7 +29,7 @@ async function readErrorMessage(response, fallback, token) {
       if (role === "participant") {
         return "[E033] This join link expired. Enter the join code again on the welcome screen.";
       }
-      return "[E077] This host room link expired after 30 days. Re-open your room from the host welcome screen.";
+      return "[E077] This host room link expired after 7 days. Create a new room from the host welcome screen.";
     }
     if (payload?.error) return payload.error;
   } catch {

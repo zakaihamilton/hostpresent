@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { verifyIceRoomToken } from "@/lib/media/iceRoomToken";
+import {
+  createRequestId,
+  logServerEvent,
+} from "@/lib/observability/structuredLog";
 import { applySecurityHeaders } from "@/lib/room/apiSecurity";
 
 export const runtime = "nodejs";
@@ -24,40 +28,41 @@ function jsonResponse(body, status) {
   return applySecurityHeaders(NextResponse.json(body, { status }));
 }
 
-function forbiddenResponse(reason) {
-  console.warn("[api/media/ice-config] forbidden:", reason);
+function forbiddenResponse(requestId, reason) {
+  logServerEvent("ice_config_forbidden", { requestId, reason });
   return jsonResponse(GENERIC_FORBIDDEN, 403);
 }
 
-function serverErrorResponse(reason) {
-  console.error("[api/media/ice-config] server error:", reason);
+function serverErrorResponse(requestId, reason) {
+  logServerEvent("ice_config_failed", { requestId, reason });
   return jsonResponse(GENERIC_SERVER_ERROR, 500);
 }
 
 export async function GET(request) {
+  const requestId = createRequestId();
   const roomToken = getRoomTokenFromRequest(request);
   if (!roomToken) {
-    return forbiddenResponse("missing room token");
+    return forbiddenResponse(requestId, "missing_room_token");
   }
 
   if (roomToken.length > 2048) {
-    return forbiddenResponse("token too long");
+    return forbiddenResponse(requestId, "token_too_long");
   }
 
   if (!process.env.INTERNAL_AUTH_SECRET?.trim()) {
-    return serverErrorResponse("INTERNAL_AUTH_SECRET is not configured");
+    return serverErrorResponse(requestId, "internal_auth_unconfigured");
   }
 
   const verified = verifyIceRoomToken(roomToken);
   if (!verified) {
-    return forbiddenResponse("invalid or expired room token");
+    return forbiddenResponse(requestId, "invalid_or_expired_token");
   }
 
   const turnSecret = process.env.TURN_SECRET_KEY;
   const domain = process.env.TURN_DOMAIN || "hostpresent.duckdns.org";
 
   if (!turnSecret) {
-    return serverErrorResponse("TURN_SECRET_KEY is not configured");
+    return serverErrorResponse(requestId, "turn_secret_unconfigured");
   }
 
   try {
@@ -85,8 +90,7 @@ export async function GET(request) {
         },
       ],
     });
-  } catch (error) {
-    console.error("[api/media/ice-config] credential generation failed", error);
-    return serverErrorResponse("credential generation failed");
+  } catch {
+    return serverErrorResponse(requestId, "credential_generation_failed");
   }
 }

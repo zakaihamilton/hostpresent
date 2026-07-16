@@ -178,7 +178,10 @@ export async function beginRecordingSegment({ gapStartedAt } = {}) {
       id: segments.length,
       startedAt,
       gapStartedAt: gapStartedAt ?? previous?.endedAt ?? startedAt,
-      gapDurationMs: Math.max(0, startedAt - (previous?.endedAt ?? startedAt)),
+      // A resumed recording has no media for the interrupted interval. Keep
+      // the exported timeline contiguous instead of turning a stale recovery
+      // timestamp into hours of silent audio.
+      gapDurationMs: 0,
       resumed: true,
       videoStartIndex: current.tracks.video?.chunkCount ?? 0,
       audioStartIndex: current.tracks.audio?.chunkCount ?? 0,

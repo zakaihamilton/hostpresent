@@ -16,6 +16,11 @@ const scriptSecurityPolicy = [
   ...(process.env.NODE_ENV === "development" ? ["'unsafe-eval'"] : []),
 ].join(" ");
 
+const localSignalingSources =
+  process.env.NODE_ENV === "development"
+    ? " http://127.0.0.1:9000 ws://127.0.0.1:9000 http://localhost:9000 ws://localhost:9000"
+    : "";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   // Next.js and the early theme bootstrap both emit inline code. A nonce-based
@@ -29,7 +34,7 @@ const contentSecurityPolicy = [
   "worker-src 'self' blob:",
   // PeerJS and TURN endpoints are deployment-configured, so permit secure
   // HTTPS/WebSocket origins without baking a particular signaling host in.
-  "connect-src 'self' https: wss:",
+  `connect-src 'self' https: wss:${localSignalingSources}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -53,6 +58,15 @@ const nextConfig = {
   reactCompiler: true,
   async headers() {
     return [
+      {
+        source: "/recording/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
       {
         source: "/:path*",
         headers: securityHeaders,

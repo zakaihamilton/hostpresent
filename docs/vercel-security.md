@@ -8,6 +8,7 @@ HostPresent is stateless. Configure these Vercel Firewall rate rules before prom
 | Resolve code | `GET /api/rooms/resolve` | 20 requests per IP | 1 minute |
 | Token state | `GET /api/rooms/state` | 120 requests per IP | 1 minute |
 | TURN config | `GET /api/media/ice-config` | 120 requests per IP | 1 minute |
+| Diagnostics | `POST /api/diagnostics` | 20 requests per IP | 1 minute |
 
 Apply the rules to Preview and Production. Verify that a request above each limit receives `429` with Vercel's standard rate-limit response.
 
