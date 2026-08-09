@@ -5,6 +5,10 @@ const recordingDownloads = new Map();
 const RECORDING_DB = "HPRecording";
 const RECORDING_STORE = "data";
 
+function isShellRequest(request) {
+  return SHELL_URLS.includes(new URL(request.url).pathname);
+}
+
 function openRecordingDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(RECORDING_DB);
@@ -174,7 +178,9 @@ self.addEventListener("fetch", (event) => {
 
           const cache = await caches.open(CACHE_NAME);
           await cache.put(event.request, response.clone());
-          const keys = await cache.keys();
+          const keys = (await cache.keys()).filter(
+            (key) => !isShellRequest(key),
+          );
           await Promise.all(
             keys
               .slice(0, Math.max(0, keys.length - MAX_RUNTIME_CACHE_ENTRIES))

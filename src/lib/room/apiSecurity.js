@@ -31,8 +31,20 @@ export function validateJsonPost(
   request,
   { maxBodyBytes = DEFAULT_MAX_BODY_BYTES } = {},
 ) {
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength === 0) {
+  const rawContentLength = request.headers.get("content-length");
+  const contentLength =
+    rawContentLength === null ? null : Number(rawContentLength);
+  if (
+    contentLength !== null &&
+    (!Number.isFinite(contentLength) || contentLength < 0)
+  ) {
+    return { ok: false, status: 400, error: "[E060] Invalid Content-Length" };
+  }
+
+  if (
+    (contentLength === 0 || contentLength === null) &&
+    !request.headers.get("content-type")
+  ) {
     return { ok: true };
   }
 
@@ -45,7 +57,7 @@ export function validateJsonPost(
     };
   }
 
-  if (contentLength > maxBodyBytes) {
+  if (contentLength !== null && contentLength > maxBodyBytes) {
     return { ok: false, status: 413, error: "[E064] Request body too large" };
   }
 

@@ -74,7 +74,10 @@ export default defineConfig({
     : {
         command: `npm run dev -- -H 127.0.0.1 -p ${PORT}`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        // Reusing an arbitrary process on the configured port can make local
+        // tests exercise a different application. Opt in explicitly when a
+        // pre-started HostPresent server is intended.
+        reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
         timeout: 120_000,
         env: {
           ...cleanEnv,

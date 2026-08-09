@@ -1,3 +1,4 @@
+import { TextDecoder, TextEncoder } from "node:util";
 import { applySecurityHeaders } from "./apiSecurity.js";
 import { inspectRoomToken, TOKEN_FAILURE } from "./tokens.js";
 
@@ -38,9 +39,39 @@ export function verifyRequestToken(token) {
   return { error: jsonError("[E066] Invalid token", 401) };
 }
 
-export async function readJsonBody(request) {
+export const BODY_TOO_LARGE = Symbol("body-too-large");
+
+export async function readJsonBody(request, { maxBytes = 16_384 } = {}) {
   try {
-    return await request.json();
+    const reader = request.body?.getReader?.();
+    if (!reader) {
+      const text = await request.text();
+      if (new TextEncoder().encode(text).byteLength > maxBytes) {
+        return BODY_TOO_LARGE;
+      }
+      return JSON.parse(text);
+    }
+
+    const chunks = [];
+    let totalBytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        return BODY_TOO_LARGE;
+      }
+      chunks.push(value);
+    }
+
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return null;
   }
