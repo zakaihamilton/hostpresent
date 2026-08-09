@@ -63,7 +63,9 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            // These assets use stable, un-hashed URLs. Revalidate them so a
+            // new worker/core pair is picked up after a deployment.
+            value: "public, max-age=0, must-revalidate",
           },
         ],
       },
