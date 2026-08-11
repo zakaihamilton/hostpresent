@@ -824,7 +824,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         ? hostStreamPlaybackMuted
         : focusedParticipant
           ? focusedParticipant.isSelf || !focusedParticipant.stream
-          : true,
+          : screenStream
+            ? !isScreenAudioShared
+            : true,
       isAudioMuted: viewingHostStream
         ? hostAudioMuted
         : focusedParticipant

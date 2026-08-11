@@ -11,6 +11,7 @@ import {
   createParticipantVideoMutedMessage,
   createParticipantVideoUnmutedMessage,
 } from "@/lib/signaling/messages";
+import { prepareOutboundAudioMix } from "@/lib/webrtc/outboundMedia";
 
 const VOICE_ISOLATION_STORAGE_KEY = "hostpresent.voiceIsolation";
 
@@ -80,7 +81,7 @@ export function MediaControls({
 
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
-  const screenAudioRef = useRef(null);
+  const activeScreenStreamRef = useRef(screenStream);
   const initialAudioMutedRef = useRef(isAudioMuted);
   const initialVideoMutedRef = useRef(isVideoMuted);
   const initialVoiceIsolationRef = useRef(isVoiceIsolationEnabled);
@@ -93,35 +94,6 @@ export function MediaControls({
   );
 
   useEffect(() => {
-    if (screenAudioRef.current) {
-      screenAudioRef.current.pause();
-      screenAudioRef.current.srcObject = null;
-      screenAudioRef.current = null;
-    }
-
-    if (screenStream) {
-      const audioTrack = screenStream.getAudioTracks()[0];
-      if (audioTrack && audioTrack.readyState === "live") {
-        const audioEl = new Audio();
-        audioEl.srcObject = screenStream;
-        if (selectedSpeaker && typeof audioEl.setSinkId === "function") {
-          audioEl.setSinkId(selectedSpeaker).catch(() => {});
-        }
-        audioEl.play().catch(() => {});
-        screenAudioRef.current = audioEl;
-      }
-    }
-
-    return () => {
-      if (screenAudioRef.current) {
-        screenAudioRef.current.pause();
-        screenAudioRef.current.srcObject = null;
-        screenAudioRef.current = null;
-      }
-    };
-  }, [screenStream, selectedSpeaker]);
-
-  useEffect(() => {
     localStreamRef.current = localStream;
   }, [localStream]);
 
@@ -131,6 +103,7 @@ export function MediaControls({
   // it stops).
   useEffect(() => {
     screenStreamRef.current = screenStream;
+    activeScreenStreamRef.current = screenStream;
     if (!screenStream && !hadScreenStreamRef.current) return;
 
     hadScreenStreamRef.current = Boolean(screenStream);
@@ -444,6 +417,35 @@ export function MediaControls({
     [isHost, roomConnection],
   );
 
+  const stopScreenShare = useCallback(
+    (streamToStop) => {
+      if (
+        streamToStop &&
+        activeScreenStreamRef.current &&
+        activeScreenStreamRef.current !== streamToStop
+      ) {
+        return;
+      }
+
+      activeScreenStreamRef.current = null;
+      screenStreamRef.current = null;
+      setScreenStream(null);
+
+      // Replace the outbound screen track before the state effect runs. This
+      // prevents a viewer from retaining the last screen frame while React
+      // propagates the cleared stream through the room connection hook.
+      void roomConnection.syncOutboundMedia?.({ screenStream: null });
+      publishScreenShareStatus(false);
+
+      if (streamToStop) {
+        for (const track of streamToStop.getTracks()) {
+          if (track.readyState !== "ended") track.stop();
+        }
+      }
+    },
+    [publishScreenShareStatus, roomConnection, setScreenStream],
+  );
+
   const toggleAudio = useCallback(() => {
     if (!localStream) return;
 
@@ -527,18 +529,14 @@ export function MediaControls({
 
   const toggleScreenShare = useCallback(async () => {
     if (screenStream) {
-      for (const track of screenStream.getTracks()) {
-        track.stop();
-      }
-      setScreenStream(null);
-      publishScreenShareStatus(false);
+      stopScreenShare(screenStream);
     } else {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: shareScreenAudio
             ? {
-                suppressLocalAudioPlayback: true,
+                suppressLocalAudioPlayback: false,
                 echoCancellation: false,
                 noiseSuppression: false,
                 autoGainControl: false,
@@ -554,12 +552,15 @@ export function MediaControls({
           );
           return;
         }
+
+        // Starting the mixer while the share action is still user initiated
+        // avoids browsers leaving AudioContext suspended in the later state
+        // synchronization effect.
+        await prepareOutboundAudioMix(localStream, stream);
+
+        activeScreenStreamRef.current = stream;
         screenVideoTrack.onended = () => {
-          for (const track of stream.getTracks()) {
-            if (track.readyState !== "ended") track.stop();
-          }
-          setScreenStream(null);
-          publishScreenShareStatus(false);
+          stopScreenShare(stream);
         };
 
         setScreenStream(stream);
@@ -585,10 +586,12 @@ export function MediaControls({
       }
     }
   }, [
+    localStream,
     publishScreenShareStatus,
     screenStream,
     shareScreenAudio,
     setScreenStream,
+    stopScreenShare,
   ]);
 
   const setShareScreenAudioPreference = useCallback((includeAudio) => {
