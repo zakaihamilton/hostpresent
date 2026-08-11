@@ -5,7 +5,7 @@
 [![Open the live app](https://img.shields.io/badge/live_app-hostpresent.com-2563eb?style=flat-square)](https://hostpresent.com)
 [![CI](https://github.com/zakaihamilton/hostpresent/actions/workflows/ci.yml/badge.svg)](https://github.com/zakaihamilton/hostpresent/actions/workflows/ci.yml)
 
-[Open Host Present](https://hostpresent.com), create a room, and invite participants with a short room code or a shareable link. The host stays at the center of the experience: presenting from a camera or screen share while keeping control of the room, participant media, and recording.
+Open [Host Present](https://hostpresent.com), create a room, and invite participants with a short room code or a shareable link. The host stays at the center of the experience: presenting from a camera or screen share while keeping control of the room, participant media, and recording.
 
 [![Host Present welcome screen](public/welcome-preview.png)](https://hostpresent.com)
 
