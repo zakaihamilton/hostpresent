@@ -1,99 +1,161 @@
 # Host Present
 
-Browser-based meetings built around a single presenter. A **host** runs the session—camera, microphone, and screen share—while **participants** join with an 8-character room code or invite link. Media and live meeting controls flow peer-to-peer over WebRTC (PeerJS); the Next.js app issues stateless, signed credentials and serves the meeting UI.
+> Focused browser meetings for presenting live to a small audience.
+
+[![Open the live app](https://img.shields.io/badge/live_app-hostpresent.com-2563eb?style=flat-square)](https://hostpresent.com)
+[![CI](https://github.com/zakaihamilton/hostpresent/actions/workflows/ci.yml/badge.svg)](https://github.com/zakaihamilton/hostpresent/actions/workflows/ci.yml)
+
+[Open Host Present](https://hostpresent.com), create a room, and invite participants with a short room code or a shareable link. The host stays at the center of the experience: presenting from a camera or screen share while keeping control of the room, participant media, and recording.
+
+[![Host Present welcome screen](public/welcome-preview.png)](https://hostpresent.com)
+
+## What it does
+
+Host Present is a role-aware meeting room built around a single presenter. Participants can join quickly, while the host controls the stage and the flow of the session.
+
+| Present clearly | Keep control | Stay connected |
+| --- | --- | --- |
+| Large presenter stage for camera or screen share | Mute one participant or everyone | WebRTC media and data channels |
+| Optional participant gallery | Choose video or audio-only participants | Chat, private messages, and invite links |
+| Screen and tab audio support | Available and listening-only modes | Diagnostics and reconnect tools |
 
 ## Features
 
-- **Host and participant roles** — Create a room as host or join with a formatted room ID (`#/j/XXXX-XXXX`).
-- **Primary presenter view** — Large stage for the host feed (camera or screen share) with optional participant gallery.
-- **Screen sharing** — Share the screen with optional system/tab audio.
-- **Recording** — Record the meeting locally in the browser; pause, resume, and download when finished.
-- **Host controls** — Mute individual participants or everyone; manage who appears on video vs. audio-only during the live session.
-- **Participant modes** — *Available* (can send media) or *Listening only* (observe without publishing).
-- **Participants sidebar** — Roster with mute/video status and host actions.
-- **Recent rooms** — Hosts can reopen rooms from local storage; participants can save rooms they have joined.
-- **Themes** — Light/dark mode with system preference support.
-- **PWA** — Installable web app with offline shell caching via a service worker.
+- **Host and participant roles** — Create a room as a host or join with an 8-character code such as `ABCD-EFGH`.
+- **Presenter-first layout** — Keep the host feed prominent while showing an optional participant gallery.
+- **Screen sharing** — Share a screen, window, or browser tab, with support for system or tab audio when the browser provides it.
+- **Local recording** — Record in the browser, pause and resume, then save the meeting locally when finished.
+- **Host controls** — Mute individual participants or the whole room and manage who publishes video.
+- **Participant modes** — Let participants join as **Available** or **Listening only**.
+- **Chat** — Send room messages or private messages and save the conversation locally.
+- **Recent rooms** — Reopen rooms from local storage without a server-side meeting database.
+- **Themes and PWA support** — Light/dark themes, system preference support, and an installable web app shell.
+- **Diagnostics and recovery** — Inspect connection details, retry signaling, and send a lightweight diagnostic report when troubleshooting is needed.
 
 ## How it works
 
-1. **Host** opens the app, sets a display name, and creates a room. They receive an 8-character join code and participant invite link.
-2. **Participants** enter the room code or follow the invite link. The code is a durable bearer credential and is converted into a participant token that expires after seven days. Anyone with a saved code can request a new participant token; hosts create a new room after their host token expires.
-3. **Signaling** uses a separate [PeerJS](https://peerjs.com/) server (`SIGNALING_SERVER_URL`) so browsers can discover each other and negotiate WebRTC.
-4. **Room API** (`/api/rooms`) issues signed host/participant tokens and TURN configuration without retaining room state. Live control messages stay on authenticated WebRTC data channels.
+```text
+Host and participants
+        │
+        ├── WebRTC media and authenticated data channels
+        │
+        └── PeerJS signaling for discovery and connection setup
 
-Routing is hash-based (`#/welcome`, `#/meeting/...`, `#/j/...`) so the SPA can run on static hosting without server-side path rules.
+Next.js application
+        ├── Creates and resolves room credentials
+        ├── Issues signed, short-lived access tokens
+        └── Provides signaling and TURN configuration
+```
 
-## Requirements
-
-- Node.js 18+ (for local development and builds)
-- A running **PeerJS signaling server** reachable from browsers (required for real meetings)
-- Optional: `NEXT_PUBLIC_APP_URL` for correct invite links when the app is served from a fixed origin
+- The browser connects participants over WebRTC directly when possible; TURN can relay media for networks that need it.
+- PeerJS is used for signaling and peer discovery. It requires a separately hosted PeerJS-compatible signaling server.
+- The Next.js API is stateless: it signs room credentials and provides connection configuration, but does not store live room state.
+- Live controls and chat travel over authenticated WebRTC data channels.
+- Routing uses URL hashes such as `#/welcome`, `#/meeting/...`, and `#/j/...`, so the app can run on hosting that does not provide server-side route rewrites.
 
 ## Getting started
 
+### Requirements
+
+- Node.js **20.9 or newer**
+- npm
+- A PeerJS signaling server reachable from the browser
+- A modern browser with camera, microphone, and screen-sharing support
+
+### Run locally
+
 ```bash
+git clone https://github.com/zakaihamilton/hostpresent.git
+cd hostpresent
 npm install
+```
+
+Create `.env.local` with a local room secret and the connection details for your signaling server:
+
+```dotenv
+ROOM_TOKEN_SECRET=replace-with-a-long-random-secret
+SIGNALING_SERVER_URL=localhost
+SIGNALING_SERVER_PATH=/myapp
+SIGNALING_SERVER_PORT=9000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Then start the development server:
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Without `SIGNALING_SERVER_URL`, the welcome screen shows a configuration notice and WebRTC will not connect.
+Open [http://localhost:3000](http://localhost:3000). The welcome screen can load without signaling configuration, but a real meeting requires a reachable PeerJS signaling server and valid media connectivity.
 
 ### Environment variables
 
-Create `.env.local` for local development (or set the same keys in your host’s environment):
+Set these variables in `.env.local` for development or in the deployment environment for production:
 
-| Variable | Description |
-|----------|-------------|
-| `ROOM_TOKEN_SECRET` | Required private, high-entropy HMAC secret for room tokens and room-ID derivation. Rotate it to invalidate all existing room links and saved rooms. |
-| `SIGNALING_SERVER_URL` | PeerJS hostname only—no `https://` (e.g. `peer.example.com`). Required for WebRTC. |
-| `SIGNALING_SERVER_PATH` | PeerJS path prefix (default: `/myapp`). |
-| `SIGNALING_SERVER_PORT` | PeerJS port (default: `443`). |
-| `NEXT_PUBLIC_APP_URL` | Public app origin for participant invite links (e.g. `https://present.example.com`). |
-| `INTERNAL_AUTH_SECRET` | HMAC secret for short-lived ICE config room tokens (required for `/api/media/ice-config`). |
-| `TURN_SECRET_KEY` | Shared secret for CoTurn ephemeral credentials. |
-| `TURN_DOMAIN` | TURN/TURNS hostname (default: `hostpresent.duckdns.org`). |
+| Variable | Purpose |
+| --- | --- |
+| `ROOM_TOKEN_SECRET` | Required high-entropy HMAC secret for room tokens and room-ID derivation. Rotating it invalidates existing room links and saved rooms. |
+| `SIGNALING_SERVER_URL` | PeerJS hostname only—do not include `https://`. Required for WebRTC. |
+| `SIGNALING_SERVER_PATH` | PeerJS path prefix; defaults to `/myapp`. |
+| `SIGNALING_SERVER_PORT` | PeerJS port; defaults to `443`. |
+| `NEXT_PUBLIC_APP_URL` | Public app origin used to build participant invite links, for example `https://hostpresent.com`. |
+| `INTERNAL_AUTH_SECRET` | HMAC secret for short-lived ICE configuration room tokens. Required when using the ICE configuration API. |
+| `TURN_SECRET_KEY` | Shared secret used to mint ephemeral CoTURN credentials. |
+| `TURN_DOMAIN` | TURN/TURNS hostname; defaults to `hostpresent.duckdns.org`. |
 
-There is no fallback room-token secret. Missing `ROOM_TOKEN_SECRET` causes room creation and code resolution to fail closed. Never expose it as a `NEXT_PUBLIC_` variable.
+There is no fallback room-token secret. If `ROOM_TOKEN_SECRET` is missing, room creation and code resolution fail closed. Never expose it through a `NEXT_PUBLIC_` variable.
 
 ## Production deployment
 
-HostPresent deliberately has no database, Redis instance, or server-persistent room state. A restart does not end an active peer-to-peer meeting, but it also cannot preserve server-side waiting rooms, participant removals, or host-token renewal. An eight-character join code remains a durable bearer credential, so do not share it beyond the intended meeting audience.
+Host Present is intentionally stateless: it does not require a database, Redis, or server-persistent room state. A server restart does not end an active peer-to-peer meeting, but waiting rooms, participant removals, and token renewal are not persisted on the server.
 
-Before deploying on Vercel, configure the Firewall rate rules documented in [Vercel security setup](docs/vercel-security.md). These rules are required because the app has no in-process rate limiter. Rotate `ROOM_TOKEN_SECRET` during this rollout; that intentionally invalidates legacy room links and locally saved room tokens.
+For a Vercel deployment:
 
-Use the [production release checklist](docs/production-release-checklist.md) for Preview and Production verification, including confirmation that each Firewall rule returns `429` once its limit is exceeded.
+1. Configure all required environment variables for Preview and Production.
+2. Configure the [Vercel Firewall rate rules](docs/vercel-security.md) before exposing room and media endpoints.
+3. Complete the [production release checklist](docs/production-release-checklist.md), including verification that each rule returns `429` after its limit is exceeded.
+4. Rotate `ROOM_TOKEN_SECRET` deliberately when invalidating legacy room links and locally saved room tokens.
 
-## Scripts
+Treat an 8-character room code as a bearer credential and share it only with the intended meeting audience.
+
+## Development commands
 
 | Command | Description |
-|---------|-------------|
-| `npm run dev` | Start the Next.js dev server |
-| `npm run build` | Production build |
-| `npm run start` | Run the production server |
-| `npm test` | Run Jest tests |
-| `npm run lint` | Biome check |
-| `npm run format` | Biome format (write) |
+| --- | --- |
+| `npm run dev` | Start the Next.js development server. |
+| `npm run build` | Create a production build. |
+| `npm run start` | Run the production server locally. |
+| `npm run lint` | Run Biome checks. |
+| `npm run format` | Format files with Biome. |
+| `npm test` | Run the Jest unit and component suite. |
+| `npm run test:e2e:smoke` | Run the Chromium welcome-flow smoke test. |
+| `npm run test:e2e:webrtc` | Run the opt-in multi-browser WebRTC flow. |
 
-## Project layout
+For the full meeting test matrix, including browser permissions and manual device checks, see [docs/testing-meetings.md](docs/testing-meetings.md).
 
-```
+## Project structure
+
+```text
 src/
-  app/              Next.js app router, API routes, layout
-  components/       UI (meeting, welcome, toolbar, video, etc.)
-  hooks/            Room session, signaling, routing, host controls
-  lib/              Room tokens, WebRTC helpers, settings, signaling messages
-public/             Static assets, service worker
+  app/              Next.js App Router, metadata, and API routes
+  components/       Welcome, meeting, media, chat, and shared UI
+  hooks/            Room sessions, signaling, routing, and host controls
+  lib/              Room security, WebRTC, settings, diagnostics, and utilities
+public/              Icons, PWA assets, service worker, and recording runtime files
+docs/                Deployment, security, release, and testing guides
+tests/e2e/           Playwright smoke and WebRTC scenarios
 ```
 
 ## Tech stack
 
-- [Next.js](https://nextjs.org) 16 (App Router)
-- [React](https://react.dev) 19
-- [PeerJS](https://peerjs.com/) for WebRTC signaling and peer connections
-- [Biome](https://biomejs.dev/) for lint/format
-- [Jest](https://jestjs.io/) and Testing Library for unit tests
+- [Next.js](https://nextjs.org/) 16 with the App Router
+- [React](https://react.dev/) 19
+- [WebRTC](https://webrtc.org/) for browser media and data channels
+- [PeerJS](https://peerjs.com/) for signaling and peer discovery
+- [Biome](https://biomejs.dev/) for linting and formatting
+- [Jest](https://jestjs.io/) and [Testing Library](https://testing-library.com/) for unit and component tests
+- [Playwright](https://playwright.dev/) for browser smoke and WebRTC tests
 
-## License
+## License and project status
 
-Private project (`package.json` marks `"private": true`). Add a license file if you intend to open-source or redistribute.
+This repository is private and `package.json` is marked with `"private": true`. It does not currently include a license granting reuse or redistribution. Contact the project owner before using the code outside its intended environment.
