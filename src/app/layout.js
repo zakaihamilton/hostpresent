@@ -3,7 +3,7 @@ import { themeInitScript } from "@/lib/settings/themeScript";
 import "./globals.css";
 
 export const metadata = {
-  metadataBase: new URL("https://hostpresent.app"),
+  metadataBase: new URL("https://hostpresent.com"),
   title: "Host Present",
   description: "Host presentation and meeting controls",
   applicationName: "Host Present",
@@ -18,7 +18,7 @@ export const metadata = {
   openGraph: {
     title: "Host Present",
     description: "Host presentation and meeting controls",
-    url: "https://hostpresent.app",
+    url: "https://hostpresent.com",
     siteName: "Host Present",
     locale: "en_US",
     type: "website",
