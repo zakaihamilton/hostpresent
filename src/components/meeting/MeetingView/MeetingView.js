@@ -333,6 +333,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     availableMicrophones,
     selectedMicrophone,
     switchMicrophone,
+    isVoiceIsolationEnabled,
+    isVoiceIsolationChanging,
+    setVoiceIsolation,
     availableSpeakers,
     selectedSpeaker,
     switchSpeaker,
@@ -1102,6 +1105,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         availableMicrophones={availableMicrophones}
         selectedMicrophone={selectedMicrophone}
         onMicrophoneChange={switchMicrophone}
+        isVoiceIsolationEnabled={isVoiceIsolationEnabled}
+        isVoiceIsolationChanging={isVoiceIsolationChanging}
+        onVoiceIsolationChange={setVoiceIsolation}
         availableSpeakers={availableSpeakers}
         selectedSpeaker={selectedSpeaker}
         onSpeakerChange={switchSpeaker}

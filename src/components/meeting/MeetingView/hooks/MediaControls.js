@@ -12,18 +12,30 @@ import {
   createParticipantVideoUnmutedMessage,
 } from "@/lib/signaling/messages";
 
-const VOICE_ISOLATION_AUDIO_CONSTRAINTS = {
+const VOICE_ISOLATION_STORAGE_KEY = "hostpresent.voiceIsolation";
+
+const AUDIO_PROCESSING_CONSTRAINTS = {
   echoCancellation: true,
   noiseSuppression: true,
   autoGainControl: true,
-  voiceIsolation: true,
 };
 
-function audioConstraintsForDevice(deviceId) {
+function audioConstraintsForDevice(deviceId, voiceIsolationEnabled = true) {
   return {
-    ...VOICE_ISOLATION_AUDIO_CONSTRAINTS,
+    ...AUDIO_PROCESSING_CONSTRAINTS,
+    voiceIsolation: voiceIsolationEnabled,
     ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
   };
+}
+
+function loadVoiceIsolationPreference() {
+  if (typeof window === "undefined") return true;
+  try {
+    const stored = window.localStorage.getItem(VOICE_ISOLATION_STORAGE_KEY);
+    return stored === null ? true : stored === "true";
+  } catch {
+    return true;
+  }
 }
 
 export function MediaControls({
@@ -58,6 +70,11 @@ export function MediaControls({
   const [selectedCamera, setSelectedCamera] = useState("");
   const [availableMicrophones, setAvailableMicrophones] = useState([]);
   const [selectedMicrophone, setSelectedMicrophone] = useState("");
+  const [isVoiceIsolationEnabled, setIsVoiceIsolationEnabled] = useState(
+    loadVoiceIsolationPreference,
+  );
+  const [isVoiceIsolationChanging, setIsVoiceIsolationChanging] =
+    useState(false);
   const [availableSpeakers, setAvailableSpeakers] = useState([]);
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
 
@@ -66,6 +83,7 @@ export function MediaControls({
   const screenAudioRef = useRef(null);
   const initialAudioMutedRef = useRef(isAudioMuted);
   const initialVideoMutedRef = useRef(isVideoMuted);
+  const initialVoiceIsolationRef = useRef(isVoiceIsolationEnabled);
   const hadScreenStreamRef = useRef(Boolean(screenStream));
   const syncOutboundMediaRef = useRef(roomConnection?.syncOutboundMedia);
   syncOutboundMediaRef.current = roomConnection?.syncOutboundMedia;
@@ -151,7 +169,10 @@ export function MediaControls({
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: audioConstraintsForDevice(),
+          audio: audioConstraintsForDevice(
+            undefined,
+            initialVoiceIsolationRef.current,
+          ),
         });
         acquiredStream = stream;
         if (cancelled) {
@@ -295,7 +316,7 @@ export function MediaControls({
 
       try {
         const newStream = await navigator.mediaDevices.getUserMedia({
-          audio: audioConstraintsForDevice(deviceId),
+          audio: audioConstraintsForDevice(deviceId, isVoiceIsolationEnabled),
           video: false,
         });
 
@@ -315,7 +336,67 @@ export function MediaControls({
         );
       }
     },
-    [localStream, isAudioMuted, roomConnection],
+    [isAudioMuted, isVoiceIsolationEnabled, localStream, roomConnection],
+  );
+
+  const setVoiceIsolation = useCallback(
+    async (enabled) => {
+      if (enabled === isVoiceIsolationEnabled) return;
+
+      const previousValue = isVoiceIsolationEnabled;
+      setIsVoiceIsolationEnabled(enabled);
+      try {
+        window.localStorage.setItem(
+          VOICE_ISOLATION_STORAGE_KEY,
+          String(enabled),
+        );
+      } catch {}
+
+      if (!localStream) return;
+
+      const currentTrack = localStream.getAudioTracks()[0];
+      const deviceId =
+        selectedMicrophone || currentTrack?.getSettings?.().deviceId || "";
+
+      setIsVoiceIsolationChanging(true);
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraintsForDevice(deviceId, enabled),
+          video: false,
+        });
+        const newTrack = newStream.getAudioTracks()[0];
+        if (!newTrack) throw new Error("No microphone track returned");
+
+        if (currentTrack) {
+          localStream.removeTrack(currentTrack);
+          currentTrack.stop();
+        }
+        localStream.addTrack(newTrack);
+        newTrack.enabled = !isAudioMuted;
+        void roomConnection.syncOutboundMedia?.();
+      } catch (err) {
+        console.error("Failed to update voice isolation:", err);
+        setIsVoiceIsolationEnabled(previousValue);
+        try {
+          window.localStorage.setItem(
+            VOICE_ISOLATION_STORAGE_KEY,
+            String(previousValue),
+          );
+        } catch {}
+        setErrorMsg(
+          "[E048] Could not update voice isolation. Check microphone permissions and try again.",
+        );
+      } finally {
+        setIsVoiceIsolationChanging(false);
+      }
+    },
+    [
+      isAudioMuted,
+      isVoiceIsolationEnabled,
+      localStream,
+      roomConnection,
+      selectedMicrophone,
+    ],
   );
 
   const publishParticipantMediaStatus = useCallback(
@@ -544,6 +625,9 @@ export function MediaControls({
     availableMicrophones,
     selectedMicrophone,
     switchMicrophone,
+    isVoiceIsolationEnabled,
+    isVoiceIsolationChanging,
+    setVoiceIsolation,
     availableSpeakers,
     selectedSpeaker,
     switchSpeaker,

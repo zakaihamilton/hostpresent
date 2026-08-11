@@ -150,6 +150,30 @@ describe("ProfileControls", () => {
     expect(screen.getByLabelText("Camera")).toHaveValue("camera-1");
   });
 
+  it("toggles voice isolation", async () => {
+    const user = userEvent.setup();
+    const onVoiceIsolationChange = jest.fn();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        availableMicrophones={[{ deviceId: "mic-1", label: "Desk mic" }]}
+        isVoiceIsolationEnabled
+        onVoiceIsolationChange={onVoiceIsolationChange}
+      />,
+    );
+
+    await user.click(getProfileButton());
+    const voiceIsolation = screen.getByRole("checkbox", {
+      name: /voice isolation/i,
+    });
+    expect(voiceIsolation).toBeChecked();
+
+    await user.click(voiceIsolation);
+    expect(onVoiceIsolationChange).toHaveBeenCalledWith(false);
+  });
+
   it("shows the listening-only state on the profile button", () => {
     const { container } = render(
       <ProfileControls

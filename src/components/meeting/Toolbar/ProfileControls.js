@@ -65,6 +65,9 @@ export function ProfileControls({
   availableMicrophones = [],
   selectedMicrophone = "",
   onMicrophoneChange = null,
+  isVoiceIsolationEnabled = true,
+  isVoiceIsolationChanging = false,
+  onVoiceIsolationChange = null,
   availableSpeakers = [],
   selectedSpeaker = "",
   onSpeakerChange = null,
@@ -392,6 +395,33 @@ export function ProfileControls({
                             </option>
                           ))}
                         </select>}
+
+                    <label className={styles.voiceIsolationToggle}>
+                      <input
+                        type="checkbox"
+                        checked={isVoiceIsolationEnabled}
+                        disabled={
+                          availableMicrophones.length === 0 ||
+                          isVoiceIsolationChanging
+                        }
+                        onChange={(event) =>
+                          onVoiceIsolationChange?.(event.target.checked)
+                        }
+                      />
+                      <span className={styles.voiceIsolationCopy}>
+                        <span className={styles.voiceIsolationTitle}>
+                          Voice isolation
+                        </span>
+                        <span className={styles.voiceIsolationHint}>
+                          Reduce background voices and noise
+                        </span>
+                      </span>
+                      {isVoiceIsolationChanging
+                        ? <span className={styles.voiceIsolationStatus}>
+                            Updating...
+                          </span>
+                        : null}
+                    </label>
 
                     <div className={styles.micTest}>
                       <button

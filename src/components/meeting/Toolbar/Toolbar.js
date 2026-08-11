@@ -28,6 +28,9 @@ export const Toolbar = memo(function Toolbar({
   availableMicrophones = [],
   selectedMicrophone = "",
   onMicrophoneChange,
+  isVoiceIsolationEnabled = true,
+  isVoiceIsolationChanging = false,
+  onVoiceIsolationChange,
   availableSpeakers = [],
   selectedSpeaker = "",
   onSpeakerChange,
@@ -62,6 +65,9 @@ export const Toolbar = memo(function Toolbar({
                 availableMicrophones={availableMicrophones}
                 selectedMicrophone={selectedMicrophone}
                 onMicrophoneChange={onMicrophoneChange}
+                isVoiceIsolationEnabled={isVoiceIsolationEnabled}
+                isVoiceIsolationChanging={isVoiceIsolationChanging}
+                onVoiceIsolationChange={onVoiceIsolationChange}
                 availableSpeakers={availableSpeakers}
                 selectedSpeaker={selectedSpeaker}
                 onSpeakerChange={onSpeakerChange}

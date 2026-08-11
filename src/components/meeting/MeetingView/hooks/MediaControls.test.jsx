@@ -124,6 +124,66 @@ describe("MediaControls Hook", () => {
     });
   });
 
+  it("replaces the microphone track when voice isolation changes", async () => {
+    const oldAudioTrack = createTrack({ kind: "audio", deviceId: "mic-id" });
+    const localStream = createStream([
+      oldAudioTrack,
+      createTrack({ kind: "video" }),
+    ]);
+    const replacementAudioTrack = createTrack({
+      kind: "audio",
+      deviceId: "mic-id",
+      id: "isolated-mic",
+    });
+    const replacementStream = createStream([replacementAudioTrack]);
+    const syncOutboundMedia = jest.fn();
+    const setLocalStream = jest.fn();
+    const roomConnection = {
+      send: jest.fn(),
+      syncOutboundMedia,
+    };
+
+    const { result } = renderHook(() =>
+      MediaControls({
+        isHost: false,
+        roomConnection,
+        localStream,
+        setLocalStream,
+        screenStream: null,
+        setScreenStream: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
+    });
+    navigator.mediaDevices.getUserMedia.mockResolvedValueOnce(
+      replacementStream,
+    );
+
+    await act(async () => {
+      await result.current.setVoiceIsolation(false);
+    });
+
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        voiceIsolation: false,
+        deviceId: { exact: "mic-id" },
+      },
+      video: false,
+    });
+    expect(oldAudioTrack.stop).toHaveBeenCalledTimes(1);
+    expect(localStream.getAudioTracks()).toEqual([replacementAudioTrack]);
+    expect(result.current.isVoiceIsolationEnabled).toBe(false);
+    expect(window.localStorage.getItem("hostpresent.voiceIsolation")).toBe(
+      "false",
+    );
+    expect(syncOutboundMedia).toHaveBeenCalled();
+  });
+
   it("syncs outbound media when localStream becomes available after join", async () => {
     const syncOutboundMedia = jest.fn();
     const acquired = createStream([
