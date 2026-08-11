@@ -520,14 +520,29 @@ export function useRoomDataChannel({
   );
 
   const ensureMediaCall = useCallback(
-    async (remoteId) => {
+    async (remoteId, streamOverrides = {}) => {
       const next = syncQueueRef.current.then(async () => {
         const peer = peerRef.current;
         if (!peer) return;
 
+        const hasLocalStreamOverride = Object.hasOwn(
+          streamOverrides,
+          "localStream",
+        );
+        const hasScreenStreamOverride = Object.hasOwn(
+          streamOverrides,
+          "screenStream",
+        );
+        const outboundLocalStream = hasLocalStreamOverride
+          ? streamOverrides.localStream
+          : localStreamRef.current;
+        const outboundScreenStream = hasScreenStreamOverride
+          ? streamOverrides.screenStream
+          : screenStreamRef.current;
+
         const outbound = await buildOutboundMediaStream(
-          localStreamRef.current,
-          screenStreamRef.current,
+          outboundLocalStream,
+          outboundScreenStream,
         );
         if (!outbound) return;
 
@@ -537,8 +552,8 @@ export function useRoomDataChannel({
           if (peerConnection && peerConnection.connectionState !== "closed") {
             await syncOutboundTracks(
               existing,
-              localStreamRef.current,
-              screenStreamRef.current,
+              outboundLocalStream,
+              outboundScreenStream,
             );
           }
           return;
@@ -556,63 +571,81 @@ export function useRoomDataChannel({
 
   const syncQueueRef = useRef(Promise.resolve());
 
-  const enqueueSync = useCallback(async () => {
-    const next = syncQueueRef.current.then(async () => {
-      if (isHost) {
-        const tasks = [];
-        for (const call of mediaCallsRef.current.values()) {
-          tasks.push(
-            syncOutboundTracks(
-              call,
-              localStreamRef.current,
-              screenStreamRef.current,
-            ),
-          );
-        }
-        await Promise.all(tasks);
+  const enqueueSync = useCallback(
+    async (streamOverrides = {}) => {
+      const next = syncQueueRef.current.then(async () => {
+        const hasLocalStreamOverride = Object.hasOwn(
+          streamOverrides,
+          "localStream",
+        );
+        const hasScreenStreamOverride = Object.hasOwn(
+          streamOverrides,
+          "screenStream",
+        );
+        const outboundLocalStream = hasLocalStreamOverride
+          ? streamOverrides.localStream
+          : localStreamRef.current;
+        const outboundScreenStream = hasScreenStreamOverride
+          ? streamOverrides.screenStream
+          : screenStreamRef.current;
 
-        for (const remoteId of connectionsRef.current.keys()) {
-          await ensureMediaCall(remoteId);
-        }
-        return;
-      }
+        if (isHost) {
+          const tasks = [];
+          for (const call of mediaCallsRef.current.values()) {
+            tasks.push(
+              syncOutboundTracks(
+                call,
+                outboundLocalStream,
+                outboundScreenStream,
+              ),
+            );
+          }
+          await Promise.all(tasks);
 
-      const hostId = hostPeerId(roomIdRef.current);
-      const existing = mediaCallsRef.current.get(hostId);
-      const hasVideoTrack = Boolean(
-        pickOutboundVideoTrack(localStreamRef.current, screenStreamRef.current),
-      );
-      const hasAudioTrack = Boolean(
-        await resolveOutboundAudioTrack(
-          localStreamRef.current,
-          screenStreamRef.current,
-        ),
-      );
-
-      // Check senders before syncOutboundTracks — addTrack alone does not
-      // renegotiate PeerJS SDP when the call was answered with no tracks.
-      if (existing) {
-        if (
-          needsMediaRenegotiation(existing, { hasVideoTrack, hasAudioTrack })
-        ) {
-          send(createMediaRenegotiateMessage());
+          for (const remoteId of connectionsRef.current.keys()) {
+            await ensureMediaCall(remoteId, streamOverrides);
+          }
           return;
         }
-        await syncOutboundTracks(
-          existing,
-          localStreamRef.current,
-          screenStreamRef.current,
-        );
-        return;
-      }
 
-      if (hasVideoTrack || hasAudioTrack) {
-        send(createMediaRenegotiateMessage());
-      }
-    });
-    syncQueueRef.current = next.catch(() => {});
-    return next;
-  }, [isHost, ensureMediaCall, send]);
+        const hostId = hostPeerId(roomIdRef.current);
+        const existing = mediaCallsRef.current.get(hostId);
+        const hasVideoTrack = Boolean(
+          pickOutboundVideoTrack(outboundLocalStream, outboundScreenStream),
+        );
+        const hasAudioTrack = Boolean(
+          await resolveOutboundAudioTrack(
+            outboundLocalStream,
+            outboundScreenStream,
+          ),
+        );
+
+        // Check senders before syncOutboundTracks — addTrack alone does not
+        // renegotiate PeerJS SDP when the call was answered with no tracks.
+        if (existing) {
+          if (
+            needsMediaRenegotiation(existing, { hasVideoTrack, hasAudioTrack })
+          ) {
+            send(createMediaRenegotiateMessage());
+            return;
+          }
+          await syncOutboundTracks(
+            existing,
+            outboundLocalStream,
+            outboundScreenStream,
+          );
+          return;
+        }
+
+        if (hasVideoTrack || hasAudioTrack) {
+          send(createMediaRenegotiateMessage());
+        }
+      });
+      syncQueueRef.current = next.catch(() => {});
+      return next;
+    },
+    [isHost, ensureMediaCall, send],
+  );
 
   useEffect(() => {
     enqueueSync().catch((error) => {

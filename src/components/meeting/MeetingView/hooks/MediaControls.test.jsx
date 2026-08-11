@@ -549,7 +549,7 @@ describe("MediaControls Hook", () => {
     expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledWith({
       video: true,
       audio: {
-        suppressLocalAudioPlayback: true,
+        suppressLocalAudioPlayback: false,
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false,
@@ -583,7 +583,7 @@ describe("MediaControls Hook", () => {
     rerender({ ...props, screenStream: null });
 
     await waitFor(() => {
-      expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
+      expect(syncOutboundMedia).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -630,9 +630,9 @@ describe("MediaControls Hook", () => {
         participantId: "p1",
       }),
     );
-    // The initial local-media setup syncs once; ending capture itself waits
-    // for the parent screen-stream state to update before replacing tracks.
-    expect(syncOutboundMedia).toHaveBeenCalledTimes(1);
+    // The initial local-media setup syncs once; ending capture immediately
+    // replaces the outbound screen track before parent state catches up.
+    expect(syncOutboundMedia).toHaveBeenCalledTimes(2);
     expect(screenAudioTrack.stop).toHaveBeenCalledTimes(1);
   });
 

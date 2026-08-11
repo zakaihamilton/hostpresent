@@ -6,6 +6,18 @@ import {
 
 export { destroyOutboundAudioMixer, needsOutboundAudioMix };
 
+export async function prepareOutboundAudioMix(localStream, screenStream) {
+  if (!needsOutboundAudioMix(localStream, screenStream)) return;
+
+  const mixer = getOutboundAudioMixer();
+  try {
+    await mixer?.getMixedAudioTrack(localStream, screenStream);
+  } catch {
+    // syncOutboundTracks will fall back to the microphone track if the
+    // browser does not allow Web Audio to start for this capture session.
+  }
+}
+
 function getEnabledLiveVideoTrack(stream) {
   return (
     stream

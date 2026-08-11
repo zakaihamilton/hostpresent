@@ -24,7 +24,12 @@ export class OutboundAudioMixer {
 
   #ensureContext() {
     if (!this.#context || this.#context.state === "closed") {
-      this.#context = new AudioContext();
+      const AudioContextConstructor =
+        typeof window !== "undefined" &&
+        (window.AudioContext || window.webkitAudioContext);
+      if (!AudioContextConstructor) return null;
+
+      this.#context = new AudioContextConstructor();
       this.#destination = this.#context.createMediaStreamDestination();
     }
     return this.#context;
@@ -60,8 +65,15 @@ export class OutboundAudioMixer {
     }
 
     const context = this.#ensureContext();
+    if (!context) return micTrack;
     if (context.state === "suspended") {
-      await context.resume();
+      try {
+        await context.resume();
+      } catch {
+        // Keep the microphone attached if the browser blocks audio-context
+        // startup outside a user gesture. A later share/mute action can retry.
+        return micTrack;
+      }
     }
 
     this.#clearGraph();
