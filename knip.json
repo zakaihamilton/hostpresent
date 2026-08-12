@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "paths": {
+    "@/*": ["./src/*"]
+  },
+  "ignoreDependencies": [
+    "@ffmpeg/core",
+    "@ffmpeg/ffmpeg",
+    "@ffmpeg/util",
+    "jsdom"
+  ],
+  "entry": [
+    "src/app/**/page.{js,jsx}",
+    "src/app/**/route.{js,jsx}",
+    "src/app/**/layout.{js,jsx}",
+    "src/app/**/manifest.{js,jsx}",
+    "src/app/**/viewport.{js,jsx}",
+    "src/components/**/index.js",
+    "src/components/**/*.js",
+    "src/hooks/*.js",
+    "src/lib/**/*.js",
+    "src/test/helpers.js",
+    "public/sw.js",
+    "public/recording/ffmpeg/*.js"
+  ]
+}
