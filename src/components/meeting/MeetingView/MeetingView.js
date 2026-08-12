@@ -398,6 +398,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         localVideoAvailable: Boolean(screenStream) || !isVideoMuted,
         hostIsSpeaking,
         hostVideoAvailable: hostScreenSharing || !hostVideoMuted,
+        hostIsScreenSharing: isHost ? Boolean(screenStream) : hostScreenSharing,
       }),
     [
       focusedParticipantId,

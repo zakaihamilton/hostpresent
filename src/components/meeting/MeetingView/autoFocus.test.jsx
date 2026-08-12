@@ -9,6 +9,7 @@ describe("getAutoFocusTargetId", () => {
     localVideoAvailable: true,
     hostIsSpeaking: false,
     hostVideoAvailable: true,
+    hostIsScreenSharing: false,
   };
 
   it("does not auto-focus a speaking participant whose camera is off", () => {
@@ -54,5 +55,17 @@ describe("getAutoFocusTargetId", () => {
         ],
       }),
     ).toBe("participant-1");
+  });
+
+  it("keeps automatic focus on the host while the host is screen sharing", () => {
+    expect(
+      getAutoFocusTargetId({
+        ...defaults,
+        hostIsScreenSharing: true,
+        videoParticipants: [
+          { id: "participant-1", isSpeaking: true, isVideoMuted: false },
+        ],
+      }),
+    ).toBe("host");
   });
 });

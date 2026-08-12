@@ -6,8 +6,11 @@ export function getAutoFocusTargetId({
   localVideoAvailable,
   hostIsSpeaking,
   hostVideoAvailable,
+  hostIsScreenSharing,
 }) {
   if (focusedParticipantId !== "") return focusedParticipantId;
+
+  if (hostIsScreenSharing) return "host";
 
   const speaker = videoParticipants.find(
     (participant) =>
