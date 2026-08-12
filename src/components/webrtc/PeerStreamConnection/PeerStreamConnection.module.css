@@ -18,10 +18,8 @@
 }
 
 .spinner {
-  width: 2rem;
-  height: 2rem;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 2rem; height: 2rem;
+  border: 3px solid var(--border); border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -44,15 +42,9 @@
   width: 100%;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation: none;
-    border-top-color: var(--primary);
-  }
+  .spinner { animation: none; border-top-color: var(--primary); }
 }
+

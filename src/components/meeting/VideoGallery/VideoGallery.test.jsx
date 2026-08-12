@@ -15,24 +15,29 @@ jest.mock("@/components/meeting/VideoTile", () => ({
 }));
 
 describe("VideoGallery", () => {
-  it("renders participant tiles when visible", () => {
-    render(
+  const defaultParticipant = {
+    id: "p1",
+    name: "Alex",
+    avatarColor: "#000",
+    isAudioMuted: false,
+    isVideoMuted: false,
+  };
+
+  function renderGallery(props = {}) {
+    return render(
       <VideoGallery
         visible
         screenStream={null}
         localStream={createMediaStream()}
-        participants={[
-          {
-            id: "p1",
-            name: "Alex",
-            avatarColor: "#000",
-            isAudioMuted: false,
-            isVideoMuted: false,
-          },
-        ]}
+        participants={[defaultParticipant]}
         isAudioMuted={false}
+        {...props}
       />,
     );
+  }
+
+  it("renders participant tiles when visible", () => {
+    renderGallery();
 
     const tiles = screen.getAllByTestId("video-tile");
     expect(tiles).toHaveLength(2);
@@ -40,28 +45,13 @@ describe("VideoGallery", () => {
   });
 
   it("keeps streams mounted when gallery is hidden", () => {
-    render(
-      <VideoGallery
-        visible={false}
-        screenStream={null}
-        localStream={createMediaStream()}
-        participants={[
-          {
-            id: "p1",
-            name: "Alex",
-            avatarColor: "#000",
-            isAudioMuted: false,
-            isVideoMuted: false,
-          },
-        ]}
-        isAudioMuted={false}
-      />,
-    );
+    renderGallery({ visible: false });
 
     const tiles = screen.getAllByTestId("video-tile");
     expect(tiles).toHaveLength(2);
     expect(tiles[1]).toHaveTextContent("Alex");
   });
+
 
   it("mutes the local self tile so users do not hear their own microphone", () => {
     const selfStream = {

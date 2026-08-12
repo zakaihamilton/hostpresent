@@ -210,6 +210,17 @@ describe("ChatPanel", () => {
   });
 
   describe("recipient dropdown", () => {
+    async function openRecipientDropdown(user, participants = [{ id: "p1", name: "Alice" }]) {
+      renderChatPanel({ participants });
+      await user.click(screen.getByLabelText("Select message recipient"));
+    }
+
+    async function selectAliceRecipient(user) {
+      const options = screen.getAllByRole("option");
+      const aliceOption = options.find((o) => o.textContent.includes("Alice"));
+      await user.click(aliceOption);
+    }
+
     it("shows 'Everyone' by default", () => {
       renderChatPanel();
       expect(screen.getByText("Everyone")).toBeInTheDocument();
@@ -221,9 +232,7 @@ describe("ChatPanel", () => {
         { id: "p1", name: "Alice" },
         { id: "p2", name: "Bob" },
       ];
-      renderChatPanel({ participants });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
+      await openRecipientDropdown(user, participants);
 
       const listbox = screen.getByRole("listbox");
       expect(listbox).toBeInTheDocument();
@@ -237,9 +246,7 @@ describe("ChatPanel", () => {
         { id: "p1", name: "Alice" },
         { id: "p2", name: "Bob" },
       ];
-      renderChatPanel({ participants });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
+      await openRecipientDropdown(user, participants);
 
       const options = screen.getAllByRole("option");
       expect(options).toHaveLength(3);
@@ -248,13 +255,8 @@ describe("ChatPanel", () => {
 
     it("selects a participant and shows their name on trigger", async () => {
       const user = userEvent.setup();
-      const participants = [{ id: "p1", name: "Alice" }];
-      renderChatPanel({ participants });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
-      const options = screen.getAllByRole("option");
-      const aliceOption = options.find((o) => o.textContent.includes("Alice"));
-      await user.click(aliceOption);
+      await openRecipientDropdown(user);
+      await selectAliceRecipient(user);
 
       // Trigger should now show the selected name
       const trigger = screen.getByLabelText("Select message recipient");
@@ -263,9 +265,7 @@ describe("ChatPanel", () => {
 
     it("shows 'Everyone' option as selected by default", async () => {
       const user = userEvent.setup();
-      renderChatPanel({ participants: [{ id: "p1", name: "Alice" }] });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
+      await openRecipientDropdown(user);
 
       const listbox = screen.getByRole("listbox");
       const everyoneOption = within(listbox)
@@ -276,13 +276,8 @@ describe("ChatPanel", () => {
 
     it("shows selected state on the chosen participant", async () => {
       const user = userEvent.setup();
-      const participants = [{ id: "p1", name: "Alice" }];
-      renderChatPanel({ participants });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
-      const options = screen.getAllByRole("option");
-      const aliceOption = options.find((o) => o.textContent.includes("Alice"));
-      await user.click(aliceOption);
+      await openRecipientDropdown(user);
+      await selectAliceRecipient(user);
 
       // Re-open to check Alice is now selected
       await user.click(screen.getByLabelText("Select message recipient"));
@@ -297,26 +292,16 @@ describe("ChatPanel", () => {
 
     it("shows '(private)' hint when a recipient is selected", async () => {
       const user = userEvent.setup();
-      const participants = [{ id: "p1", name: "Alice" }];
-      renderChatPanel({ participants });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
-      const options = screen.getAllByRole("option");
-      const aliceOption = options.find((o) => o.textContent.includes("Alice"));
-      await user.click(aliceOption);
+      await openRecipientDropdown(user);
+      await selectAliceRecipient(user);
 
       expect(screen.getByText("(private)")).toBeInTheDocument();
     });
 
     it("updates placeholder for private message", async () => {
       const user = userEvent.setup();
-      const participants = [{ id: "p1", name: "Alice" }];
-      renderChatPanel({ participants });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
-      const options = screen.getAllByRole("option");
-      const aliceOption = options.find((o) => o.textContent.includes("Alice"));
-      await user.click(aliceOption);
+      await openRecipientDropdown(user);
+      await selectAliceRecipient(user);
 
       expect(
         screen.getByPlaceholderText("Message Alice\u2026"),
@@ -325,15 +310,14 @@ describe("ChatPanel", () => {
 
     it("closes dropdown when clicking outside", async () => {
       const user = userEvent.setup();
-      renderChatPanel({ participants: [{ id: "p1", name: "Alice" }] });
-
-      await user.click(screen.getByLabelText("Select message recipient"));
+      await openRecipientDropdown(user);
       const listbox = screen.getByRole("listbox");
       expect(listbox).toBeInTheDocument();
 
       await user.click(document.body);
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     });
+
 
     it("closes dropdown on Escape key", async () => {
       const user = userEvent.setup();

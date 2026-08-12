@@ -80,20 +80,24 @@ describe("Header", () => {
     expect(onShowInviteLink).toHaveBeenCalledTimes(1);
   });
 
-  it("enters edit mode and allows renaming when onSessionTitleChange is provided", async () => {
-    const user = userEvent.setup();
-    const onSessionTitleChange = jest.fn();
-
-    render(
+  function renderEditableHeader(sessionTitle = "Initial Title", onSessionTitleChange = jest.fn()) {
+    return render(
       <Header
         meetingDurationSeconds={0}
         isRecording={false}
         isRecordingPaused={false}
         recordingDurationSeconds={0}
-        sessionTitle="Initial Title"
+        sessionTitle={sessionTitle}
         onSessionTitleChange={onSessionTitleChange}
       />,
     );
+  }
+
+  it("enters edit mode and allows renaming when onSessionTitleChange is provided", async () => {
+    const user = userEvent.setup();
+    const onSessionTitleChange = jest.fn();
+
+    renderEditableHeader("Initial Title", onSessionTitleChange);
 
     // Initial title rendering as a button
     const titleBtn = screen.getByRole("button", { name: "Initial Title" });
@@ -118,16 +122,7 @@ describe("Header", () => {
     const user = userEvent.setup();
     const onSessionTitleChange = jest.fn();
 
-    render(
-      <Header
-        meetingDurationSeconds={0}
-        isRecording={false}
-        isRecordingPaused={false}
-        recordingDurationSeconds={0}
-        sessionTitle="Initial Title"
-        onSessionTitleChange={onSessionTitleChange}
-      />,
-    );
+    renderEditableHeader("Initial Title", onSessionTitleChange);
 
     const titleBtn = screen.getByRole("button", { name: "Initial Title" });
     await user.click(titleBtn);
@@ -188,16 +183,7 @@ describe("Header", () => {
     const user = userEvent.setup();
     const onSessionTitleChange = jest.fn();
 
-    render(
-      <Header
-        meetingDurationSeconds={0}
-        isRecording={false}
-        isRecordingPaused={false}
-        recordingDurationSeconds={0}
-        sessionTitle="Initial Title"
-        onSessionTitleChange={onSessionTitleChange}
-      />,
-    );
+    renderEditableHeader("Initial Title", onSessionTitleChange);
 
     const titleBtn = screen.getByRole("button", { name: "Initial Title" });
     await user.click(titleBtn);
@@ -208,4 +194,5 @@ describe("Header", () => {
 
     expect(onSessionTitleChange).toHaveBeenCalledWith("");
   });
+
 });

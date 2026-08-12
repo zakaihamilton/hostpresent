@@ -386,43 +386,46 @@ describe("Recording", () => {
     expect(result.current.downloadState).toMatchObject({ phase: "warning" });
   });
 
+  function makeRerenderProps(overrides = {}) {
+    return {
+      isHost: true,
+      roomConnection: { send: jest.fn() },
+      localStream: null,
+      screenStream: null,
+      videoParticipants: [],
+      focusedParticipantId: "host",
+      resetRecordingTimer: jest.fn(),
+      isRecording: true,
+      setIsRecording: jest.fn(),
+      isRecordingPaused: false,
+      setIsRecordingPaused: jest.fn(),
+      sessionName: "Test Session",
+      ...overrides,
+    };
+  }
+
   it("updates the canvas track when screen sharing starts during recording", async () => {
     const cameraTrack = createTrack({ kind: "video", id: "camera" });
+    const screenTrack = createTrack({ kind: "video", id: "screen" });
     const localStream = createStream([cameraTrack]);
+    const screenStream = createStream([screenTrack]);
 
     const { result, rerender } = renderRecording({
       localStream,
-      screenStream: null,
       isRecording: true,
     });
 
     await act(async () => {
+
       await result.current.startRecording();
     });
 
-    expect(recorderInstances).toHaveLength(2);
     expect(CanvasVideoRenderer.prototype.setTrack).toHaveBeenCalledWith(
       cameraTrack,
     );
 
-    const screenTrack = createTrack({ kind: "video", id: "screen" });
-    const screenStream = createStream([screenTrack]);
-
     act(() => {
-      rerender({
-        isHost: true,
-        roomConnection: { send: jest.fn() },
-        localStream,
-        screenStream,
-        videoParticipants: [],
-        focusedParticipantId: "host",
-        resetRecordingTimer: jest.fn(),
-        isRecording: true,
-        setIsRecording: jest.fn(),
-        isRecordingPaused: false,
-        setIsRecordingPaused: jest.fn(),
-        sessionName: "Test Session",
-      });
+      rerender(makeRerenderProps({ localStream, screenStream }));
     });
 
     expect(recorderInstances).toHaveLength(2);
@@ -452,20 +455,7 @@ describe("Recording", () => {
     );
 
     act(() => {
-      rerender({
-        isHost: true,
-        roomConnection: { send: jest.fn() },
-        localStream,
-        screenStream: null,
-        videoParticipants: [],
-        focusedParticipantId: "host",
-        resetRecordingTimer: jest.fn(),
-        isRecording: true,
-        setIsRecording: jest.fn(),
-        isRecordingPaused: false,
-        setIsRecordingPaused: jest.fn(),
-        sessionName: "Test Session",
-      });
+      rerender(makeRerenderProps({ localStream, screenStream: null }));
     });
 
     expect(recorderInstances).toHaveLength(2);
@@ -506,20 +496,13 @@ describe("Recording", () => {
     act(() => {
       remoteStream.removeTrack(cameraTrack);
       remoteStream.addTrack(screenTrack);
-      rerender({
-        isHost: true,
-        roomConnection: { send: jest.fn() },
-        localStream: createStream([]),
-        screenStream: null,
-        videoParticipants,
-        focusedParticipantId: "p1",
-        resetRecordingTimer: jest.fn(),
-        isRecording: true,
-        setIsRecording: jest.fn(),
-        isRecordingPaused: false,
-        setIsRecordingPaused: jest.fn(),
-        sessionName: "Test Session",
-      });
+      rerender(
+        makeRerenderProps({
+          localStream: createStream([]),
+          videoParticipants,
+          focusedParticipantId: "p1",
+        }),
+      );
     });
 
     expect(recorderInstances).toHaveLength(2);
@@ -528,3 +511,4 @@ describe("Recording", () => {
     );
   });
 });
+

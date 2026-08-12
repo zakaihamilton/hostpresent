@@ -51,24 +51,9 @@ html[data-theme="dark"] {
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]):not([data-theme="dark"]) {
     color-scheme: dark;
-    --bg-main: #0b0f17;
-    --bg-panel: #121824;
-    --bg-hover: rgba(255, 255, 255, 0.05);
-    --btn-hover: rgba(255, 255, 255, 0.07);
-    --border: rgba(255, 255, 255, 0.12);
-    --primary: #6366f1;
-    --primary-hover: #4f46e5;
-    --primary-gradient: #6366f1;
-    --text-main: #f9fafb;
-    --text-muted: #a6b9cd;
-    --tooltip-bg: rgba(255, 255, 255, 0.98);
-    --tooltip-text: #07070a;
-    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6);
-    --glow-color-1: rgba(99, 102, 241, 0.25);
-    --glow-color-2: rgba(59, 130, 246, 0.2);
   }
 }
+
 
 * {
   box-sizing: border-box;

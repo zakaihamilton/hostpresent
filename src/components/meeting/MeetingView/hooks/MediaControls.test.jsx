@@ -81,8 +81,8 @@ describe("MediaControls Hook", () => {
     });
   });
 
-  it("loads default media states (unmuted)", () => {
-    const { result } = renderHook(() =>
+  function renderMediaControls(props = {}) {
+    return renderHook(() =>
       MediaControls({
         isHost: false,
         roomConnection: { send: jest.fn() },
@@ -91,25 +91,21 @@ describe("MediaControls Hook", () => {
         setLocalStream: jest.fn(),
         screenStream: null,
         setScreenStream: jest.fn(),
+        ...props,
       }),
     );
+  }
+
+  it("loads default media states (unmuted)", () => {
+    const { result } = renderMediaControls();
 
     expect(result.current.isAudioMuted).toBe(false);
     expect(result.current.isVideoMuted).toBe(false);
   });
 
   it("requests microphone capture with voice isolation constraints", async () => {
-    renderHook(() =>
-      MediaControls({
-        isHost: false,
-        roomConnection: { send: jest.fn() },
-        streamListenerCleanupsRef: { current: [] },
-        localStream: null,
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
-    );
+    renderMediaControls();
+
 
     await waitFor(() => {
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
@@ -246,21 +242,12 @@ describe("MediaControls Hook", () => {
     window.localStorage.setItem("hostpresent.audioMuted", "true");
     window.localStorage.setItem("hostpresent.videoMuted", "true");
 
-    const { result } = renderHook(() =>
-      MediaControls({
-        isHost: false,
-        roomConnection: { send: jest.fn() },
-        streamListenerCleanupsRef: { current: [] },
-        localStream: null,
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
-    );
+    const { result } = renderMediaControls();
 
     expect(result.current.isAudioMuted).toBe(true);
     expect(result.current.isVideoMuted).toBe(true);
   });
+
 
   it("saves media states to localStorage on toggle", () => {
     const sendMock = jest.fn();

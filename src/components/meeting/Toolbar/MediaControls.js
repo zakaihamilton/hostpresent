@@ -17,42 +17,12 @@ import {
   VideoOff,
 } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useMicrophoneTest } from "./useMicrophoneTest";
+import { useToolbarMenuPosition } from "./useToolbarMenu";
 import styles from "./MediaControls.module.css";
-
-const MENU_GAP = 8;
-const VIEWPORT_PADDING = 8;
-const MIC_TEST_DURATION_MS = 2200;
-const MIC_TEST_FRAME_MS = 120;
-const MIC_SIGNAL_THRESHOLD = 0.04;
 
 function btnClass(...classes) {
   return [styles.btn, ...classes.filter(Boolean)].join(" ");
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function computeMenuPosition(anchorRect, menuRect) {
-  const width = menuRect.width;
-  let left = anchorRect.right - width;
-  left = clamp(
-    left,
-    VIEWPORT_PADDING,
-    window.innerWidth - width - VIEWPORT_PADDING,
-  );
-
-  let top = anchorRect.top - MENU_GAP - menuRect.height;
-  if (top < VIEWPORT_PADDING) {
-    top = anchorRect.bottom + MENU_GAP;
-  }
-  top = clamp(
-    top,
-    VIEWPORT_PADDING,
-    window.innerHeight - menuRect.height - VIEWPORT_PADDING,
-  );
-
-  return { top, left };
 }
 
 export function MediaControls({
@@ -71,58 +41,23 @@ export function MediaControls({
   onCameraChange,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
-  const [menuPositioned, setMenuPositioned] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [micTestState, setMicTestState] = useState("idle");
-  const [micTestLevel, setMicTestLevel] = useState(0);
   const clusterRef = useRef(null);
   const menuAnchorRef = useRef(null);
   const menuRef = useRef(null);
-  const micTestCleanupRef = useRef(null);
   const menuId = useId();
   const headingId = `${menuId}-heading`;
   const microphoneSectionId = `${menuId}-microphone`;
   const outputSectionId = `${menuId}-output`;
   const videoSectionId = `${menuId}-video`;
 
-  const updateMenuPosition = useCallback(() => {
-    const anchor = menuAnchorRef.current;
-    const menu = menuRef.current;
-    if (!anchor || !menu) return;
+  const { micTestState, micTestLevel, micTestStatus, handleTestMicrophone, stopMicTest } =
+    useMicrophoneTest(selectedMicrophone);
 
-    const anchorRect = anchor.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
-    const nextCoords = computeMenuPosition(anchorRect, menuRect);
-    setMenuCoords((prev) =>
-      prev.top === nextCoords.top && prev.left === nextCoords.left
-        ? prev
-        : nextCoords,
-    );
-  }, []);
-
-  useLayoutEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!menuOpen) {
-      setMenuPositioned(false);
-      return;
-    }
-
-    updateMenuPosition();
-    setMenuPositioned(true);
-
-    const handleReposition = () => updateMenuPosition();
-    window.addEventListener("resize", handleReposition);
-    window.addEventListener("scroll", handleReposition, true);
-
-    return () => {
-      window.removeEventListener("resize", handleReposition);
-      window.removeEventListener("scroll", handleReposition, true);
-    };
-  }, [menuOpen, updateMenuPosition]);
+  const { menuCoords, menuPositioned, mounted } = useToolbarMenuPosition({
+    menuOpen,
+    menuAnchorRef,
+    menuRef,
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -152,91 +87,6 @@ export function MediaControls({
     };
   }, [menuOpen]);
 
-  useEffect(
-    () => () => {
-      micTestCleanupRef.current?.();
-    },
-    [],
-  );
-
-  const stopMicTest = () => {
-    micTestCleanupRef.current?.();
-    micTestCleanupRef.current = null;
-  };
-
-  const handleTestMicrophone = async () => {
-    stopMicTest();
-    setMicTestState("testing");
-    setMicTestLevel(0);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: selectedMicrophone
-          ? { deviceId: { exact: selectedMicrophone } }
-          : true,
-        video: false,
-      });
-      const AudioContextConstructor =
-        window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextConstructor) {
-        throw new Error("AudioContext is not available");
-      }
-
-      const context = new AudioContextConstructor();
-      const analyser = context.createAnalyser();
-      analyser.fftSize = 512;
-      const source = context.createMediaStreamSource(stream);
-      source.connect(analyser);
-      const samples = new Uint8Array(analyser.fftSize);
-      let peakLevel = 0;
-
-      const sample = () => {
-        analyser.getByteTimeDomainData(samples);
-        let sum = 0;
-        for (const value of samples) {
-          const normalized = (value - 128) / 128;
-          sum += normalized * normalized;
-        }
-        const level = Math.min(1, Math.sqrt(sum / samples.length) * 3);
-        peakLevel = Math.max(peakLevel, level);
-        setMicTestLevel(level);
-      };
-
-      const intervalId = window.setInterval(sample, MIC_TEST_FRAME_MS);
-      const timeoutId = window.setTimeout(() => {
-        stopMicTest();
-        setMicTestLevel(peakLevel);
-        setMicTestState(
-          peakLevel >= MIC_SIGNAL_THRESHOLD ? "detected" : "quiet",
-        );
-      }, MIC_TEST_DURATION_MS);
-
-      micTestCleanupRef.current = () => {
-        window.clearInterval(intervalId);
-        window.clearTimeout(timeoutId);
-        source.disconnect();
-        void context.close?.();
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      };
-    } catch {
-      stopMicTest();
-      setMicTestLevel(0);
-      setMicTestState("error");
-    }
-  };
-
-  const micTestStatus =
-    micTestState === "testing"
-      ? "Testing..."
-      : micTestState === "detected"
-        ? "Microphone is working"
-        : micTestState === "quiet"
-          ? "No input detected"
-          : micTestState === "error"
-            ? "Could not test microphone"
-            : "Speak after starting the test";
 
   return (
     <div className={styles.cluster}>

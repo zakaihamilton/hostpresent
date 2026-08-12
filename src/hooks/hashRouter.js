@@ -110,13 +110,13 @@ function parseHash(hash) {
     };
   }
 
-  if (first === "j") {
-    if (second && isValidJoinCode(second)) {
+  function resolveParticipantRoute(view, secondCode) {
+    if (secondCode && isValidJoinCode(secondCode)) {
       return {
-        view: APP_VIEW.JOIN,
+        view,
         role: APP_ROLE.PARTICIPANT,
         token: null,
-        joinCode: normalizeJoinCode(second),
+        joinCode: normalizeJoinCode(secondCode),
       };
     }
     return {
@@ -125,6 +125,10 @@ function parseHash(hash) {
       token: null,
       joinCode: null,
     };
+  }
+
+  if (first === "j") {
+    return resolveParticipantRoute(APP_VIEW.JOIN, second);
   }
 
   if (first === "mh") {
@@ -153,21 +157,9 @@ function parseHash(hash) {
   }
 
   if (first === "mj") {
-    if (second && isValidJoinCode(second)) {
-      return {
-        view: APP_VIEW.MEETING,
-        role: APP_ROLE.PARTICIPANT,
-        token: null,
-        joinCode: normalizeJoinCode(second),
-      };
-    }
-    return {
-      view: APP_VIEW.WELCOME,
-      role: APP_ROLE.PARTICIPANT,
-      token: null,
-      joinCode: null,
-    };
+    return resolveParticipantRoute(APP_VIEW.MEETING, second);
   }
+
 
   if (first === "welcome" || first === "meeting") {
     return parseLegacyRoute(parts);

@@ -196,12 +196,12 @@ function openDB() {
 }
 
 async function storeDatabaseValue(key, value) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+  const database = await openDB();
+  return new Promise((res, rej) => {
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    transaction.objectStore(STORE_NAME).put(value, key);
+    transaction.oncomplete = () => res();
+    transaction.onerror = () => rej(transaction.error);
   });
 }
 
@@ -228,16 +228,17 @@ async function removeCancelledExportOutputs(sessionId) {
 }
 
 async function readDatabaseValue(key) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const request = db
+  const database = await openDB();
+  return new Promise((res, rej) => {
+    const req = database
       .transaction(STORE_NAME, "readonly")
       .objectStore(STORE_NAME)
       .get(key);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
   });
 }
+
 
 function fragmentKey(stream, index) {
   return `chunk:${stream}:${String(index).padStart(9, "0")}`;
@@ -482,16 +483,22 @@ async function appendEncodedPackets({ source, stream, muxer, timeline }) {
   }
 }
 
-async function getEncodedTrackConfig({ source, stream }) {
+async function openInputAndGetTrack(source, stream) {
   const input = new Input({ formats: [MP4], source });
+  if (!(await input.canRead())) {
+    input.dispose();
+    throw new Error(`Final ${stream} track is unreadable.`);
+  }
+  const track =
+    stream === "video"
+      ? await input.getPrimaryVideoTrack()
+      : await input.getPrimaryAudioTrack();
+  return { input, track };
+}
+
+async function getEncodedTrackConfig({ source, stream }) {
+  const { input, track } = await openInputAndGetTrack(source, stream);
   try {
-    if (!(await input.canRead())) {
-      throw new Error(`Final ${stream} track is unreadable.`);
-    }
-    const track =
-      stream === "video"
-        ? await input.getPrimaryVideoTrack()
-        : await input.getPrimaryAudioTrack();
     const expectedCodec = stream === "video" ? "avc" : "aac";
     if (!track || (await track.getCodec()) !== expectedCodec) {
       throw new Error(`Final ${stream} track is not ${expectedCodec}.`);
@@ -507,16 +514,10 @@ async function getEncodedTrackConfig({ source, stream }) {
 }
 
 async function appendFinalTrackToRecording({ source, stream, muxer }) {
-  const input = new Input({ formats: [MP4], source });
+  const { input, track } = await openInputAndGetTrack(source, stream);
   try {
-    if (!(await input.canRead())) {
-      throw new Error(`Final ${stream} track is unreadable.`);
-    }
-    const track =
-      stream === "video"
-        ? await input.getPrimaryVideoTrack()
-        : await input.getPrimaryAudioTrack();
     if (!track) throw new Error(`Final ${stream} track is missing.`);
+
     const sink = new EncodedPacketSink(track);
     let timeline = 0;
     for await (const packet of sink.packets()) {
@@ -564,15 +565,24 @@ async function muxFinalRecording({ videoOutput, audioOutput, outputHandle }) {
   }
 }
 
-async function exportPersistedNativeTrack({ manifest, stream, outputHandle }) {
-  const track = manifest.tracks[stream];
-  const writable = await outputHandle.createWritable();
-  const muxer = await createMp4SampleMuxer({ writable, stream });
+function getManifestSegments(manifest, stream, totalChunks) {
   const startKey = stream === "video" ? "videoStartIndex" : "audioStartIndex";
   const endKey = stream === "video" ? "videoEndIndex" : "audioEndIndex";
   const segments = manifest.segments?.length
     ? manifest.segments
-    : [{ id: 0, [startKey]: 0, [endKey]: track.chunkCount }];
+    : [{ id: 0, [startKey]: 0, [endKey]: totalChunks }];
+  return { startKey, endKey, segments };
+}
+
+async function exportPersistedNativeTrack({ manifest, stream, outputHandle }) {
+  const track = manifest.tracks[stream];
+  const writable = await outputHandle.createWritable();
+  const muxer = await createMp4SampleMuxer({ writable, stream });
+  const { startKey, endKey, segments } = getManifestSegments(
+    manifest,
+    stream,
+    track.chunkCount,
+  );
   let timeline = 0;
   let samples = 0;
   try {
@@ -615,11 +625,12 @@ async function exportPersistedTrack({ manifest, stream, outputHandle }) {
   let packets = 0;
   let muxer = null;
   try {
-    const startKey = stream === "video" ? "videoStartIndex" : "audioStartIndex";
-    const endKey = stream === "video" ? "videoEndIndex" : "audioEndIndex";
-    const segments = manifest.segments?.length
-      ? manifest.segments
-      : [{ id: 0, [startKey]: 0, [endKey]: track.chunkCount }];
+    const { startKey, endKey, segments } = getManifestSegments(
+      manifest,
+      stream,
+      track.chunkCount,
+    );
+
     for (let index = 0; index < segments.length; index += 1) {
       const segment = segments[index];
       const start = segment[startKey] ?? 0;

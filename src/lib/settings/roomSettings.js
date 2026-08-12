@@ -1,63 +1,40 @@
 import { normalizeJoinCode } from "@/lib/room/joinCodeFormat";
-import { dedupeRoomsByJoinCode } from "@/lib/settings/recentRoomDedup";
+import { createRecentRoomStore } from "@/lib/settings/recentRoomStore";
 
 // Version the storage key so tokens signed with the retired public secret are
 // never reused after the stateless credential cutover.
 const STORAGE_KEY = "hostpresent.rooms.v2";
-const MAX_RECENT_ROOMS = 10;
 
-const EMPTY_SETTINGS = {
-  activeHostToken: null,
-  rooms: [],
-};
+const store = createRecentRoomStore({
+  storageKey: STORAGE_KEY,
+  activeTokenKey: "activeHostToken",
+  maxRooms: 10,
+});
 
 function readRaw() {
-  if (typeof window === "undefined") return EMPTY_SETTINGS;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY_SETTINGS;
-    const parsed = JSON.parse(raw);
-    return {
-      activeHostToken: parsed.activeHostToken ?? null,
-      rooms: Array.isArray(parsed.rooms) ? parsed.rooms : [],
-    };
-  } catch {
-    return EMPTY_SETTINGS;
-  }
+  return store.readRaw();
 }
 
 function writeRaw(settings) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch {
-    // ignore storage failures
-  }
-}
-
-function sortByRecent(a, b) {
-  const aTime = a.lastUsedAt ?? a.createdAt ?? 0;
-  const bTime = b.lastUsedAt ?? b.createdAt ?? 0;
-  return bTime - aTime;
+  return store.writeRaw(settings);
 }
 
 function getRecentTime(room) {
   return room.lastUsedAt ?? room.createdAt ?? 0;
 }
 
+function sortByRecent(a, b) {
+  return getRecentTime(b) - getRecentTime(a);
+}
+
 function trimRecentRooms(rooms) {
-  let nextRooms = dedupeRoomsByJoinCode(rooms, getRecentTime).sort(
-    sortByRecent,
-  );
-  if (nextRooms.length > MAX_RECENT_ROOMS) {
-    nextRooms = nextRooms.slice(0, MAX_RECENT_ROOMS);
-  }
-  return nextRooms;
+  return store.trimRecentRooms(rooms, getRecentTime);
 }
 
 export function loadRoomSettings() {
   return readRaw();
 }
+
 
 export function listHostRooms() {
   return trimRecentRooms(readRaw().rooms);

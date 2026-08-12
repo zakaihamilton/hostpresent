@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom";
+import { createMediaStream } from "./helpers";
 
 process.env.ROOM_TOKEN_SECRET = "test-room-token-secret";
+
 
 class ResizeObserverMock {
   observe() {}
@@ -46,23 +48,11 @@ Element.prototype.scrollIntoView = () => {};
 Object.defineProperty(global.navigator, "mediaDevices", {
   configurable: true,
   value: {
-    getUserMedia: jest.fn().mockResolvedValue({
-      id: "test-stream",
-      active: true,
-      getTracks: () => [],
-      getAudioTracks: () => [],
-      getVideoTracks: () => [],
-      addTrack: () => {},
-      removeTrack: () => {},
-    }),
-    getDisplayMedia: jest.fn().mockResolvedValue({
+    getUserMedia: jest.fn().mockImplementation(async () => createMediaStream()),
+    getDisplayMedia: jest.fn().mockImplementation(async () => ({
+      ...createMediaStream(),
       id: "screen-stream",
-      active: true,
-      getTracks: () => [],
-      getAudioTracks: () => [],
-      getVideoTracks: () => [],
-      addTrack: () => {},
-      removeTrack: () => {},
-    }),
+    })),
   },
 });
+

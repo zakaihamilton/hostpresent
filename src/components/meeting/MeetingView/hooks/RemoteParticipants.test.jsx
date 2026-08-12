@@ -11,15 +11,11 @@ function createRoomConnection() {
     hostPresent: true,
     send: jest.fn(),
     sendToParticipant: jest.fn(),
-    subscribe: jest.fn((callback) => {
-      subscribers.push(callback);
-      return () => {};
-    }),
-    emit(message) {
-      for (const callback of subscribers) callback(message);
-    },
+    subscribe: jest.fn((cb) => { subscribers.push(cb); return () => {}; }),
+    emit(message) { subscribers.forEach((cb) => cb(message)); },
   };
 }
+
 
 function renderRemoteParticipants({
   isHost = true,

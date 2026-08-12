@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { toBase64Url, fromBase64Url } from "@/lib/utils/base64url";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
 import { ROOM_ROLE } from "./roles.js";
 
@@ -17,18 +18,6 @@ export function isRoomSigningEncrypted() {
   return Boolean(getSigningSecret());
 }
 
-function toBase64Url(value) {
-  return Buffer.from(value)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
-function fromBase64Url(value) {
-  const padded = value + "=".repeat((4 - (value.length % 4)) % 4);
-  return Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64");
-}
 
 function signPayload(payload) {
   const secret = getSigningSecret();

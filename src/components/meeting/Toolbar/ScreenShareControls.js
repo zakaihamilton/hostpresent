@@ -11,40 +11,14 @@ import {
 import { createPortal } from "react-dom";
 import { ChevronDown, ScreenShare } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useToolbarMenuPosition } from "./useToolbarMenu";
 import styles from "./ScreenShareControls.module.css";
 
-const MENU_GAP = 8;
-const VIEWPORT_PADDING = 8;
-
 function btnClass(...classes) {
+
   return [styles.btn, ...classes.filter(Boolean)].join(" ");
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function computeMenuPosition(anchorRect, menuRect) {
-  const width = menuRect.width;
-  let left = anchorRect.right - width;
-  left = clamp(
-    left,
-    VIEWPORT_PADDING,
-    window.innerWidth - width - VIEWPORT_PADDING,
-  );
-
-  let top = anchorRect.top - MENU_GAP - menuRect.height;
-  if (top < VIEWPORT_PADDING) {
-    top = anchorRect.bottom + MENU_GAP;
-  }
-  top = clamp(
-    top,
-    VIEWPORT_PADDING,
-    window.innerHeight - menuRect.height - VIEWPORT_PADDING,
-  );
-
-  return { top, left };
-}
 
 export function ScreenShareControls({
   screenStream,
@@ -54,9 +28,6 @@ export function ScreenShareControls({
   onShareScreenAudioChange,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
-  const [menuPositioned, setMenuPositioned] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const clusterRef = useRef(null);
   const menuAnchorRef = useRef(null);
   const menuTriggerRef = useRef(null);
@@ -72,38 +43,12 @@ export function ScreenShareControls({
     }
   }, []);
 
-  const updateMenuPosition = useCallback(() => {
-    const anchor = menuAnchorRef.current;
-    const menu = menuRef.current;
-    if (!anchor || !menu) return;
+  const { menuCoords, menuPositioned, mounted } = useToolbarMenuPosition({
+    menuOpen,
+    menuAnchorRef,
+    menuRef,
+  });
 
-    const anchorRect = anchor.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
-    setMenuCoords(computeMenuPosition(anchorRect, menuRect));
-  }, []);
-
-  useLayoutEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!menuOpen) {
-      setMenuPositioned(false);
-      return;
-    }
-
-    updateMenuPosition();
-    setMenuPositioned(true);
-
-    const handleReposition = () => updateMenuPosition();
-    window.addEventListener("resize", handleReposition);
-    window.addEventListener("scroll", handleReposition, true);
-
-    return () => {
-      window.removeEventListener("resize", handleReposition);
-      window.removeEventListener("scroll", handleReposition, true);
-    };
-  }, [menuOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!menuOpen) return;

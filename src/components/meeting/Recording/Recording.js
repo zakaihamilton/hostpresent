@@ -41,6 +41,26 @@ export { getRecordingMediaSignature } from "./media/recordingMedia";
 const MIN_RECORDING_STORAGE_BYTES = 128 * 1024 * 1024;
 const LIVE_CAPTURE_STOP_TIMEOUT_MS = 15_000;
 
+function collectLiveAudioTracks(localStream, screenStream, videoParticipants = []) {
+  const micTrack = localStream?.getAudioTracks().find((t) => t.readyState === "live");
+  const screenAudio = screenStream?.getAudioTracks().find((t) => t.readyState === "live");
+  const remoteAudioTracks = (videoParticipants || [])
+    .map((p) => p.stream?.getAudioTracks().find((t) => t.readyState === "live"))
+    .filter(Boolean);
+  return [micTrack, screenAudio, ...remoteAudioTracks].filter(Boolean);
+}
+
+function persistFragment(stream, index, blob, sessionRef, monitorFn, stopRef) {
+  saveRecordingFragment({ stream, index, blob })
+    .then((saved) => {
+      sessionRef.current = saved;
+      return getRecordingStorageEstimate();
+    })
+    .then(monitorFn)
+    .catch(() => stopRef.current?.());
+}
+
+
 export function Recording({
   isHost,
   roomConnection,
@@ -173,22 +193,14 @@ export function Recording({
     });
     canvasRendererRef.current.setTrack(videoTrack);
 
-    const micTrack = localStreamRef.current
-      ?.getAudioTracks()
-      .find((t) => t.readyState === "live");
-    const screenAudio = screenStreamRef.current
-      ?.getAudioTracks()
-      .find((t) => t.readyState === "live");
-    const remoteAudioTracks = videoParticipantsRef.current
-      .map((p) =>
-        p.stream?.getAudioTracks().find((t) => t.readyState === "live"),
-      )
-      .filter(Boolean);
 
-    const allAudioTracks = [micTrack, screenAudio, ...remoteAudioTracks].filter(
-      Boolean,
+    const allAudioTracks = collectLiveAudioTracks(
+      localStreamRef.current,
+      screenStreamRef.current,
+      videoParticipantsRef.current,
     );
     audioMixerRef.current.updateTracks(allAudioTracks);
+
 
     const recVideoTrack = canvasRendererRef.current
       .getStream()
@@ -358,19 +370,15 @@ export function Recording({
         new MediaStream([recVideoTrack, recAudioTrack].filter(Boolean)),
         { mimeType: recordingFormatsRef.current.recoveryVideo.mimeType },
       );
+
+
       mediaRecorderRef.current = mirrorRecorder;
       mirrorRecorder.ondataavailable = (event) => {
         if (event.data?.size <= 0) return;
         const index = chunkIndexRef.current;
         chunkIndexRef.current = index + 1;
         videoChunkCountRef.current = index + 1;
-        saveRecordingFragment({ stream: "video", index, blob: event.data })
-          .then((saved) => {
-            recordingSessionRef.current = saved;
-            return getRecordingStorageEstimate();
-          })
-          .then(monitorStorageEstimate)
-          .catch(() => stopForStorageRef.current?.());
+        persistFragment("video", index, event.data, recordingSessionRef, monitorStorageEstimate, stopForStorageRef);
       };
       mirrorRecorder.start(5000);
 
@@ -384,13 +392,7 @@ export function Recording({
           if (event.data?.size <= 0) return;
           const index = audioChunkCountRef.current;
           audioChunkCountRef.current = index + 1;
-          saveRecordingFragment({ stream: "audio", index, blob: event.data })
-            .then((saved) => {
-              recordingSessionRef.current = saved;
-              return getRecordingStorageEstimate();
-            })
-            .then(monitorStorageEstimate)
-            .catch(() => stopForStorageRef.current?.());
+          persistFragment("audio", index, event.data, recordingSessionRef, monitorStorageEstimate, stopForStorageRef);
         };
         mirrorAudioRecorder.start(5000);
       }
@@ -415,13 +417,7 @@ export function Recording({
         const idx = chunkIndexRef.current;
         chunkIndexRef.current = idx + 1;
         videoChunkCountRef.current = idx + 1;
-        saveRecordingFragment({ stream: "video", index: idx, blob: event.data })
-          .then((session) => {
-            recordingSessionRef.current = session;
-            return getRecordingStorageEstimate();
-          })
-          .then(monitorStorageEstimate)
-          .catch(() => stopForStorageRef.current?.());
+        persistFragment("video", idx, event.data, recordingSessionRef, monitorStorageEstimate, stopForStorageRef);
       }
     };
 
@@ -438,19 +434,15 @@ export function Recording({
         if (event.data?.size > 0) {
           const index = audioChunkCountRef.current;
           audioChunkCountRef.current = index + 1;
-          saveRecordingFragment({ stream: "audio", index, blob: event.data })
-            .then((session) => {
-              recordingSessionRef.current = session;
-              return getRecordingStorageEstimate();
-            })
-            .then(monitorStorageEstimate)
-            .catch(() => stopForStorageRef.current?.());
+          audioChunkCountRef.current = index + 1;
+          persistFragment("audio", index, event.data, recordingSessionRef, monitorStorageEstimate, stopForStorageRef);
         }
       };
       audioRecorder.start(5000);
     } else {
       audioRecorderRef.current = null;
     }
+
 
     recorder.start(5000);
   }, [
@@ -891,23 +883,10 @@ export function Recording({
     });
     canvasRendererRef.current?.setTrack(videoTrack);
 
-    const micTrack = localStream
-      ?.getAudioTracks()
-      .find((t) => t.readyState === "live");
-    const screenAudio = screenStream
-      ?.getAudioTracks()
-      .find((t) => t.readyState === "live");
-    const remoteAudioTracks = videoParticipants
-      .map((p) =>
-        p.stream?.getAudioTracks().find((t) => t.readyState === "live"),
-      )
-      .filter(Boolean);
-
-    const allAudioTracks = [micTrack, screenAudio, ...remoteAudioTracks].filter(
-      Boolean,
-    );
+    const allAudioTracks = collectLiveAudioTracks(localStream, screenStream, videoParticipants);
     audioMixerRef.current?.updateTracks(allAudioTracks);
   }, [
+
     isHost,
     isRecording,
     focusedParticipantId,

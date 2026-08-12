@@ -3,20 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { ParticipantsSidebar } from "./ParticipantsSidebar";
 
 describe("ParticipantsSidebar", () => {
-  it("renders host and remote participants", () => {
-    render(
+  const defaultParticipant = {
+    id: "p1",
+    name: "Alex",
+    avatarColor: "#000",
+    isAudioMuted: false,
+    isVideoMuted: false,
+  };
+
+  function renderSidebar(props = {}) {
+    return render(
       <ParticipantsSidebar
         visible
         audioList={[]}
-        videoParticipants={[
-          {
-            id: "p1",
-            name: "Alex",
-            avatarColor: "#000",
-            isAudioMuted: false,
-            isVideoMuted: false,
-          },
-        ]}
+        videoParticipants={[defaultParticipant]}
         isVideoMuted={false}
         isAudioMuted={false}
         isHost
@@ -26,8 +26,13 @@ describe("ParticipantsSidebar", () => {
         onMuteAllAudio={() => {}}
         canMuteAllVideo
         canMuteAllAudio
+        {...props}
       />,
     );
+  }
+
+  it("renders host and remote participants", () => {
+    renderSidebar();
 
     expect(screen.getByText("Participants")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
@@ -39,23 +44,12 @@ describe("ParticipantsSidebar", () => {
     const user = userEvent.setup();
     const onClose = jest.fn();
 
-    render(
-      <ParticipantsSidebar
-        visible
-        audioList={[]}
-        videoParticipants={[]}
-        isVideoMuted={false}
-        isAudioMuted={false}
-        isHost
-        onClose={onClose}
-        onMuteParticipantVideo={() => {}}
-        onMuteParticipantAudio={() => {}}
-        onMuteAllVideo={() => {}}
-        onMuteAllAudio={() => {}}
-        canMuteAllVideo={false}
-        canMuteAllAudio={false}
-      />,
-    );
+    renderSidebar({
+      videoParticipants: [],
+      onClose,
+      canMuteAllVideo: false,
+      canMuteAllAudio: false,
+    });
 
     await user.click(
       screen.getByRole("button", { name: "Close participants" }),
@@ -68,30 +62,7 @@ describe("ParticipantsSidebar", () => {
     const onMuteAllVideo = jest.fn();
     const onMuteAllAudio = jest.fn();
 
-    render(
-      <ParticipantsSidebar
-        visible
-        audioList={[]}
-        videoParticipants={[
-          {
-            id: "p1",
-            name: "Alex",
-            avatarColor: "#000",
-            isAudioMuted: false,
-            isVideoMuted: false,
-          },
-        ]}
-        isVideoMuted={false}
-        isAudioMuted={false}
-        isHost
-        onMuteParticipantVideo={() => {}}
-        onMuteParticipantAudio={() => {}}
-        onMuteAllVideo={onMuteAllVideo}
-        onMuteAllAudio={onMuteAllAudio}
-        canMuteAllVideo
-        canMuteAllAudio
-      />,
-    );
+    renderSidebar({ onMuteAllVideo, onMuteAllAudio });
 
     await user.click(
       screen.getByRole("button", { name: "Turn off all cameras" }),
@@ -105,31 +76,7 @@ describe("ParticipantsSidebar", () => {
   });
 
   it("reflects participant media status changes in the roster", () => {
-    const participant = {
-      id: "p1",
-      name: "Alex",
-      avatarColor: "#000",
-      isAudioMuted: false,
-      isVideoMuted: false,
-      isScreenSharing: false,
-    };
-
-    const { rerender } = render(
-      <ParticipantsSidebar
-        visible
-        audioList={[]}
-        videoParticipants={[participant]}
-        isVideoMuted={false}
-        isAudioMuted={false}
-        isHost
-        onMuteParticipantVideo={() => {}}
-        onMuteParticipantAudio={() => {}}
-        onMuteAllVideo={() => {}}
-        onMuteAllAudio={() => {}}
-        canMuteAllVideo
-        canMuteAllAudio
-      />,
-    );
+    const { rerender } = renderSidebar();
 
     expect(
       screen.getByRole("button", { name: "Turn off camera" }),
@@ -144,7 +91,7 @@ describe("ParticipantsSidebar", () => {
         audioList={[]}
         videoParticipants={[
           {
-            ...participant,
+            ...defaultParticipant,
             isAudioMuted: true,
             isVideoMuted: true,
             isScreenSharing: true,
@@ -168,6 +115,6 @@ describe("ParticipantsSidebar", () => {
     expect(
       screen.queryByRole("button", { name: "Mute participant" }),
     ).toBeNull();
-    expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 });
+

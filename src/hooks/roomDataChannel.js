@@ -519,26 +519,24 @@ export function useRoomDataChannel({
     [bindMediaCall],
   );
 
+  function resolveOutboundStreams(streamOverrides = {}) {
+    const outboundLocalStream = Object.hasOwn(streamOverrides, "localStream")
+      ? streamOverrides.localStream
+      : localStreamRef.current;
+    const outboundScreenStream = Object.hasOwn(streamOverrides, "screenStream")
+      ? streamOverrides.screenStream
+      : screenStreamRef.current;
+    return { outboundLocalStream, outboundScreenStream };
+  }
+
   const ensureMediaCall = useCallback(
     async (remoteId, streamOverrides = {}) => {
       const next = syncQueueRef.current.then(async () => {
         const peer = peerRef.current;
         if (!peer) return;
 
-        const hasLocalStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "localStream",
-        );
-        const hasScreenStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "screenStream",
-        );
-        const outboundLocalStream = hasLocalStreamOverride
-          ? streamOverrides.localStream
-          : localStreamRef.current;
-        const outboundScreenStream = hasScreenStreamOverride
-          ? streamOverrides.screenStream
-          : screenStreamRef.current;
+        const { outboundLocalStream, outboundScreenStream } =
+          resolveOutboundStreams(streamOverrides);
 
         const outbound = await buildOutboundMediaStream(
           outboundLocalStream,
@@ -574,20 +572,9 @@ export function useRoomDataChannel({
   const enqueueSync = useCallback(
     async (streamOverrides = {}) => {
       const next = syncQueueRef.current.then(async () => {
-        const hasLocalStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "localStream",
-        );
-        const hasScreenStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "screenStream",
-        );
-        const outboundLocalStream = hasLocalStreamOverride
-          ? streamOverrides.localStream
-          : localStreamRef.current;
-        const outboundScreenStream = hasScreenStreamOverride
-          ? streamOverrides.screenStream
-          : screenStreamRef.current;
+        const { outboundLocalStream, outboundScreenStream } =
+          resolveOutboundStreams(streamOverrides);
+
 
         if (isHost) {
           const tasks = [];
@@ -1327,60 +1314,43 @@ export function useRoomDataChannel({
     }
 
     const interval = setInterval(async () => {
-      let turnUsed = false;
-      for (const conn of connectionsRef.current.values()) {
-        const pc = conn.peerConnection;
-        if (!pc) continue;
+      async function hasRelayCandidate(item) {
+        const pc = item?.peerConnection;
+        if (!pc) return false;
         try {
           const stats = await pc.getStats();
           for (const report of stats.values()) {
-            if (
-              report.type === "candidate-pair" &&
-              report.state === "succeeded"
-            ) {
+            if (report.type === "candidate-pair" && report.state === "succeeded") {
               const localCandidate = stats.get(report.localCandidateId);
-              if (localCandidate && localCandidate.candidateType === "relay") {
-                turnUsed = true;
-                break;
-              }
+              if (localCandidate?.candidateType === "relay") return true;
             }
           }
         } catch {
           // ignore
         }
-        if (turnUsed) break;
+        return false;
+      }
+
+      let turnUsed = false;
+      for (const conn of connectionsRef.current.values()) {
+        if (await hasRelayCandidate(conn)) {
+          turnUsed = true;
+          break;
+        }
       }
 
       if (!turnUsed) {
         for (const call of mediaCallsRef.current.values()) {
-          const pc = call.peerConnection;
-          if (!pc) continue;
-          try {
-            const stats = await pc.getStats();
-            for (const report of stats.values()) {
-              if (
-                report.type === "candidate-pair" &&
-                report.state === "succeeded"
-              ) {
-                const localCandidate = stats.get(report.localCandidateId);
-                if (
-                  localCandidate &&
-                  localCandidate.candidateType === "relay"
-                ) {
-                  turnUsed = true;
-                  break;
-                }
-              }
-            }
-          } catch {
-            // ignore
+          if (await hasRelayCandidate(call)) {
+            turnUsed = true;
+            break;
           }
-          if (turnUsed) break;
         }
       }
 
       setIsTurnActive(turnUsed);
     }, 3000);
+
 
     return () => clearInterval(interval);
   }, [isConnected]);

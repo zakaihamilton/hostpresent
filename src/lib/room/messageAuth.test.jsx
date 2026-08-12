@@ -37,27 +37,10 @@ describe("messageAuth", () => {
       participantType: "video",
     };
 
-    expect(
-      canSendSignalingMessage({
-        isHost: false,
-        message,
-        localParticipantId: "guest-1",
-      }),
-    ).toBe(true);
-    expect(
-      canSendSignalingMessage({
-        isHost: false,
-        message,
-        localParticipantId: "guest-2",
-      }),
-    ).toBe(false);
-    expect(
-      canSendSignalingMessage({
-        isHost: true,
-        message,
-        localParticipantId: "",
-      }),
-    ).toBe(false);
+    expect(canSendSignalingMessage({ isHost: false, message, localParticipantId: "guest-1" })).toBe(true);
+    expect(canSendSignalingMessage({ isHost: false, message, localParticipantId: "guest-2" })).toBe(false);
+    expect(canSendSignalingMessage({ isHost: true, message, localParticipantId: "" })).toBe(false);
+
   });
 
   it("lets the host receive media renegotiate from the sending participant", () => {
