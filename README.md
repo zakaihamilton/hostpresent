@@ -44,11 +44,11 @@ Host and participants
 Next.js application
         ├── Creates and resolves room credentials
         ├── Issues signed, short-lived access tokens
-        └── Provides signaling and TURN configuration
+        └── Provides room APIs and TURN configuration
 ```
 
 - The browser connects participants over WebRTC directly when possible; TURN can relay media for networks that need it.
-- PeerJS is used for signaling and peer discovery. It requires a separately hosted PeerJS-compatible signaling server.
+- PeerJS is used for signaling and peer discovery through a separately hosted PeerJS-compatible signaling server.
 - The Next.js API is stateless: it signs room credentials and provides connection configuration, but does not store live room state.
 - Live controls and chat travel over authenticated WebRTC data channels.
 - Routing uses URL hashes such as `#/welcome`, `#/meeting/...`, and `#/j/...`, so the app can run on hosting that does not provide server-side route rewrites.
@@ -75,7 +75,7 @@ Create `.env.local` with a local room secret and the connection details for your
 ```dotenv
 ROOM_TOKEN_SECRET=replace-with-a-long-random-secret
 SIGNALING_SERVER_URL=localhost
-SIGNALING_SERVER_PATH=/myapp
+SIGNALING_SERVER_PATH=/
 SIGNALING_SERVER_PORT=9000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
@@ -96,8 +96,9 @@ Set these variables in `.env.local` for development or in the deployment environ
 | --- | --- |
 | `ROOM_TOKEN_SECRET` | Required high-entropy HMAC secret for room tokens and room-ID derivation. Rotating it invalidates existing room links and saved rooms. |
 | `SIGNALING_SERVER_URL` | PeerJS hostname only—do not include `https://`. Required for WebRTC. |
-| `SIGNALING_SERVER_PATH` | PeerJS path prefix; defaults to `/myapp`. |
-| `SIGNALING_SERVER_PORT` | PeerJS port; defaults to `443`. |
+| `SIGNALING_SERVER_PATH` | PeerJS path prefix; defaults to `/`. |
+| `SIGNALING_SERVER_PORT` | PeerJS port; defaults to `9000` for localhost and `443` for other hosts. |
+| `SIGNALING_SECURE` | Optional `true`/`false` override for the PeerJS connection transport. It defaults to insecure for localhost and secure for other hosts. |
 | `NEXT_PUBLIC_APP_URL` | Public app origin used to build participant invite links, for example `https://hostpresent.com`. |
 | `INTERNAL_AUTH_SECRET` | HMAC secret for short-lived ICE configuration room tokens. Required when using the ICE configuration API. |
 | `TURN_SECRET_KEY` | Shared secret used to mint ephemeral CoTURN credentials. |
@@ -129,7 +130,7 @@ Treat an 8-character room code as a bearer credential and share it only with the
 | `npm run format` | Format files with Biome. |
 | `npm test` | Run the Jest unit and component suite. |
 | `npm run test:e2e:smoke` | Run the Chromium welcome-flow smoke test. |
-| `npm run test:e2e:webrtc` | Run the opt-in multi-browser WebRTC flow. |
+| `npm run test:e2e:webrtc` | Run the opt-in Chromium WebRTC flow with separate host and participant contexts. |
 
 For the full meeting test matrix, including browser permissions and manual device checks, see [docs/testing-meetings.md](docs/testing-meetings.md).
 
@@ -158,4 +159,6 @@ tests/e2e/           Playwright smoke and WebRTC scenarios
 
 ## License and project status
 
-This repository is private and `package.json` is marked with `"private": true`. It does not currently include a license granting reuse or redistribution. Contact the project owner before using the code outside its intended environment.
+Host Present is open-source software in active development, with a hosted app available at [hostpresent.com](https://hostpresent.com). Host Present-authored code is licensed under the [MIT License](LICENSE).
+
+`package.json` remains marked with `"private": true` to prevent accidental npm publication; this does not make the GitHub repository private. Third-party dependencies and bundled runtime assets, including the FFmpeg recording assets, retain their respective upstream licenses and are not relicensed by the Host Present MIT license.
