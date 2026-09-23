@@ -127,6 +127,7 @@ describe("RemoteParticipants", () => {
   it("participants track host-present metadata and host mute messages", async () => {
     const setIsAudioMuted = jest.fn();
     const setIsVideoMuted = jest.fn();
+    const setSessionTitle = jest.fn();
     const roomConnection = createRoomConnection();
     const roomConnectionRef = createRef();
     roomConnectionRef.current = roomConnection;
@@ -146,7 +147,7 @@ describe("RemoteParticipants", () => {
         setIsRecordingPaused: jest.fn(),
         resetRecordingTimer: jest.fn(),
         publishParticipantMediaStatus: jest.fn(),
-        setSessionTitle: jest.fn(),
+        setSessionTitle,
       }),
     );
 
@@ -158,6 +159,7 @@ describe("RemoteParticipants", () => {
         videoMuted: true,
         screenSharing: true,
         mode: PARTICIPANT_MODE.LISTENING,
+        sessionTitle: "Initial title",
       });
       roomConnection.emit({
         type: SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO,
@@ -176,6 +178,14 @@ describe("RemoteParticipants", () => {
     expect(result.current.hostMode).toBe(PARTICIPANT_MODE.LISTENING);
     expect(setIsAudioMuted).toHaveBeenCalledWith(true);
     expect(setIsVideoMuted).toHaveBeenCalledWith(true);
+
+    act(() => {
+      roomConnection.emit({
+        type: SIGNALING_MESSAGE.HOST_PRESENT,
+        sessionTitle: "",
+      });
+    });
+    expect(setSessionTitle).toHaveBeenLastCalledWith("");
   });
 
   it("host mute all disables screen-share audio and video tracks", () => {

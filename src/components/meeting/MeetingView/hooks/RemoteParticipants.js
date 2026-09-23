@@ -429,7 +429,7 @@ export function RemoteParticipants({
       if (message.mode === "listening" || message.mode === "available") {
         setHostMode(message.mode);
       }
-      if (message.sessionTitle && setSessionTitle) {
+      if (typeof message.sessionTitle === "string" && setSessionTitle) {
         setSessionTitle(message.sessionTitle);
       }
     });

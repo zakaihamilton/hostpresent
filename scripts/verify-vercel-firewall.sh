@@ -34,22 +34,36 @@ verify_limit() {
   echo "${label}: verified (${rate_limited_count} rate-limited responses)."
 }
 
-# These use invalid credentials and do not create or join a real meeting.
+# Invalid request bodies and credentials keep the checks from creating or
+# joining a room. Invalid diagnostic requests are rejected before being logged.
 verify_limit \
   "Create room" \
   11 \
   -X POST \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: text/plain" \
+  --data 'invalid' \
   "${app_url}/api/rooms"
 verify_limit \
   "Resolve room code" \
   21 \
-  "${app_url}/api/rooms/resolve?code=ABCDEFGH"
+  -X POST \
+  -H "Content-Type: application/json" \
+  --data '{"code":"INVALID"}' \
+  "${app_url}/api/rooms/resolve"
 verify_limit \
   "Room state" \
   121 \
-  "${app_url}/api/rooms/state?token=invalid"
+  -H "Authorization: Bearer invalid" \
+  "${app_url}/api/rooms/state"
 verify_limit \
   "TURN configuration" \
   121 \
-  "${app_url}/api/media/ice-config?roomToken=invalid"
+  -H "x-room-token: invalid" \
+  "${app_url}/api/media/ice-config"
+verify_limit \
+  "Diagnostics" \
+  21 \
+  -X POST \
+  -H "Content-Type: text/plain" \
+  --data 'invalid' \
+  "${app_url}/api/diagnostics"

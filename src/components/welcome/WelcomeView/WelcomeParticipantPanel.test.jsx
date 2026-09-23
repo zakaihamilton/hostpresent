@@ -49,13 +49,14 @@ describe("WelcomeParticipantPanel", () => {
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 6")).toBeInTheDocument();
+    expect(screen.getByLabelText("Character 10")).toBeInTheDocument();
     expect(
       document.querySelector('label[for="join-code-box-0"]'),
     ).toHaveTextContent("Room code");
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
   });
 
-  it("enables join only when all 8 code characters are entered", async () => {
+  it("accepts legacy 8-character and new 10-character codes", async () => {
     const user = userEvent.setup();
     const { resolveJoinCode } = await import("@/lib/room/inviteLink");
     resolveJoinCode.mockResolvedValue({
@@ -73,9 +74,19 @@ describe("WelcomeParticipantPanel", () => {
 
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
 
-    for (let i = 6; i < 8; i++) {
-      const char = String.fromCharCode(65 + i);
-      await user.type(screen.getByLabelText(`Character ${i + 1}`), char);
+    for (const [index, character] of ["G", "H", "J", "K"].entries()) {
+      await user.type(
+        screen.getByLabelText(`Character ${index + 7}`),
+        character,
+      );
+      if (index === 1) {
+        expect(
+          screen.getByRole("button", { name: "Join meeting" }),
+        ).toBeEnabled();
+        expect(
+          screen.getByText(/valid older 8-character code/i),
+        ).toBeInTheDocument();
+      }
     }
 
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();

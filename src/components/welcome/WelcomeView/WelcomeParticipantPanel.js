@@ -9,7 +9,12 @@ import {
   normalizeRoomIdInput,
   resolveJoinCode,
 } from "@/lib/room/inviteLink";
-import { formatJoinCode, JOIN_CODE_LENGTH } from "@/lib/room/joinCodeFormat";
+import {
+  formatJoinCode,
+  isValidJoinCode,
+  JOIN_CODE_LENGTH,
+  LEGACY_JOIN_CODE_LENGTH,
+} from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -32,8 +37,6 @@ import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
 import ps from "./WelcomeParticipantPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
-const WAITING_POLL_MS = 2000;
-
 export function WelcomeParticipantPanel({
   token,
   joinCode,
@@ -46,31 +49,24 @@ export function WelcomeParticipantPanel({
   const [recentRooms, setRecentRooms] = useState([]);
   const [resolveError, setResolveError] = useState("");
   const [isResolving, setIsResolving] = useState(false);
-  const [waitingForHost, setWaitingForHost] = useState(false);
   const [displayName, setDisplayName] = useState(() => loadDisplayName());
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
   const resolvedJoinCodeRef = useRef(null);
-  const waitingPollRef = useRef(null);
 
   const refreshRecentRooms = useCallback(() => {
     setRecentRooms(listParticipantRooms());
   }, []);
 
-  const clearWaitingPoll = useCallback(() => {
-    if (waitingPollRef.current) {
-      window.clearTimeout(waitingPollRef.current);
-      waitingPollRef.current = null;
-    }
-  }, []);
-
   const enterMeeting = useCallback(
     (resolved) => {
-      if (!resolved?.participantToken) return;
+      if (!resolved?.participantToken) {
+        throw new Error(
+          "[E031] Could not get a participant token for this room.",
+        );
+      }
 
-      clearWaitingPoll();
-      setWaitingForHost(false);
       saveParticipantRoom({
         roomId: resolved.roomId,
         participantToken: resolved.participantToken,
@@ -95,52 +91,33 @@ export function WelcomeParticipantPanel({
         token: resolved.participantToken,
       });
     },
-    [clearWaitingPoll, navigate, refreshRecentRooms],
+    [navigate, refreshRecentRooms],
   );
 
   const resolveAndJoin = useCallback(
-    async (code, { fromPoll = false } = {}) => {
+    async (code) => {
       const normalized = normalizeRoomIdInput(code);
       if (!normalized) return;
-      if (!fromPoll) {
-        setResolveError("");
-        setIsResolving(true);
-      }
+      setResolveError("");
+      setIsResolving(true);
       try {
         const resolved = await resolveJoinCode(normalized, {
           deviceId: getOrCreateParticipantDeviceId(),
         });
-        if (resolved?.waiting) {
-          setWaitingForHost(true);
-          setIsResolving(false);
-          clearWaitingPoll();
-          waitingPollRef.current = window.setTimeout(() => {
-            void resolveAndJoin(normalized, { fromPoll: true });
-          }, WAITING_POLL_MS);
-          return;
-        }
         enterMeeting(resolved);
       } catch (joinError) {
-        clearWaitingPoll();
-        setWaitingForHost(false);
         setResolveError(joinError.message);
         resolvedJoinCodeRef.current = null;
       } finally {
-        if (!fromPoll) {
-          setIsResolving(false);
-        }
+        setIsResolving(false);
       }
     },
-    [clearWaitingPoll, enterMeeting],
+    [enterMeeting],
   );
 
   useEffect(() => {
     refreshRecentRooms();
   }, [refreshRecentRooms]);
-
-  useEffect(() => {
-    return () => clearWaitingPoll();
-  }, [clearWaitingPoll]);
 
   useEffect(() => {
     if (joinCode) {
@@ -230,19 +207,18 @@ export function WelcomeParticipantPanel({
     />
   );
 
-  const allFilled =
-    (roomIdInput ?? "").replace(/-/g, "").length === JOIN_CODE_LENGTH;
+  const enteredCodeLength = (roomIdInput ?? "").replace(/-/g, "").length;
+  const isLegacyJoinCode =
+    enteredCodeLength === LEGACY_JOIN_CODE_LENGTH &&
+    isValidJoinCode(roomIdInput);
+  const allFilled = isValidJoinCode(roomIdInput);
 
-  if (isResolving || waitingForHost) {
+  if (isResolving) {
     return (
       <div className={shared.welcomePanel}>
         <div className={shared.waiting}>
           <div className={shared.spinner} aria-hidden />
-          <p className={shared.helpText}>
-            {waitingForHost
-              ? "Waiting for the host to start the meeting…"
-              : "Checking the room and joining…"}
-          </p>
+          <p className={shared.helpText}>Checking the room and joining…</p>
         </div>
       </div>
     );
@@ -272,7 +248,9 @@ export function WelcomeParticipantPanel({
               />
             </div>
             <p className={ps.joinHint}>
-              Enter the {JOIN_CODE_LENGTH}-character code from the host.
+              {isLegacyJoinCode
+                ? `This is a valid older ${LEGACY_JOIN_CODE_LENGTH}-character code. Continue entering the last two characters for a new code, or join with this code.`
+                : `Enter the ${JOIN_CODE_LENGTH}-character code from the host. Existing ${LEGACY_JOIN_CODE_LENGTH}-character codes are also accepted.`}
             </p>
           </div>
         </div>

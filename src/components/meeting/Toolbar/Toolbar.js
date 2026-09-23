@@ -50,7 +50,19 @@ export const Toolbar = memo(function Toolbar({
   onLeave = null,
   participantCount = 0,
   allowScreenShare = true,
+  mediaPublishingEnabled = true,
 }) {
+  const audioButtonLabel = mediaPublishingEnabled
+    ? isAudioMuted
+      ? "Unmute microphone"
+      : "Mute microphone"
+    : "Microphone unavailable in listening-only mode";
+  const videoButtonLabel = mediaPublishingEnabled
+    ? isVideoMuted
+      ? "Turn camera on"
+      : "Turn camera off"
+    : "Camera unavailable in listening-only mode";
+
   return (
     <footer className={styles.toolbar}>
       <div className={styles.toolbarInner}>
@@ -80,9 +92,7 @@ export const Toolbar = memo(function Toolbar({
 
         {/* Primary Controls: Mic, Camera, Screen Share, End/Leave (Center Zone) */}
         <div className={`${styles.controlGroup} ${styles.primaryGroup}`}>
-          <Tooltip
-            text={isAudioMuted ? "Unmute Microphone" : "Mute Microphone"}
-          >
+          <Tooltip text={audioButtonLabel}>
             <button
               type="button"
               className={btnClass(
@@ -90,15 +100,14 @@ export const Toolbar = memo(function Toolbar({
                 isAudioMuted && styles.btnDanger,
               )}
               onClick={onToggleAudio}
-              aria-label={
-                isAudioMuted ? "Unmute microphone" : "Mute microphone"
-              }
+              aria-label={audioButtonLabel}
+              disabled={!mediaPublishingEnabled}
             >
               {isAudioMuted ? <MicOff /> : <Mic />}
             </button>
           </Tooltip>
 
-          <Tooltip text={isVideoMuted ? "Turn Camera On" : "Turn Camera Off"}>
+          <Tooltip text={videoButtonLabel}>
             <button
               type="button"
               className={btnClass(
@@ -106,7 +115,8 @@ export const Toolbar = memo(function Toolbar({
                 isVideoMuted && styles.btnDanger,
               )}
               onClick={onToggleVideo}
-              aria-label={isVideoMuted ? "Turn camera on" : "Turn camera off"}
+              aria-label={videoButtonLabel}
+              disabled={!mediaPublishingEnabled}
             >
               {isVideoMuted ? <VideoOff /> : <Video />}
             </button>

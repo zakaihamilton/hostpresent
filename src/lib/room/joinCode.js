@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
+import { JOIN_CODE_LENGTH } from "./joinCodeFormat.js";
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-// A join code is a bearer credential in the stateless room model. Eight
-// characters from this alphabet provide roughly 37 bits of entropy.
-const CODE_LENGTH = 8;
+// New 10-character codes provide about 46 bits of entropy. The resolver still
+// accepts legacy 8-character codes for existing invite links.
+const CODE_LENGTH = JOIN_CODE_LENGTH;
 
 export function createJoinCode() {
   const bytes = randomBytes(CODE_LENGTH);

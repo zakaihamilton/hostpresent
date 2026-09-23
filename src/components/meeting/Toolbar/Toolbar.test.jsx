@@ -88,4 +88,33 @@ describe("Toolbar", () => {
 
     expect(container.querySelector(".unreadBadge")).not.toBeInTheDocument();
   });
+
+  it("disables publishing controls in listening-only mode", () => {
+    render(
+      <Toolbar
+        isAudioMuted={false}
+        isVideoMuted={false}
+        screenStream={null}
+        shareScreenAudio={false}
+        isScreenAudioShared={false}
+        isGalleryVisible={false}
+        isSidebarVisible={false}
+        mediaPublishingEnabled={false}
+        allowScreenShare={false}
+        {...handlers}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Microphone unavailable in listening-only mode",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Camera unavailable in listening-only mode",
+      }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Share screen" })).toBeNull();
+  });
 });

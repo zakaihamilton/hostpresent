@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { Fragment, useCallback, useEffect, useRef } from "react";
 import { formatJoinCode, JOIN_CODE_LENGTH } from "@/lib/room/joinCodeFormat";
 import styles from "./JoinCodeBoxes.module.css";
 
@@ -118,14 +118,25 @@ export function JoinCodeBoxes({
     );
   });
 
+  const groups = Array.from({ length: Math.ceil(TOTAL / GROUP) }, (_, index) =>
+    boxes.slice(index * GROUP, (index + 1) * GROUP),
+  );
+
   return (
     <div className={[styles.wrapper, className].filter(Boolean).join(" ")}>
       <div className={styles.groups}>
-        <div className={styles.group}>{boxes.slice(0, GROUP)}</div>
-        <span className={styles.separator} aria-hidden>
-          -
-        </span>
-        <div className={styles.group}>{boxes.slice(GROUP)}</div>
+        {groups.map((group, index) => (
+          <Fragment key={`code-group-${group[0].key}`}>
+            {index > 0
+              ? <span className={styles.separator} aria-hidden>
+                  -
+                </span>
+              : null}
+            <div className={styles.group} style={{ flex: group.length }}>
+              {group}
+            </div>
+          </Fragment>
+        ))}
       </div>
     </div>
   );

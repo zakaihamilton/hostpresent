@@ -1,5 +1,5 @@
 import { ROOM_ROLE } from "@/lib/room/roles";
-import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
+import { isChatMessage, SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 
 const HOST_COMMAND_TYPES = new Set([
   SIGNALING_MESSAGE.HOST_PRESENT,
@@ -147,4 +147,52 @@ export function canReceiveSignalingMessage({
   }
 
   return message.participantId === localParticipantId;
+}
+
+export function authenticateChatMessage(
+  message,
+  {
+    senderId = "",
+    expectedSenderId = "",
+    senderName = "",
+    allowHostRelay = false,
+  } = {},
+) {
+  if (
+    !isChatMessage(message) ||
+    !senderId ||
+    !expectedSenderId ||
+    senderId !== expectedSenderId
+  ) {
+    return null;
+  }
+
+  if (
+    message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
+    (typeof message.recipientId !== "string" || !message.recipientId.trim())
+  ) {
+    return null;
+  }
+
+  const isAuthenticatedHostRelay =
+    allowHostRelay &&
+    message.relayedByHost === true &&
+    typeof message.senderId === "string" &&
+    Boolean(message.senderId.trim());
+  const trustedSenderName =
+    typeof senderName === "string" ? senderName.trim().slice(0, 32) : "";
+  const relayedSenderName =
+    typeof message.senderName === "string" ? message.senderName.trim() : "";
+  const authenticatedSenderName =
+    isAuthenticatedHostRelay && relayedSenderName
+      ? relayedSenderName.slice(0, 32)
+      : trustedSenderName;
+
+  return {
+    ...message,
+    senderId: isAuthenticatedHostRelay ? message.senderId : senderId,
+    senderName: authenticatedSenderName,
+    text: message.text.trim(),
+    relayedByHost: isAuthenticatedHostRelay,
+  };
 }

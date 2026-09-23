@@ -46,9 +46,10 @@ async function readErrorMessage(response, fallback, token) {
 async function fetchRoomState(token) {
   let response;
   try {
-    response = await fetch(
-      `/api/rooms/state?token=${encodeURIComponent(token)}`,
-    );
+    response = await fetch("/api/rooms/state", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
   } catch {
     throw new Error(
       "[E023] Could not reach the server. Check your connection.",

@@ -6,7 +6,7 @@ import { useHostControls } from "./hostControls";
 function createSignaling() {
   const subscribers = [];
   return {
-    send: jest.fn().mockResolvedValue(undefined),
+    send: jest.fn(() => true),
     subscribe: jest.fn((callback) => {
       subscribers.push(callback);
       return () => {};

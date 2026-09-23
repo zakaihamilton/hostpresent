@@ -21,7 +21,7 @@ Host Present is a role-aware meeting room built around a single presenter. Parti
 
 ## Features
 
-- **Host and participant roles** — Create a room as a host or join with an 8-character code such as `ABCD-EFGH`.
+- **Host and participant roles** — Create a room as a host or join with a 10-character code such as `ABCD-EFGH-JK`. Existing 8-character codes remain valid.
 - **Presenter-first layout** — Keep the host feed prominent while showing an optional participant gallery.
 - **Screen sharing** — Share a screen, window, or browser tab, with support for system or tab audio when the browser provides it.
 - **Local recording** — Record in the browser, pause and resume, then save the meeting locally when finished.
@@ -108,7 +108,7 @@ There is no fallback room-token secret. If `ROOM_TOKEN_SECRET` is missing, room 
 
 ## Production deployment
 
-Host Present is intentionally stateless: it does not require a database, Redis, or server-persistent room state. A server restart does not end an active peer-to-peer meeting, but waiting rooms, participant removals, and token renewal are not persisted on the server.
+Host Present is intentionally stateless: it does not require a database, Redis, or server-persistent room state. A server restart does not end an active peer-to-peer meeting, but connection waiting states, participant removals, and token renewal are not persisted on the server.
 
 For a Vercel deployment:
 
@@ -117,7 +117,7 @@ For a Vercel deployment:
 3. Complete the [production release checklist](docs/production-release-checklist.md), including verification that each rule returns `429` after its limit is exceeded.
 4. Rotate `ROOM_TOKEN_SECRET` deliberately when invalidating legacy room links and locally saved room tokens.
 
-Treat an 8-character room code as a bearer credential and share it only with the intended meeting audience.
+Treat a room code as a bearer credential and share it only with the intended meeting audience. New codes have 10 characters; existing 8-character codes remain valid.
 
 ## Development commands
 

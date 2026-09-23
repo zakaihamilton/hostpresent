@@ -27,6 +27,7 @@ import {
   loadDisplayName,
   loadParticipantMode,
   normalizeDisplayNameInput,
+  PARTICIPANT_MODE,
   resolveDisplayName,
   saveDisplayName,
   saveParticipantMode,
@@ -173,6 +174,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const [participantMode, setParticipantMode] = useState(() =>
     loadParticipantMode(),
   );
+  const canPublishMedia =
+    isHost || participantMode !== PARTICIPANT_MODE.LISTENING;
   const [sessionTitle, setSessionTitle] = useState("");
   const [focusedParticipantId, setFocusedParticipantId] = useState("");
   const [meetingDisconnectReason, setMeetingDisconnectReason] = useState(null);
@@ -341,6 +344,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     switchSpeaker,
   } = MediaControls({
     isHost,
+    participantMode,
     roomConnection,
     localStream,
     setLocalStream,
@@ -1104,7 +1108,6 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         onParticipantModeChange={
           handleDisplayNameChange ? handleParticipantModeChange : null
         }
-        allowScreenShare={true}
         availableMicrophones={availableMicrophones}
         selectedMicrophone={selectedMicrophone}
         onMicrophoneChange={switchMicrophone}
@@ -1133,6 +1136,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
             ? 1 + videoParticipants.length + audioList.length
             : 2 + peerParticipants.length
         }
+        mediaPublishingEnabled={canPublishMedia}
+        allowScreenShare={canPublishMedia}
       />
     </div>
   );

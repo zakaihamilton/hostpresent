@@ -45,7 +45,7 @@ async function createHostMeeting(page) {
       );
       return values.replace(/[^a-zA-Z0-9]/g, "");
     })
-    .toHaveLength(8);
+    .toHaveLength(10);
   const joinCode = await joinCodeBoxes.evaluateAll((inputs) =>
     inputs.map((input) => input.value).join(""),
   );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIceServers } from "@/components/webrtc/PeerStreamConnection";
 import {
+  authenticateChatMessage,
   canReceiveSignalingMessage,
   canSendSignalingMessage,
   isParticipantStatusMessage,
@@ -59,6 +60,7 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
+const MAX_DATA_CHANNEL_MESSAGE_CHARS = 16_384;
 
 export function sendOnConnection(conn, message) {
   if (!conn?.open) return false;
@@ -105,6 +107,7 @@ export function useRoomDataChannel({
   const inboundStreamsRef = useRef(new Map());
   const relayCallsRef = useRef(new Map());
   const peerDeviceIdsRef = useRef(new Map());
+  const participantDisplayNamesRef = useRef(new Map());
   const hostConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
@@ -129,6 +132,7 @@ export function useRoomDataChannel({
   const onRemoteHostStreamRef = useRef();
   const onChatMessageRef = useRef(null);
   const sessionTitleRef = useRef("");
+  const hostDisplayNameRef = useRef("");
   const roomIdRef = useRef(roomId);
   const destroyedRef = useRef(false);
 
@@ -655,6 +659,7 @@ export function useRoomDataChannel({
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
+      const connectionPeerId = conn.peer || remoteId;
       const handleOpen = () => {
         if (destroyedRef.current) return;
         updateConnectedState(1);
@@ -691,45 +696,83 @@ export function useRoomDataChannel({
         if (destroyedRef.current) return;
         try {
           const payload = typeof raw === "string" ? raw : JSON.stringify(raw);
+          if (
+            typeof payload !== "string" ||
+            payload.length > MAX_DATA_CHANNEL_MESSAGE_CHARS
+          ) {
+            return;
+          }
           const message = parseSignalingMessage(payload);
 
           if (isChatMessage(message)) {
+            const authenticatedMessage = authenticateChatMessage(message, {
+              senderId: connectionPeerId,
+              expectedSenderId: isHost
+                ? connectionPeerId
+                : hostPeerId(roomIdRef.current),
+              senderName: isHost
+                ? (participantDisplayNamesRef.current.get(connectionPeerId) ??
+                  "Guest")
+                : hostDisplayNameRef.current || "Host",
+              allowHostRelay: !isHost,
+            });
+            if (!authenticatedMessage) return;
+
             if (isHost) {
-              if (message.type === SIGNALING_MESSAGE.CHAT_MESSAGE) {
+              const hostRelayedMessage = {
+                ...authenticatedMessage,
+                relayedByHost: true,
+              };
+              if (
+                authenticatedMessage.type === SIGNALING_MESSAGE.CHAT_MESSAGE
+              ) {
                 for (const [id, c] of connectionsRef.current) {
-                  if (id !== remoteId) {
-                    sendOnConnection(c, message);
+                  if (id !== connectionPeerId) {
+                    sendOnConnection(c, hostRelayedMessage);
                   }
                 }
               }
               if (
-                message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
-                message.recipientId
+                authenticatedMessage.type ===
+                  SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
+                authenticatedMessage.recipientId
               ) {
-                const recipientConn = connectionsRef.current.get(
-                  message.recipientId,
-                );
-                if (recipientConn) {
-                  sendOnConnection(recipientConn, message);
+                const hostId = hostPeerId(roomIdRef.current);
+                if (authenticatedMessage.recipientId !== hostId) {
+                  const recipientConn = connectionsRef.current.get(
+                    authenticatedMessage.recipientId,
+                  );
+                  if (recipientConn) {
+                    sendOnConnection(recipientConn, hostRelayedMessage);
+                  }
+                  return;
                 }
               }
             }
-            notifyHandlers(message);
+            if (
+              !isHost &&
+              authenticatedMessage.type ===
+                SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
+              authenticatedMessage.recipientId !== localParticipantIdRef.current
+            ) {
+              return;
+            }
+            notifyHandlers(authenticatedMessage);
             if (onChatMessageRef.current) {
-              onChatMessageRef.current(message);
+              onChatMessageRef.current(authenticatedMessage);
             }
             return;
           }
 
           if (!isSignalingMessage(message)) return;
           const resolvedMessage = resolveParticipantStatusMessage(message, {
-            senderId: remoteId,
+            senderId: connectionPeerId,
           });
           if (
             !canReceiveSignalingMessage({
               isHost,
               message: resolvedMessage,
-              senderId: remoteId,
+              senderId: connectionPeerId,
               localParticipantId: localParticipantIdRef.current,
             })
           ) {
@@ -738,17 +781,33 @@ export function useRoomDataChannel({
           notifyHandlers(resolvedMessage);
           if (
             isHost &&
-            resolvedMessage.type === SIGNALING_MESSAGE.PARTICIPANT_PROFILE &&
-            typeof resolvedMessage.deviceId === "string" &&
-            resolvedMessage.deviceId
+            resolvedMessage.type === SIGNALING_MESSAGE.PARTICIPANT_PROFILE
           ) {
-            peerDeviceIdsRef.current.set(remoteId, resolvedMessage.deviceId);
+            participantDisplayNamesRef.current.set(
+              connectionPeerId,
+              resolvedMessage.displayName || "Guest",
+            );
+            if (
+              typeof resolvedMessage.deviceId === "string" &&
+              resolvedMessage.deviceId
+            ) {
+              peerDeviceIdsRef.current.set(
+                connectionPeerId,
+                resolvedMessage.deviceId,
+              );
+            }
+          }
+          if (
+            !isHost &&
+            resolvedMessage.type === SIGNALING_MESSAGE.HOST_PRESENT
+          ) {
+            hostDisplayNameRef.current = resolvedMessage.displayName || "Host";
           }
           if (
             isHost &&
             resolvedMessage.type === SIGNALING_MESSAGE.MEDIA_RENEGOTIATE
           ) {
-            const targetId = resolvedMessage.participantId || remoteId;
+            const targetId = resolvedMessage.participantId || connectionPeerId;
             if (targetId) {
               const existingCall = mediaCallsRef.current.get(targetId);
               if (existingCall) {
@@ -771,7 +830,7 @@ export function useRoomDataChannel({
             ]);
             if (participantStatusRelayTypes.has(resolvedMessage.type)) {
               for (const [id, c] of connectionsRef.current) {
-                if (id !== remoteId) {
+                if (id !== connectionPeerId) {
                   sendOnConnection(c, resolvedMessage);
                 }
               }
@@ -797,24 +856,33 @@ export function useRoomDataChannel({
     ],
   );
 
-  const sendParticipantProfile = useCallback(() => {
-    if (isHost) return false;
+  const sendParticipantProfile = useCallback(
+    ({ nextDisplayName, nextParticipantMode } = {}) => {
+      if (isHost) return false;
 
-    const participantId = localParticipantIdRef.current;
-    if (!participantId || !hostConnectionRef.current?.open) {
-      return false;
-    }
+      const participantId = localParticipantIdRef.current;
+      if (!participantId || !hostConnectionRef.current?.open) {
+        return false;
+      }
 
-    return sendOnConnection(
-      hostConnectionRef.current,
-      createParticipantProfileMessage({
-        participantId,
-        displayName: displayNameRef.current,
-        mode: participantModeRef.current,
-        deviceId: getOrCreateParticipantDeviceId(),
-      }),
-    );
-  }, [isHost]);
+      return sendOnConnection(
+        hostConnectionRef.current,
+        createParticipantProfileMessage({
+          participantId,
+          displayName:
+            nextDisplayName === undefined
+              ? displayNameRef.current
+              : nextDisplayName,
+          mode:
+            nextParticipantMode === undefined
+              ? participantModeRef.current
+              : nextParticipantMode,
+          deviceId: getOrCreateParticipantDeviceId(),
+        }),
+      );
+    },
+    [isHost],
+  );
 
   useEffect(() => {
     sendParticipantProfileRef.current = sendParticipantProfile;
@@ -822,8 +890,11 @@ export function useRoomDataChannel({
 
   useEffect(() => {
     if (isHost) return undefined;
-    sendParticipantProfile();
-  }, [isHost, sendParticipantProfile]);
+    sendParticipantProfile({
+      nextDisplayName: displayName,
+      nextParticipantMode: participantMode,
+    });
+  }, [displayName, isHost, participantMode, sendParticipantProfile]);
 
   const sendToParticipant = useCallback(
     (participantId, message) => {
@@ -1001,6 +1072,8 @@ export function useRoomDataChannel({
       relayCallsRef.current.clear();
       inboundStreamsRef.current.clear();
       peerDeviceIdsRef.current.clear();
+      participantDisplayNamesRef.current.clear();
+      hostDisplayNameRef.current = "";
 
       try {
         for (const conn of connectionsRef.current.values()) {
@@ -1106,6 +1179,7 @@ export function useRoomDataChannel({
         conn.on("close", () => {
           connectionsRef.current.delete(remoteId);
           peerDeviceIdsRef.current.delete(remoteId);
+          participantDisplayNamesRef.current.delete(remoteId);
           mediaCallsRef.current.get(remoteId)?.close();
           mediaCallsRef.current.delete(remoteId);
           closeRelayCallsForViewer(remoteId);

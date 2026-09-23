@@ -8,7 +8,7 @@ import {
 } from "@/lib/room/tokens";
 
 jest.mock("@/lib/room/joinCode", () => ({
-  createJoinCode: jest.fn(() => "ABCDEFGH"),
+  createJoinCode: jest.fn(() => "ABCDEFGHJK"),
 }));
 
 class TestHeaders {
@@ -35,6 +35,12 @@ class TestRequest {
     this.url = url;
     this.method = init.method ?? "GET";
     this.headers = new TestHeaders(init.headers);
+    this.requestBody = init.body ?? "";
+    this.body = null;
+  }
+
+  async text() {
+    return this.requestBody;
   }
 }
 
@@ -76,7 +82,7 @@ describe("stateless room API routes", () => {
     delete process.env.ROOM_TOKEN_SECRET;
   });
 
-  it("creates only a host credential and an 8-character join code", async () => {
+  it("creates only a host credential and a 10-character join code", async () => {
     const { POST } = await import("./route");
     const response = await POST(
       request("http://localhost/api/rooms", { method: "POST" }),
@@ -84,7 +90,7 @@ describe("stateless room API routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.joinCode).toBe("ABCDEFGH");
+    expect(body.joinCode).toBe("ABCDEFGHJK");
     expect(body.participantToken).toBeUndefined();
     expect(verifyRoomToken(body.hostToken)).toMatchObject({
       role: ROOM_ROLE.HOST,
@@ -102,29 +108,48 @@ describe("stateless room API routes", () => {
   });
 
   it("mints a participant credential from a valid code without stored room state", async () => {
-    const { GET } = await import("./resolve/route");
-    const response = await GET(
-      request("http://localhost/api/rooms/resolve?code=ABCD-EFGH"),
+    const { POST } = await import("./resolve/route");
+    const response = await POST(
+      request("http://localhost/api/rooms/resolve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: "ABCD-EFGH-JK" }),
+      }),
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(body.waiting).toBeUndefined();
     expect(verifyRoomToken(body.participantToken)).toMatchObject({
       role: ROOM_ROLE.PARTICIPANT,
-      roomId: deriveRoomIdFromJoinCode("ABCDEFGH"),
+      roomId: deriveRoomIdFromJoinCode("ABCDEFGHJK"),
     });
   });
 
   it("rejects malformed and secretless participant code resolution", async () => {
-    const { GET } = await import("./resolve/route");
+    const { POST } = await import("./resolve/route");
     expect(
-      (await GET(request("http://localhost/api/rooms/resolve?code=ABCDEF")))
-        .status,
+      (
+        await POST(
+          request("http://localhost/api/rooms/resolve", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ code: "ABCDEF" }),
+          }),
+        )
+      ).status,
     ).toBe(400);
     delete process.env.ROOM_TOKEN_SECRET;
     expect(
-      (await GET(request("http://localhost/api/rooms/resolve?code=ABCDEFGH")))
-        .status,
+      (
+        await POST(
+          request("http://localhost/api/rooms/resolve", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ code: "ABCDEFGHJK" }),
+          }),
+        )
+      ).status,
     ).toBe(503);
   });
 
@@ -137,9 +162,9 @@ describe("stateless room API routes", () => {
     });
     const { GET } = await import("./state/route");
     const response = await GET(
-      request(
-        `http://localhost/api/rooms/state?token=${encodeURIComponent(token)}`,
-      ),
+      request("http://localhost/api/rooms/state", {
+        headers: { authorization: `Bearer ${token}` },
+      }),
     );
     const body = await response.json();
 
@@ -159,16 +184,18 @@ describe("stateless room API routes", () => {
     expect(
       (
         await GET(
-          request(
-            `http://localhost/api/media/ice-config?roomToken=${encodeURIComponent(roomToken)}`,
-          ),
+          request("http://localhost/api/media/ice-config", {
+            headers: { "x-room-token": roomToken },
+          }),
         )
       ).status,
     ).toBe(200);
     expect(
       (
         await GET(
-          request("http://localhost/api/media/ice-config?roomToken=forged"),
+          request(
+            `http://localhost/api/media/ice-config?roomToken=${encodeURIComponent(roomToken)}`,
+          ),
         )
       ).status,
     ).toBe(403);

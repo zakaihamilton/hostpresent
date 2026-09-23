@@ -1,6 +1,6 @@
 import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import {
-  getSearchParam,
+  getBearerToken,
   jsonOk,
   verifyRequestToken,
 } from "@/lib/room/routeHelpers";
@@ -8,7 +8,7 @@ import {
 export const runtime = "nodejs";
 
 export async function GET(request) {
-  const token = getSearchParam(request, "token");
+  const token = getBearerToken(request);
   const auth = verifyRequestToken(token);
   if (auth.error) return auth.error;
 

@@ -2,9 +2,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
 import { ROOM_ROLE } from "./roles.js";
 
-// Room tokens are deliberately shorter lived than the eight-character join
-// code. The code remains the durable, stateless participant credential; a
-// leaked token therefore has a bounded useful lifetime.
+// Room tokens are deliberately shorter lived than the join code. The code
+// remains the durable, stateless participant credential; a leaked token
+// therefore has a bounded useful lifetime.
 export const ROOM_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 export { ROOM_ROLE } from "./roles.js";
@@ -13,7 +13,7 @@ export function getSigningSecret() {
   return process.env.ROOM_TOKEN_SECRET?.trim() || null;
 }
 
-export function isRoomSigningEncrypted() {
+export function isRoomSigningConfigured() {
   return Boolean(getSigningSecret());
 }
 

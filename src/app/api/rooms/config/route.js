@@ -1,5 +1,5 @@
 import { jsonOk } from "@/lib/room/routeHelpers";
-import { isRoomSigningEncrypted } from "@/lib/room/tokens";
+import { isRoomSigningConfigured } from "@/lib/room/tokens";
 import {
   buildPeerJsConfig,
   getSignalingServerHost,
@@ -14,7 +14,7 @@ export async function GET(_request) {
   const peerJs = host ? buildPeerJsConfig(host) : null;
 
   return jsonOk({
-    encrypted: isRoomSigningEncrypted(),
+    roomSigningConfigured: isRoomSigningConfigured(),
     signaling: "webrtc-peerjs",
     signalingServerConfigured: isSignalingServerConfigured(),
     signalingServerPath: getSignalingServerPath(),

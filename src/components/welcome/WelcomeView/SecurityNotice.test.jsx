@@ -6,11 +6,11 @@ describe("SecurityNotice", () => {
     jest.restoreAllMocks();
   });
 
-  it("shows notice when encryption is disabled", async () => {
+  it("shows notice when room signing is not configured", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        encrypted: false,
+        roomSigningConfigured: false,
         signalingServerConfigured: true,
       }),
     });
@@ -18,15 +18,17 @@ describe("SecurityNotice", () => {
     render(<SecurityNotice />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Not encrypted/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Room signing is not configured/i),
+      ).toBeInTheDocument();
     });
   });
 
-  it("stays hidden when encryption is enabled", async () => {
+  it("stays hidden when signing and signaling are configured", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        encrypted: true,
+        roomSigningConfigured: true,
         signalingServerConfigured: true,
       }),
     });
@@ -46,7 +48,7 @@ describe("SecurityNotice", () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        encrypted: false,
+        roomSigningConfigured: true,
         signalingServerConfigured: false,
       }),
     });

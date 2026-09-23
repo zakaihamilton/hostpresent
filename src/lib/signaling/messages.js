@@ -25,6 +25,10 @@ export const SIGNALING_MESSAGE = {
   MEDIA_RENEGOTIATE: "media_renegotiate",
 };
 
+export const CHAT_MESSAGE_MAX_LENGTH = 500;
+const MAX_CHAT_RECIPIENT_ID_LENGTH = 128;
+const MAX_DATE_TIMESTAMP = 8_640_000_000_000_000;
+
 export function createRoomFullMessage() {
   return {
     type: SIGNALING_MESSAGE.ROOM_FULL,
@@ -262,7 +266,10 @@ export function createChatMessage({ senderId, senderName, text }) {
     senderId,
     senderName:
       typeof senderName === "string" ? senderName.trim().slice(0, 32) : "",
-    text: typeof text === "string" ? text.trim().slice(0, 500) : "",
+    text:
+      typeof text === "string"
+        ? text.trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
+        : "",
     timestamp: Date.now(),
   };
 }
@@ -279,18 +286,39 @@ export function createChatPrivateMessage({
     senderName:
       typeof senderName === "string" ? senderName.trim().slice(0, 32) : "",
     recipientId,
-    text: typeof text === "string" ? text.trim().slice(0, 500) : "",
+    text:
+      typeof text === "string"
+        ? text.trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
+        : "",
     timestamp: Date.now(),
   };
 }
 
 export function isChatMessage(message) {
-  return (
-    message &&
-    typeof message === "object" &&
-    (message.type === SIGNALING_MESSAGE.CHAT_MESSAGE ||
-      message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE)
-  );
+  if (
+    !message ||
+    typeof message !== "object" ||
+    (message.type !== SIGNALING_MESSAGE.CHAT_MESSAGE &&
+      message.type !== SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE) ||
+    typeof message.text !== "string" ||
+    !message.text.trim() ||
+    message.text.length > CHAT_MESSAGE_MAX_LENGTH ||
+    !Number.isSafeInteger(message.timestamp) ||
+    message.timestamp < 0 ||
+    message.timestamp > MAX_DATE_TIMESTAMP
+  ) {
+    return false;
+  }
+
+  if (message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE) {
+    return (
+      typeof message.recipientId === "string" &&
+      Boolean(message.recipientId.trim()) &&
+      message.recipientId.length <= MAX_CHAT_RECIPIENT_ID_LENGTH
+    );
+  }
+
+  return true;
 }
 
 export function withRoomEnvelope(message, { roomId, token }) {

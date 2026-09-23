@@ -14,9 +14,6 @@ const GENERIC_FORBIDDEN = { error: "Access denied." };
 const GENERIC_SERVER_ERROR = { error: "Media configuration is unavailable." };
 
 function getRoomTokenFromRequest(request) {
-  const fromQuery = new URL(request.url).searchParams.get("roomToken");
-  if (fromQuery) return fromQuery;
-
   return (
     request.headers.get("x-room-token")?.trim() ||
     request.headers.get("room-token")?.trim() ||

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import {
   createHostAudioMutedMessage,
   createHostAudioUnmutedMessage,
@@ -41,6 +42,7 @@ function loadVoiceIsolationPreference() {
 
 export function MediaControls({
   isHost,
+  participantMode = PARTICIPANT_MODE.AVAILABLE,
   roomConnection,
   localStream,
   setLocalStream,
@@ -88,6 +90,8 @@ export function MediaControls({
   const hadScreenStreamRef = useRef(Boolean(screenStream));
   const syncOutboundMediaRef = useRef(roomConnection?.syncOutboundMedia);
   syncOutboundMediaRef.current = roomConnection?.syncOutboundMedia;
+  const isListeningOnly =
+    !isHost && participantMode === PARTICIPANT_MODE.LISTENING;
 
   const isScreenAudioShared = Boolean(
     screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
@@ -139,6 +143,12 @@ export function MediaControls({
     let acquiredStream = null;
 
     const initLocalMedia = async () => {
+      if (isListeningOnly) {
+        setLocalStream(null);
+        void syncOutboundMediaRef.current?.({ localStream: null });
+        return;
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -203,7 +213,7 @@ export function MediaControls({
         }
       }
     };
-  }, [setLocalStream]);
+  }, [isListeningOnly, setLocalStream]);
 
   // Once local media first becomes available, push tracks onto any open PeerJS calls.
   // Device switches/toggles call syncOutboundMedia explicitly.
@@ -446,6 +456,11 @@ export function MediaControls({
     [publishScreenShareStatus, roomConnection, setScreenStream],
   );
 
+  useEffect(() => {
+    if (!isListeningOnly || !screenStream) return;
+    stopScreenShare(screenStream);
+  }, [isListeningOnly, screenStream, stopScreenShare]);
+
   const toggleAudio = useCallback(() => {
     if (!localStream) return;
 
@@ -528,6 +543,8 @@ export function MediaControls({
   ]);
 
   const toggleScreenShare = useCallback(async () => {
+    if (isListeningOnly) return;
+
     if (screenStream) {
       stopScreenShare(screenStream);
     } else {
@@ -586,6 +603,7 @@ export function MediaControls({
       }
     }
   }, [
+    isListeningOnly,
     localStream,
     publishScreenShareStatus,
     screenStream,

@@ -7,7 +7,7 @@ const createdRoom = {
   roomId: "room-1",
   hostToken: "host-token",
   participantToken: "participant-token",
-  joinCode: "ABCDEF",
+  joinCode: "ABCDEFGHJK",
 };
 
 jest.mock("@/hooks/roomSession", () => ({
@@ -20,7 +20,7 @@ jest.mock("@/hooks/roomSession", () => ({
   },
   useRoomSession: () => ({
     status: "waiting",
-    roomState: { joinCode: "ABCDEF" },
+    roomState: { joinCode: "ABCDEFGHJK" },
     error: "",
     createRoom: jest.fn().mockResolvedValue(createdRoom),
     refreshState: jest.fn(),

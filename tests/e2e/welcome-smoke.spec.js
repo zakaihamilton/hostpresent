@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 async function readJoinCode(page) {
-  const boxes = Array.from({ length: 8 }, (_, index) =>
+  const boxes = Array.from({ length: 10 }, (_, index) =>
     page.getByRole("textbox", {
       name: `Character ${index + 1}`,
       exact: true,
@@ -12,7 +12,7 @@ async function readJoinCode(page) {
   }
   const readCode = async () =>
     (await Promise.all(boxes.map((box) => box.inputValue()))).join("");
-  await expect.poll(readCode).toMatch(/^[A-Z]{8}$/);
+  await expect.poll(readCode).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ]{10}$/);
   return readCode();
 }
 
@@ -51,15 +51,16 @@ test("host welcome creates a shareable room without joining media", async ({
   ).toBeEnabled();
 
   const joinCode = await readJoinCode(page);
+  const formattedJoinCode = joinCode.replace(/(.{4})(?=.)/g, "$1-");
   await expect(page.getByLabel("Invite link")).toHaveValue(
-    new RegExp(`#/j/${joinCode.slice(0, 4)}-${joinCode.slice(4)}`),
+    new RegExp(`#/j/${formattedJoinCode}`),
   );
   await expect(
     page.getByRole("button", { name: "Copy room code" }),
   ).toBeEnabled();
 });
 
-test("participant join button enables only after all eight code characters are entered", async ({
+test("participant accepts legacy 8-character and new 10-character codes", async ({
   page,
 }) => {
   await page.goto("/#/j");
@@ -83,13 +84,18 @@ test("participant join button enables only after all eight code characters are e
     page.getByRole("button", { name: "Join meeting" }),
   ).toBeDisabled();
 
-  for (let index = 6; index < 8; index += 1) {
+  for (const [offset, character] of ["G", "H", "J", "K"].entries()) {
     await page
       .getByRole("textbox", {
-        name: `Character ${index + 1}`,
+        name: `Character ${offset + 7}`,
         exact: true,
       })
-      .fill(String.fromCharCode(65 + index));
+      .fill(character);
+    if (offset === 1) {
+      await expect(
+        page.getByRole("button", { name: "Join meeting" }),
+      ).toBeEnabled();
+    }
   }
   await expect(
     page.getByRole("button", { name: "Join meeting" }),
@@ -100,7 +106,7 @@ test("invite route joins the participant flow", async ({ page }) => {
   const resolveResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === "/api/rooms/resolve" &&
-      response.request().method() === "GET",
+      response.request().method() === "POST",
   );
 
   await page.goto("/#/j/ABCD-EFGH");

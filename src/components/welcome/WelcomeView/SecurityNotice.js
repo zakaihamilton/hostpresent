@@ -18,6 +18,15 @@ export function SecurityNotice() {
         const data = await response.json();
         if (cancelled) return;
 
+        if (!data.roomSigningConfigured) {
+          setNotice({
+            title: "[E081] Room signing is not configured.",
+            message:
+              "Room creation, code resolution, and saved room access are unavailable until ROOM_TOKEN_SECRET is set on the server.",
+          });
+          return;
+        }
+
         if (!data.signalingServerConfigured) {
           setNotice({
             title: "[E080] Signaling not configured.",
@@ -25,14 +34,6 @@ export function SecurityNotice() {
               "WebRTC will not work until SIGNALING_SERVER_URL is set on the server (Vercel env vars or .env.local).",
           });
           return;
-        }
-
-        if (!data.encrypted) {
-          setNotice({
-            title: "[E081] Not encrypted.",
-            message:
-              "Room links are working, but tokens use a default secret. Set SIGNALING_SERVER_URL for production room signing.",
-          });
         }
       } catch {
         // leave banner hidden if config cannot be loaded

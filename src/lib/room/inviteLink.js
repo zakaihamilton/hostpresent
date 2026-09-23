@@ -43,8 +43,12 @@ export function formatRoomIdInput(value) {
 
 export async function resolveJoinCode(joinCode) {
   const normalized = normalizeJoinCode(joinCode);
-  const params = new URLSearchParams({ code: normalized });
-  const response = await fetch(`/api/rooms/resolve?${params.toString()}`);
+  const response = await fetch("/api/rooms/resolve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ code: normalized }),
+  });
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {

@@ -1,5 +1,6 @@
 const GROUP_SIZE = 4;
-const JOIN_CODE_LENGTH = 8;
+const JOIN_CODE_LENGTH = 10;
+const LEGACY_JOIN_CODE_LENGTH = 8;
 
 export function normalizeJoinCode(code) {
   if (typeof code !== "string") return "";
@@ -17,9 +18,11 @@ export function formatJoinCode(code) {
 
 export function isValidJoinCode(code) {
   const normalized = normalizeJoinCode(code);
-  return new RegExp(`^[ABCDEFGHJKLMNPQRSTUVWXYZ]{${JOIN_CODE_LENGTH}}$`).test(
-    normalized,
+  return (
+    (normalized.length === JOIN_CODE_LENGTH ||
+      normalized.length === LEGACY_JOIN_CODE_LENGTH) &&
+    /^[ABCDEFGHJKLMNPQRSTUVWXYZ]+$/.test(normalized)
   );
 }
 
-export { JOIN_CODE_LENGTH };
+export { JOIN_CODE_LENGTH, LEGACY_JOIN_CODE_LENGTH };

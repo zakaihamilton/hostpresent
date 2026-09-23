@@ -10,8 +10,10 @@ export function jsonError(message, status = 400) {
   return jsonOk({ error: message }, { status });
 }
 
-export function getSearchParam(request, name) {
-  return new URL(request.url).searchParams.get(name);
+export function getBearerToken(request) {
+  const authorization = request.headers.get("authorization") ?? "";
+  const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
+  return match?.[1] ?? null;
 }
 
 export function verifyRequestToken(token) {

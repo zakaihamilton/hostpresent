@@ -6,6 +6,7 @@
   "ignores": [
     "node_modules/**",
     "playwright-report/**",
+    "test-results/**",
     ".repnix/**",
     "coverage/**"
   ]

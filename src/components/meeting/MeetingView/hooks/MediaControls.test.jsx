@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import { MediaControls } from "./MediaControls";
 
 function createTrack({
@@ -110,6 +111,43 @@ describe("MediaControls Hook", () => {
         setScreenStream: jest.fn(),
       }),
     );
+
+    await waitFor(() => {
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          voiceIsolation: true,
+        },
+      });
+    });
+  });
+
+  it("does not capture media in listening-only mode and acquires it when enabled", async () => {
+    const setLocalStream = jest.fn();
+    const roomConnection = {
+      send: jest.fn(),
+      syncOutboundMedia: jest.fn(),
+    };
+    const { rerender } = renderHook(
+      ({ participantMode }) =>
+        MediaControls({
+          isHost: false,
+          participantMode,
+          roomConnection,
+          localStream: null,
+          setLocalStream,
+          screenStream: null,
+          setScreenStream: jest.fn(),
+        }),
+      { initialProps: { participantMode: PARTICIPANT_MODE.LISTENING } },
+    );
+
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+
+    rerender({ participantMode: PARTICIPANT_MODE.AVAILABLE });
 
     await waitFor(() => {
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({

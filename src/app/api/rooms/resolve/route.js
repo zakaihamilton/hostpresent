@@ -1,12 +1,28 @@
+import { guardPostRequest } from "@/lib/room/apiSecurity";
 import { isValidJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { deriveRoomIdFromJoinCode } from "@/lib/room/roomIdentity";
-import { getSearchParam, jsonError, jsonOk } from "@/lib/room/routeHelpers";
+import {
+  BODY_TOO_LARGE,
+  jsonError,
+  jsonOk,
+  readJsonBody,
+} from "@/lib/room/routeHelpers";
 import { ROOM_ROLE, signRoomToken } from "@/lib/room/tokens";
 
 export const runtime = "nodejs";
 
-export async function GET(request) {
-  const joinCode = normalizeJoinCode(getSearchParam(request, "code") ?? "");
+export async function POST(request) {
+  const blocked = guardPostRequest(request, { maxBodyBytes: 512 });
+  if (blocked) return blocked;
+
+  const body = await readJsonBody(request, { maxBytes: 512 });
+  if (body === BODY_TOO_LARGE) {
+    return jsonError("[E064] Request body too large", 413);
+  }
+
+  const joinCode = normalizeJoinCode(
+    typeof body?.code === "string" ? body.code : "",
+  );
 
   if (!isValidJoinCode(joinCode)) {
     return jsonError("[E075] Invalid join code", 400);
