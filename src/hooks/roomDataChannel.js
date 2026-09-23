@@ -9,6 +9,7 @@ import {
   isParticipantStatusMessage,
   resolveParticipantStatusMessage,
 } from "@/lib/room/messageAuth";
+import { MAX_PARTICIPANT_CONNECTIONS } from "@/lib/room/peerLimits.mjs";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
 import {
@@ -60,7 +61,6 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
-const MAX_PARTICIPANT_CONNECTIONS = 29;
 const MAX_DATA_CHANNEL_MESSAGE_CHARS = 16_384;
 
 export function sendOnConnection(conn, message) {
@@ -1163,6 +1163,11 @@ export function useRoomDataChannel({
       peer.on("connection", (conn) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
         const remoteId = conn.peer;
+
+        if (connectionsRef.current.has(remoteId)) {
+          conn.close();
+          return;
+        }
 
         if (connectionsRef.current.size >= MAX_PARTICIPANT_CONNECTIONS) {
           const rejectConnection = () => {

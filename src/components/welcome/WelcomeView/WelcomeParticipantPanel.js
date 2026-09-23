@@ -11,6 +11,7 @@ import {
 } from "@/lib/room/inviteLink";
 import {
   formatJoinCode,
+  isLegacyJoinCode,
   isValidJoinCode,
   JOIN_CODE_LENGTH,
   LEGACY_JOIN_CODE_LENGTH,
@@ -99,6 +100,13 @@ export function WelcomeParticipantPanel({
       const normalized = normalizeRoomIdInput(code);
       if (!normalized) return;
       setResolveError("");
+      if (isLegacyJoinCode(normalized)) {
+        setResolveError(
+          "[E091] This 8-character invite code has expired. Ask the host for a new 10-character code.",
+        );
+        resolvedJoinCodeRef.current = null;
+        return;
+      }
       setIsResolving(true);
       try {
         const resolved = await resolveJoinCode(normalized, {
@@ -207,11 +215,8 @@ export function WelcomeParticipantPanel({
     />
   );
 
-  const enteredCodeLength = (roomIdInput ?? "").replace(/-/g, "").length;
-  const isLegacyJoinCode =
-    enteredCodeLength === LEGACY_JOIN_CODE_LENGTH &&
-    isValidJoinCode(roomIdInput);
-  const allFilled = isValidJoinCode(roomIdInput);
+  const hasLegacyJoinCode = isLegacyJoinCode(roomIdInput);
+  const allFilled = isValidJoinCode(roomIdInput) && !hasLegacyJoinCode;
 
   if (isResolving) {
     return (
@@ -242,15 +247,18 @@ export function WelcomeParticipantPanel({
             <div className={shared.directActionRow}>
               <JoinCodeBoxes
                 value={roomIdInput}
-                onChange={setRoomIdInput}
+                onChange={(value) => {
+                  setRoomIdInput(value);
+                  setResolveError("");
+                }}
                 autoFocus
                 className={shared.joinCodeBoxes}
               />
             </div>
             <p className={ps.joinHint}>
-              {isLegacyJoinCode
-                ? `This is a valid older ${LEGACY_JOIN_CODE_LENGTH}-character code. Continue entering the last two characters for a new code, or join with this code.`
-                : `Enter the ${JOIN_CODE_LENGTH}-character code from the host. Existing ${LEGACY_JOIN_CODE_LENGTH}-character codes are also accepted.`}
+              {hasLegacyJoinCode
+                ? `This ${LEGACY_JOIN_CODE_LENGTH}-character invite has expired. Ask the host for a new ${JOIN_CODE_LENGTH}-character code.`
+                : `Enter the ${JOIN_CODE_LENGTH}-character code from the host.`}
             </p>
           </div>
         </div>

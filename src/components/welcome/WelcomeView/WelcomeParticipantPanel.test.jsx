@@ -56,13 +56,13 @@ describe("WelcomeParticipantPanel", () => {
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
   });
 
-  it("accepts legacy 8-character and new 10-character codes", async () => {
+  it("rejects expired 8-character codes and accepts new 10-character codes", async () => {
     const user = userEvent.setup();
     const { resolveJoinCode } = await import("@/lib/room/inviteLink");
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEFGHJK",
     });
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
@@ -74,21 +74,24 @@ describe("WelcomeParticipantPanel", () => {
 
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
 
-    for (const [index, character] of ["G", "H", "J", "K"].entries()) {
+    for (const [index, character] of ["G", "H"].entries()) {
       await user.type(
         screen.getByLabelText(`Character ${index + 7}`),
         character,
       );
-      if (index === 1) {
-        expect(
-          screen.getByRole("button", { name: "Join meeting" }),
-        ).toBeEnabled();
-        expect(
-          screen.getByText(/valid older 8-character code/i),
-        ).toBeInTheDocument();
-      }
     }
 
+    expect(
+      screen.getByText(/8-character invite has expired/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
+
+    for (const [index, character] of ["J", "K"].entries()) {
+      await user.type(
+        screen.getByLabelText(`Character ${index + 9}`),
+        character,
+      );
+    }
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
   });
 
@@ -97,13 +100,13 @@ describe("WelcomeParticipantPanel", () => {
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEFGHJK",
     });
 
     render(
       <WelcomeParticipantPanel
         {...defaultProps}
-        joinCode="ABCDEFGH"
+        joinCode="ABCDEFGHJK"
         autoJoinFromRoute={false}
       />,
     );
@@ -120,13 +123,13 @@ describe("WelcomeParticipantPanel", () => {
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEFGHJK",
     });
 
     render(
       <WelcomeParticipantPanel
         {...defaultProps}
-        joinCode="ABCDEFGH"
+        joinCode="ABCDEFGHJK"
         autoJoinFromRoute
         navigate={navigate}
       />,
@@ -134,14 +137,14 @@ describe("WelcomeParticipantPanel", () => {
 
     await waitFor(() => {
       expect(resolveJoinCode).toHaveBeenCalledWith(
-        "ABCDEFGH",
+        "ABCDEFGHJK",
         expect.objectContaining({ deviceId: expect.any(String) }),
       );
     });
     expect(navigate).toHaveBeenCalledWith({
       view: "meeting",
       role: "participant",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABCDEFGHJK",
     });
   });
 

@@ -5,6 +5,7 @@ import {
   isPeerIdAuthorizedForClaims,
   verifyPeerAuthToken,
 } from "../src/lib/room/peerAuthToken.mjs";
+import { MAX_PARTICIPANT_CONNECTIONS } from "../src/lib/room/peerLimits.mjs";
 
 loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 
@@ -22,6 +23,16 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 const path = process.env.SIGNALING_SERVER_PATH?.trim() || "/";
 const key = process.env.SIGNALING_SERVER_KEY?.trim() || "peerjs";
 const host = process.env.SIGNALING_SERVER_HOST?.trim() || "0.0.0.0";
+const activeParticipantsByRoom = new Map();
+
+function isRoomSlotAvailable(peerId, claims) {
+  if (claims?.role !== "participant") return true;
+  const activePeerIds = activeParticipantsByRoom.get(claims.roomId);
+  return (
+    activePeerIds?.has(peerId) ||
+    (activePeerIds?.size ?? 0) < MAX_PARTICIPANT_CONNECTIONS
+  );
+}
 
 function validateUpgrade(info, callback) {
   try {
@@ -44,7 +55,9 @@ function validateUpgrade(info, callback) {
     const [peerId] = peerIds;
     const [token] = tokens;
     const claims = verifyPeerAuthToken(token);
-    const allowed = isPeerIdAuthorizedForClaims(peerId, claims);
+    const allowed =
+      isPeerIdAuthorizedForClaims(peerId, claims) &&
+      isRoomSlotAvailable(peerId, claims);
     callback(
       allowed,
       allowed ? 200 : 403,
@@ -69,6 +82,41 @@ peerServer.on("error", (error) => {
   // PeerJS errors may be caused by untrusted signaling traffic. Keep request
   // URLs and client tokens out of logs.
   console.error("[peer-server] signaling error", error?.message || "unknown");
+});
+
+peerServer.on("connection", (client) => {
+  const claims = verifyPeerAuthToken(client.getToken());
+  if (claims?.role !== "participant") return;
+
+  let activePeerIds = activeParticipantsByRoom.get(claims.roomId);
+  if (!activePeerIds) {
+    activePeerIds = new Set();
+    activeParticipantsByRoom.set(claims.roomId, activePeerIds);
+  }
+
+  const peerId = client.getId();
+  if (
+    !activePeerIds.has(peerId) &&
+    activePeerIds.size >= MAX_PARTICIPANT_CONNECTIONS
+  ) {
+    client.getSocket()?.close(1013, "Room is full");
+    return;
+  }
+
+  activePeerIds.add(peerId);
+});
+
+peerServer.on("disconnect", (client) => {
+  const claims = verifyPeerAuthToken(client.getToken());
+  if (claims?.role !== "participant") return;
+
+  const activePeerIds = activeParticipantsByRoom.get(claims.roomId);
+  if (!activePeerIds) return;
+
+  activePeerIds.delete(client.getId());
+  if (activePeerIds.size === 0) {
+    activeParticipantsByRoom.delete(claims.roomId);
+  }
 });
 
 console.log(

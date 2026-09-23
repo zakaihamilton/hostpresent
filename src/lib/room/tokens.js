@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { normalizeJoinCode } from "./joinCodeFormat.js";
 import { ROOM_ROLE } from "./roles.js";
 
@@ -73,6 +73,7 @@ export function signRoomToken({ roomId, role, joinCode = null }) {
     role,
     iat,
     exp,
+    jti: randomBytes(16).toString("hex"),
     ...(joinCode ? { joinCode: normalizeJoinCode(joinCode) } : {}),
   };
   const payloadPart = toBase64Url(JSON.stringify(payload));
@@ -95,6 +96,7 @@ function toVerifiedClaims(payload) {
     iat: payload.iat,
     exp: payload.exp,
     joinCode: payload.joinCode ?? null,
+    jti: payload.jti ?? null,
   };
 }
 
@@ -119,7 +121,9 @@ export function inspectRoomToken(token) {
     typeof payload.exp !== "number" ||
     typeof payload.iat !== "number" ||
     payload.exp <= payload.iat ||
-    payload.exp - payload.iat > ROOM_TOKEN_TTL_MS
+    payload.exp - payload.iat > ROOM_TOKEN_TTL_MS ||
+    (payload.jti !== undefined &&
+      (typeof payload.jti !== "string" || !/^[a-f0-9]{32}$/.test(payload.jti)))
   ) {
     return { ok: false, reason: TOKEN_FAILURE.INVALID_CLAIMS };
   }

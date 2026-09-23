@@ -3,7 +3,7 @@ import { JOIN_CODE_LENGTH } from "./joinCodeFormat.js";
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 // New 10-character codes provide about 46 bits of entropy. The resolver still
-// accepts legacy 8-character codes for existing invite links.
+// Recognizes the 8-character shape so old links can show an expiration message.
 const CODE_LENGTH = JOIN_CODE_LENGTH;
 
 export function createJoinCode() {

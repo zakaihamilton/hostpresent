@@ -7,6 +7,7 @@ export {
 export { createJoinCode } from "./joinCode.js";
 export {
   formatJoinCode,
+  isLegacyJoinCode,
   isValidJoinCode,
   normalizeJoinCode,
 } from "./joinCodeFormat.js";

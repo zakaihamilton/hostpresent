@@ -16,6 +16,14 @@ export function formatJoinCode(code) {
   );
 }
 
+export function isLegacyJoinCode(code) {
+  const normalized = normalizeJoinCode(code);
+  return (
+    normalized.length === LEGACY_JOIN_CODE_LENGTH &&
+    /^[ABCDEFGHJKLMNPQRSTUVWXYZ]+$/.test(normalized)
+  );
+}
+
 export function isValidJoinCode(code) {
   const normalized = normalizeJoinCode(code);
   return (

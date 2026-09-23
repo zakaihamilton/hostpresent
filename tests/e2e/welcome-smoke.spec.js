@@ -60,7 +60,7 @@ test("host welcome creates a shareable room without joining media", async ({
   ).toBeEnabled();
 });
 
-test("participant accepts legacy 8-character and new 10-character codes", async ({
+test("participant rejects expired 8-character and accepts new 10-character codes", async ({
   page,
 }) => {
   await page.goto("/#/j");
@@ -94,7 +94,10 @@ test("participant accepts legacy 8-character and new 10-character codes", async 
     if (offset === 1) {
       await expect(
         page.getByRole("button", { name: "Join meeting" }),
-      ).toBeEnabled();
+      ).toBeDisabled();
+      await expect(
+        page.getByText(/8-character invite has expired/i),
+      ).toBeVisible();
     }
   }
   await expect(
@@ -109,10 +112,10 @@ test("invite route joins the participant flow", async ({ page }) => {
       response.request().method() === "POST",
   );
 
-  await page.goto("/#/j/ABCD-EFGH");
+  await page.goto("/#/j/ABCD-EFGH-JK");
 
   expect((await resolveResponse).ok()).toBe(true);
-  await expect(page).toHaveURL(/#\/mj\/ABCD-EFGH$/);
+  await expect(page).toHaveURL(/#\/mj\/ABCD-EFGH-JK$/);
 });
 
 test("recent host room survives reload in local storage", async ({ page }) => {

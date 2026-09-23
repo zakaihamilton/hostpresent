@@ -19,7 +19,9 @@ export async function GET(request) {
   const peerAuthTicket = createPeerAuthTicket({
     roomId: verified.roomId,
     role: verified.role,
+    issuedAt: verified.iat,
     expiresAt: verified.exp,
+    sessionToken: token,
   });
 
   const response = {

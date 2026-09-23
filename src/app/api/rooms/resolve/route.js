@@ -1,5 +1,9 @@
 import { guardPostRequest } from "@/lib/room/apiSecurity";
-import { isValidJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
+import {
+  isLegacyJoinCode,
+  isValidJoinCode,
+  normalizeJoinCode,
+} from "@/lib/room/joinCodeFormat";
 import { deriveRoomIdFromJoinCode } from "@/lib/room/roomIdentity";
 import {
   BODY_TOO_LARGE,
@@ -23,6 +27,13 @@ export async function POST(request) {
   const joinCode = normalizeJoinCode(
     typeof body?.code === "string" ? body.code : "",
   );
+
+  if (isLegacyJoinCode(joinCode)) {
+    return jsonError(
+      "[E091] This 8-character invite code has expired. Ask the host for a new 10-character code.",
+      410,
+    );
+  }
 
   if (!isValidJoinCode(joinCode)) {
     return jsonError("[E075] Invalid join code", 400);

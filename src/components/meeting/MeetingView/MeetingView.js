@@ -22,7 +22,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
 import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
-import { formatJoinCode } from "@/lib/room/joinCodeFormat";
+import { formatJoinCode, isLegacyJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -100,6 +100,8 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
     () => formatJoinCode(routeJoinCode ?? roomState?.joinCode ?? ""),
     [routeJoinCode, roomState?.joinCode],
   );
+  const hasRetiredInviteCode =
+    isHost && isLegacyJoinCode(routeJoinCode ?? roomState?.joinCode ?? "");
 
   const inviteLink = useMemo(
     () =>
@@ -947,7 +949,9 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
         onShowInviteLink={
-          isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
+          isHost && (inviteLink || hasRetiredInviteCode) && !inviteBarVisible
+            ? handleShowInviteBar
+            : null
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
         revealTitleOnLogoClick={!isHost}
@@ -968,13 +972,14 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
         isFatalConnectionError={fatalConnectionError}
       />
 
-      {isHost && inviteLink && inviteBarVisible
+      {isHost && (inviteLink || hasRetiredInviteCode) && inviteBarVisible
         ? <InviteBar
             inviteLink={inviteLink}
             inviteCopyMessage={inviteCopyMessage}
             onCopyInviteLink={handleCopyInviteLink}
             onDismiss={handleDismissInviteBar}
             roomId={formattedRoomId}
+            retiredInviteCode={hasRetiredInviteCode}
           />
         : null}
 

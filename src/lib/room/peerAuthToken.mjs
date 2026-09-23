@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const PEER_AUTH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PEER_AUTH_AUDIENCE = "hostpresent-peerjs";
@@ -25,22 +25,37 @@ function signPayload(payloadPart, secret) {
   return createHmac("sha256", secret).update(payloadPart).digest();
 }
 
-export function createPeerAuthTicket({ roomId, role, expiresAt }) {
+export function createPeerAuthTicket({
+  roomId,
+  role,
+  issuedAt,
+  expiresAt,
+  sessionToken,
+}) {
   const secret = getRoomSigningSecret();
-  const iat = Date.now();
+  const iat = issuedAt;
   if (
     !secret ||
     typeof roomId !== "string" ||
     !roomId ||
     (role !== "host" && role !== "participant") ||
+    typeof iat !== "number" ||
     typeof expiresAt !== "number" ||
-    expiresAt <= iat
+    expiresAt <= iat ||
+    typeof sessionToken !== "string" ||
+    !sessionToken ||
+    sessionToken.length > MAX_TOKEN_LENGTH
   ) {
     return null;
   }
 
   const exp = Math.min(iat + PEER_AUTH_TOKEN_TTL_MS, expiresAt);
-  const jti = randomBytes(16).toString("hex");
+  const jti = createHmac("sha256", secret)
+    .update("hostpresent-peer-session:")
+    .update(sessionToken)
+    .digest()
+    .subarray(0, 16)
+    .toString("hex");
   const peerId = role === "host" ? `hp-${roomId}` : `pp-${jti}`;
   const payloadPart = toBase64Url(
     JSON.stringify({

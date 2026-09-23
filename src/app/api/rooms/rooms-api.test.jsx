@@ -128,6 +128,14 @@ describe("stateless room API routes", () => {
 
   it("rejects malformed and secretless participant code resolution", async () => {
     const { POST } = await import("./resolve/route");
+    const retiredCodeResponse = await POST(
+      request("http://localhost/api/rooms/resolve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: "ABCDEFGH" }),
+      }),
+    );
+    expect(retiredCodeResponse.status).toBe(410);
     expect(
       (
         await POST(
