@@ -1,5 +1,7 @@
 const DEFAULT_SIGNALING_PATH = "/";
 const DEFAULT_SIGNALING_PORT = 443;
+const DEFAULT_SIGNALING_KEY = "peerjs";
+export const REQUIRED_SIGNALING_AUTH_MODE = "room-token-v1";
 
 export { DEFAULT_SIGNALING_PATH };
 
@@ -159,6 +161,7 @@ export function buildPeerJsConfig(host = getSignalingServerHost()) {
     host: resolvedHost,
     port: readSignalingPortFromEnv(resolvedHost),
     path: getSignalingServerPath(),
+    key: process.env.SIGNALING_SERVER_KEY?.trim() || DEFAULT_SIGNALING_KEY,
     secure: readSignalingSecureFromEnv(resolvedHost),
     // Application-level handlers surface actionable PeerJS failures. Keep the
     // library logger quiet so expected peer-unavailable retries do not pollute
@@ -184,6 +187,10 @@ export function getPeerJsConfigFromApi(payload) {
     host,
     port: Number(payload?.port ?? (isLocal ? 9000 : DEFAULT_SIGNALING_PORT)),
     path: normalizeSignalingPath(payload?.path),
+    key:
+      typeof payload?.key === "string" && payload.key
+        ? payload.key
+        : DEFAULT_SIGNALING_KEY,
     secure: payload?.secure !== undefined ? payload.secure !== false : !isLocal,
     debug: 0,
     config: payload?.config ?? undefined,

@@ -10,6 +10,14 @@ endpoints.
   the Preview and Production environments.
 - Confirm `ROOM_TOKEN_SECRET`, `INTERNAL_AUTH_SECRET`, `TURN_SECRET_KEY`, and
   the signaling/TURN variables are set in the environment being promoted.
+- Confirm the authenticated signaling service uses the same
+  `ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_PATH`, and `SIGNALING_SERVER_KEY` as
+  the app, with `SIGNALING_AUTH_MODE=room-token-v1` configured in the app.
+- Confirm the app's signaling port and secure transport match the public
+  TLS/WebSocket proxy, and the signaling process listens on its platform `PORT`
+  or `SIGNALING_SERVER_PORT`.
+- Confirm signaling access logs redact the PeerJS WebSocket `token` query
+  parameter.
 - Run `npm run lint`, `npm run test:unit -- --runInBand`, `npm run build`, and
   `npm run test:e2e:smoke` from the release commit.
 

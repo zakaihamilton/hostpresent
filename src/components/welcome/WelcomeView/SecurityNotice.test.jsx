@@ -30,6 +30,7 @@ describe("SecurityNotice", () => {
       json: async () => ({
         roomSigningConfigured: true,
         signalingServerConfigured: true,
+        signalingAuthMode: "room-token-v1",
       }),
     });
 

@@ -35,6 +35,14 @@ export function SecurityNotice() {
           });
           return;
         }
+
+        if (data.signalingAuthMode !== "room-token-v1") {
+          setNotice({
+            title: "[E084] Authenticated signaling is not configured.",
+            message:
+              "WebRTC requires the Host Present authenticated signaling server and SIGNALING_AUTH_MODE=room-token-v1.",
+          });
+        }
       } catch {
         // leave banner hidden if config cannot be loaded
       }

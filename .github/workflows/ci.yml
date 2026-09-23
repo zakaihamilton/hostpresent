@@ -6,12 +6,6 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    services:
-      peerjs:
-        # Pin the signaling-server image used by the real-meeting suite.
-        image: peerjs/peerjs-server:1.0.2
-        ports:
-          - 9000:9000
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -28,20 +22,31 @@ jobs:
       - run: npm run test:unit -- --runInBand
       - run: npm run build
       - run: npm run test:e2e:smoke
-      - name: Wait for PeerJS signaling port
+      - name: Run authenticated PeerJS signaling and WebRTC suite
         run: |
+          npm run signaling > /tmp/hostpresent-peerjs.log 2>&1 &
+          peerjs_pid=$!
+          trap 'kill "$peerjs_pid" 2>/dev/null || true' EXIT
+          ready=0
           for attempt in {1..30}; do
             if (echo > /dev/tcp/127.0.0.1/9000) >/dev/null 2>&1; then
-              exit 0
+              ready=1
+              break
             fi
             sleep 1
           done
-          exit 1
-      - run: npm run test:e2e:webrtc
+          if [ "$ready" -ne 1 ] || ! kill -0 "$peerjs_pid" 2>/dev/null; then
+            cat /tmp/hostpresent-peerjs.log
+            exit 1
+          fi
+          npm run test:e2e:webrtc
         env:
           SIGNALING_SERVER_URL: 127.0.0.1
           SIGNALING_SERVER_PORT: "9000"
           SIGNALING_SERVER_PATH: /
+          SIGNALING_SERVER_KEY: peerjs
+          SIGNALING_AUTH_MODE: room-token-v1
+          ROOM_TOKEN_SECRET: ci-room-token-secret
           INTERNAL_AUTH_SECRET: ci-internal-auth-secret
           TURN_SECRET_KEY: ci-turn-secret
           TURN_DOMAIN: 127.0.0.1

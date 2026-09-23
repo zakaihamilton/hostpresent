@@ -60,6 +60,7 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
+const MAX_PARTICIPANT_CONNECTIONS = 29;
 const MAX_DATA_CHANNEL_MESSAGE_CHARS = 16_384;
 
 export function sendOnConnection(conn, message) {
@@ -75,6 +76,7 @@ export function sendOnConnection(conn, message) {
 export function useRoomDataChannel({
   role,
   token,
+  peerAuthToken,
   roomId,
   enabled = true,
   displayName = "",
@@ -1042,7 +1044,7 @@ export function useRoomDataChannel({
   }, [iceServers]);
 
   useEffect(() => {
-    if (!configReady || !peerConfig || !iceServers) {
+    if (!configReady || !peerConfig || !iceServers || !peerAuthToken) {
       return undefined;
     }
 
@@ -1118,6 +1120,7 @@ export function useRoomDataChannel({
       const baseOptions = peerConfigRef.current ?? peerConfig;
       const options = {
         ...baseOptions,
+        token: peerAuthToken,
         config: { iceServers: iceServersRef.current ?? iceServers },
       };
       const peer = new Peer(hostPeerId(roomId), options);
@@ -1154,7 +1157,7 @@ export function useRoomDataChannel({
         if (destroyedRef.current || peer !== peerRef.current) return;
         const remoteId = conn.peer;
 
-        if (connectionsRef.current.size >= 29) {
+        if (connectionsRef.current.size >= MAX_PARTICIPANT_CONNECTIONS) {
           const rejectConnection = () => {
             try {
               conn.send(JSON.stringify(createRoomFullMessage()));
@@ -1189,6 +1192,15 @@ export function useRoomDataChannel({
 
       peer.on("call", (call) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
+        const connection = connectionsRef.current.get(call.peer);
+        if (
+          !connection ||
+          connectionsRef.current.size > MAX_PARTICIPANT_CONNECTIONS ||
+          mediaCallsRef.current.has(call.peer)
+        ) {
+          call.close();
+          return;
+        }
         answerIncomingCall(call, call.peer);
       });
 
@@ -1231,6 +1243,7 @@ export function useRoomDataChannel({
       const baseOptions = peerConfigRef.current ?? peerConfig;
       const options = {
         ...baseOptions,
+        token: peerAuthToken,
         config: { iceServers: iceServersRef.current ?? iceServers },
       };
       const peer = new Peer(undefined, options);
@@ -1265,6 +1278,10 @@ export function useRoomDataChannel({
 
       peer.on("call", (call) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
+        if (call.peer !== hostPeerId(roomId)) {
+          call.close();
+          return;
+        }
         const relayFrom =
           typeof call.metadata?.relayFrom === "string"
             ? call.metadata.relayFrom
@@ -1349,6 +1366,7 @@ export function useRoomDataChannel({
     iceServers,
     isHost,
     peerConfig,
+    peerAuthToken,
     roomId,
     scheduleConnectTimeout,
     schedulePeerRetry,

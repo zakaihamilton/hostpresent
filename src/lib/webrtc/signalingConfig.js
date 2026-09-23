@@ -1,4 +1,7 @@
-import { getPeerJsConfigFromApi } from "./peerClient.js";
+import {
+  getPeerJsConfigFromApi,
+  REQUIRED_SIGNALING_AUTH_MODE,
+} from "./peerClient.js";
 
 const CONFIG_FETCH_TIMEOUT_MS = 10000;
 
@@ -59,6 +62,10 @@ export async function fetchPeerJsConfig() {
   const data = await response.json();
   if (!data.signalingServerConfigured) {
     return null;
+  }
+
+  if (data.signalingAuthMode !== REQUIRED_SIGNALING_AUTH_MODE) {
+    throw new Error("[E084] Authenticated signaling is not configured.");
   }
 
   return getPeerJsConfigFromApi(data.peerJs);

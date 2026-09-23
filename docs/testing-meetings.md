@@ -24,13 +24,22 @@ Install browser dependencies once:
 npx playwright install chromium
 ```
 
-Start or configure a PeerJS signaling server that matches the app environment.
-For local runs, the app expects these values unless overridden:
+Start the Host Present authenticated PeerJS signaling server in one terminal:
+
+```bash
+npm run signaling
+```
+
+For local runs, configure the app and signaling process with the same
+`ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_KEY`, and signaling path/port. The app
+also requires `SIGNALING_AUTH_MODE=room-token-v1`. Its default local values are:
 
 ```bash
 SIGNALING_SERVER_URL=localhost
 SIGNALING_SERVER_PORT=9000
-SIGNALING_SERVER_PATH=/myapp
+SIGNALING_SERVER_PATH=/
+SIGNALING_SERVER_KEY=peerjs
+SIGNALING_AUTH_MODE=room-token-v1
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 

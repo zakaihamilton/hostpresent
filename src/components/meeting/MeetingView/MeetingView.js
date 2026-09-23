@@ -235,6 +235,7 @@ function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
   const roomConnection = useRoomDataChannel({
     role,
     token,
+    peerAuthToken: roomState?.peerAuthToken,
     roomId: roomState?.roomId ?? null,
     enabled: Boolean(token && roomState?.roomId && !meetingDisconnectReason),
     displayName: resolvedDisplayName,
