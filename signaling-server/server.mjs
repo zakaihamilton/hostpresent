@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { loadEnvConfig } from "@next/env";
 import { PeerServer } from "peer";
 import { WebSocketServer } from "ws";
@@ -5,7 +6,10 @@ import {
   isPeerIdAuthorizedForClaims,
   verifyPeerAuthToken,
 } from "../src/lib/room/peerAuthToken.mjs";
-import { MAX_PARTICIPANT_CONNECTIONS } from "../src/lib/room/peerLimits.mjs";
+import {
+  createParticipantCapacityStore,
+  PARTICIPANT_CAPACITY_RENEW_INTERVAL_MS,
+} from "./participantCapacity.mjs";
 
 loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 
@@ -23,49 +27,63 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 const path = process.env.SIGNALING_SERVER_PATH?.trim() || "/";
 const key = process.env.SIGNALING_SERVER_KEY?.trim() || "peerjs";
 const host = process.env.SIGNALING_SERVER_HOST?.trim() || "0.0.0.0";
-const activeParticipantsByRoom = new Map();
+const participantCapacity = createParticipantCapacityStore();
+const activeParticipantClientsByRoom = new Map();
 
-function isRoomSlotAvailable(peerId, claims) {
-  if (claims?.role !== "participant") return true;
-  const activePeerIds = activeParticipantsByRoom.get(claims.roomId);
-  return (
-    activePeerIds?.has(peerId) ||
-    (activePeerIds?.size ?? 0) < MAX_PARTICIPANT_CONNECTIONS
-  );
+async function validatePeerUpgrade(info) {
+  const url = new URL(info.req.url || "/", "http://peerjs.local");
+  const peerIds = url.searchParams.getAll("id");
+  const tokens = url.searchParams.getAll("token");
+  const keys = url.searchParams.getAll("key");
+  if (peerIds.length !== 1 || tokens.length !== 1 || keys.length !== 1) {
+    return { allowed: false, statusCode: 403, message: "Access denied" };
+  }
+  if (keys[0] !== key) {
+    return { allowed: false, statusCode: 403, message: "Access denied" };
+  }
+
+  // PeerServer reads query parameters with Object.fromEntries(), which takes
+  // the last value for duplicate keys. Reject duplicates so the ID checked
+  // here is exactly the ID PeerServer registers after the upgrade.
+  const [peerId] = peerIds;
+  const [token] = tokens;
+  const claims = verifyPeerAuthToken(token);
+  if (!isPeerIdAuthorizedForClaims(peerId, claims)) {
+    return { allowed: false, statusCode: 403, message: "Access denied" };
+  }
+
+  if (claims.role === "participant") {
+    const ownerId = randomUUID();
+    let admitted;
+    try {
+      admitted = await participantCapacity.acquire(
+        claims.roomId,
+        peerId,
+        ownerId,
+      );
+    } catch {
+      return {
+        allowed: false,
+        statusCode: 503,
+        message: "Room admission is unavailable",
+      };
+    }
+    if (!admitted) {
+      return { allowed: false, statusCode: 429, message: "Room is full" };
+    }
+    info.req.hostpresentParticipantOwnerId = ownerId;
+  }
+
+  return { allowed: true, statusCode: 200 };
 }
 
 function validateUpgrade(info, callback) {
-  try {
-    const url = new URL(info.req.url || "/", "http://peerjs.local");
-    const peerIds = url.searchParams.getAll("id");
-    const tokens = url.searchParams.getAll("token");
-    const keys = url.searchParams.getAll("key");
-    if (peerIds.length !== 1 || tokens.length !== 1 || keys.length !== 1) {
-      callback(false, 403, "Access denied");
-      return;
-    }
-    if (keys[0] !== key) {
-      callback(false, 403, "Access denied");
-      return;
-    }
-
-    // PeerServer reads query parameters with Object.fromEntries(), which takes
-    // the last value for duplicate keys. Reject duplicates so the ID checked
-    // here is exactly the ID PeerServer registers after the upgrade.
-    const [peerId] = peerIds;
-    const [token] = tokens;
-    const claims = verifyPeerAuthToken(token);
-    const allowed =
-      isPeerIdAuthorizedForClaims(peerId, claims) &&
-      isRoomSlotAvailable(peerId, claims);
-    callback(
-      allowed,
-      allowed ? 200 : 403,
-      allowed ? undefined : "Access denied",
-    );
-  } catch {
-    callback(false, 403, "Access denied");
-  }
+  validatePeerUpgrade(info).then(
+    ({ allowed, statusCode, message }) => {
+      callback(allowed, statusCode, message);
+    },
+    () => callback(false, 503, "Room admission is unavailable"),
+  );
 }
 
 const peerServer = PeerServer({
@@ -74,8 +92,17 @@ const peerServer = PeerServer({
   path,
   key,
   proxied: process.env.SIGNALING_SERVER_PROXIED === "true",
-  createWebSocketServer: (options) =>
-    new WebSocketServer({ ...options, verifyClient: validateUpgrade }),
+  createWebSocketServer: (options) => {
+    const webSocketServer = new WebSocketServer({
+      ...options,
+      verifyClient: validateUpgrade,
+    });
+    webSocketServer.on("connection", (socket, request) => {
+      socket.hostpresentParticipantOwnerId =
+        request.hostpresentParticipantOwnerId;
+    });
+    return webSocketServer;
+  },
 });
 
 peerServer.on("error", (error) => {
@@ -87,37 +114,101 @@ peerServer.on("error", (error) => {
 peerServer.on("connection", (client) => {
   const claims = verifyPeerAuthToken(client.getToken());
   if (claims?.role !== "participant") return;
-
-  let activePeerIds = activeParticipantsByRoom.get(claims.roomId);
-  if (!activePeerIds) {
-    activePeerIds = new Set();
-    activeParticipantsByRoom.set(claims.roomId, activePeerIds);
-  }
-
-  const peerId = client.getId();
-  if (
-    !activePeerIds.has(peerId) &&
-    activePeerIds.size >= MAX_PARTICIPANT_CONNECTIONS
-  ) {
-    client.getSocket()?.close(1013, "Room is full");
+  const ownerId = client.getSocket()?.hostpresentParticipantOwnerId;
+  if (!ownerId) {
+    client.getSocket()?.close(1011, "Room admission lease is missing");
     return;
   }
 
-  activePeerIds.add(peerId);
+  let activeClients = activeParticipantClientsByRoom.get(claims.roomId);
+  if (!activeClients) {
+    activeClients = new Map();
+    activeParticipantClientsByRoom.set(claims.roomId, activeClients);
+  }
+
+  const previousEntry = activeClients.get(client.getId());
+  const activeEntry = { client, ownerId, renewalFailures: 0 };
+  activeClients.set(client.getId(), activeEntry);
+  if (previousEntry) {
+    void participantCapacity
+      .release(claims.roomId, client.getId(), previousEntry.ownerId)
+      .catch(() => {});
+  }
 });
 
 peerServer.on("disconnect", (client) => {
   const claims = verifyPeerAuthToken(client.getToken());
   if (claims?.role !== "participant") return;
 
-  const activePeerIds = activeParticipantsByRoom.get(claims.roomId);
-  if (!activePeerIds) return;
-
-  activePeerIds.delete(client.getId());
-  if (activePeerIds.size === 0) {
-    activeParticipantsByRoom.delete(claims.roomId);
+  const activeClients = activeParticipantClientsByRoom.get(claims.roomId);
+  const activeEntry = activeClients?.get(client.getId());
+  const ownerId = client.getSocket()?.hostpresentParticipantOwnerId;
+  if (activeEntry?.client === client && activeEntry.ownerId === ownerId) {
+    activeClients.delete(client.getId());
+    if (activeClients.size === 0) {
+      activeParticipantClientsByRoom.delete(claims.roomId);
+    }
+    void participantCapacity
+      .release(claims.roomId, client.getId(), ownerId)
+      .catch(() => {});
   }
 });
+
+let participantRenewalInFlight = false;
+
+async function renewParticipantSlots() {
+  if (participantRenewalInFlight) return;
+  participantRenewalInFlight = true;
+  try {
+    await Promise.all(
+      [...activeParticipantClientsByRoom].map(
+        async ([roomId, activeClients]) => {
+          const owners = [...activeClients].map(([peerId, entry]) => ({
+            peerId,
+            ownerId: entry.ownerId,
+          }));
+          let renewedOwnerIds;
+          try {
+            renewedOwnerIds = new Set(
+              await participantCapacity.renew(roomId, owners),
+            );
+          } catch {
+            for (const [peerId, activeEntry] of activeClients) {
+              if (activeClients.get(peerId) !== activeEntry) continue;
+              const nextFailures = activeEntry.renewalFailures + 1;
+              activeEntry.renewalFailures = nextFailures;
+              if (nextFailures >= 2) {
+                activeEntry.client
+                  .getSocket()
+                  ?.close(1013, "Room admission unavailable");
+              }
+            }
+            return;
+          }
+
+          for (const [peerId, activeEntry] of activeClients) {
+            if (activeClients.get(peerId) !== activeEntry) continue;
+            if (!renewedOwnerIds.has(activeEntry.ownerId)) {
+              activeEntry.client
+                .getSocket()
+                ?.close(1013, "Room admission lease expired");
+              continue;
+            }
+            activeEntry.renewalFailures = 0;
+          }
+        },
+      ),
+    );
+  } finally {
+    participantRenewalInFlight = false;
+  }
+}
+
+const participantRenewalTimer = setInterval(
+  () => void renewParticipantSlots(),
+  PARTICIPANT_CAPACITY_RENEW_INTERVAL_MS,
+);
+participantRenewalTimer.unref?.();
 
 console.log(
   `[peer-server] authenticated signaling server listening on ${host}:${port}${path}`,

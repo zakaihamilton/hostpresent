@@ -24,7 +24,7 @@ Install browser dependencies once:
 npx playwright install chromium
 ```
 
-Start the Host Present authenticated PeerJS signaling server in one terminal:
+Start the local Host Present PeerJS signaling server in one terminal:
 
 ```bash
 npm run signaling

@@ -49,6 +49,7 @@ Next.js application
 
 - The browser connects participants over WebRTC directly when possible; TURN can relay media for networks that need it.
 - PeerJS is used for signaling through the separately hosted authenticated server in `signaling-server/`. It validates signed room-scoped tickets and only allows host tokens to claim host peer IDs.
+- The signaling process uses short-lived in-memory leases to enforce the participant limit during PeerJS connections.
 - The Next.js API is stateless: it signs room credentials and provides connection configuration, but does not store live room state.
 - Live controls and chat travel over authenticated WebRTC data channels.
 - Routing uses URL hashes such as `#/welcome`, `#/meeting/...`, and `#/j/...`, so the app can run on hosting that does not provide server-side route rewrites.
@@ -82,7 +83,7 @@ SIGNALING_AUTH_MODE=room-token-v1
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Start the authenticated signaling server in one terminal and the Next.js app in another:
+Start the PeerJS signaling server in one terminal and the Next.js app in another:
 
 ```bash
 npm run signaling
@@ -116,12 +117,14 @@ There is no fallback room-token secret. If `ROOM_TOKEN_SECRET` is missing, room 
 
 ## Production deployment
 
-Host Present is intentionally stateless: it does not require a database, Redis, or server-persistent room state. A server restart does not end an active peer-to-peer meeting, but connection waiting states, participant removals, and token renewal are not persisted on the server.
+Room and media state are not persisted on the server. A signaling restart does not end an active peer-to-peer meeting, but connection waiting states, participant removals, and token renewal are not persisted.
+
+The app document is rendered per request so its Content Security Policy can use a fresh script nonce. PeerJS keeps its live registry and participant-capacity leases in process memory, so keep the Railway signaling service at one replica. Railway deploys one replica by default; [multiple replicas are not supported by PeerJS's process-local registry, and Railway does not provide sticky sessions](https://docs.railway.com/deployments/optimize-performance).
 
 For a Vercel deployment, run the authenticated signaling server as a separate WebSocket-capable service:
 
 1. Configure all required environment variables for Preview and Production.
-2. Deploy `npm run signaling` from this repository on a WebSocket-capable host. Set the same `ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_PATH`, and `SIGNALING_SERVER_KEY` on the signaling service and app. The service listens on the platform's `PORT` or `SIGNALING_SERVER_PORT`; set the app's `SIGNALING_SERVER_PORT` to the browser-facing port exposed by the TLS/WebSocket proxy (usually `443`).
+2. Deploy `npm run signaling` from this repository on a WebSocket-capable host. Set the same `ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_PATH`, and `SIGNALING_SERVER_KEY` on the signaling service and app. Keep the Railway signaling service at one replica. The service listens on the platform's `PORT` or `SIGNALING_SERVER_PORT`; set the app's `SIGNALING_SERVER_PORT` to the browser-facing port exposed by the TLS/WebSocket proxy (usually `443`).
 3. Set `SIGNALING_AUTH_MODE=room-token-v1` in the app and point `SIGNALING_SERVER_URL` at the authenticated server.
 4. Configure the [Vercel Firewall rate rules](docs/vercel-security.md) before exposing room and media endpoints.
 5. Complete the [production release checklist](docs/production-release-checklist.md), including verification that each rule returns `429` after its limit is exceeded.

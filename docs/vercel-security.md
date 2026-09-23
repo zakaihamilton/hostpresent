@@ -1,6 +1,6 @@
 # Vercel security setup
 
-HostPresent is stateless. Configure these Vercel Firewall rate rules before promoting a deployment to production:
+Room and media state are not stored on the application server. Configure these Vercel Firewall rate rules before promoting a deployment to production:
 
 | Route | Match | Limit | Window |
 | --- | --- | --- | --- |
@@ -25,6 +25,6 @@ Required environment variables:
 - `SIGNALING_AUTH_MODE=room-token-v1`: enables the authenticated signaling protocol in the app.
 - `INTERNAL_AUTH_SECRET`, `TURN_SECRET_KEY`, and `TURN_DOMAIN`: scoped TURN credentials.
 
-Run `npm run signaling` as a separate WebSocket-capable service. It must use the same `ROOM_TOKEN_SECRET`, signaling path, and key as the app. Expose it through a TLS-enabled WebSocket proxy, and do not place the service behind a proxy that logs WebSocket request query strings without redacting `token`.
+Run `npm run signaling` as a separate WebSocket-capable service. It must use the same `ROOM_TOKEN_SECRET`, signaling path, and key as the app. Keep the Railway service at one replica: PeerJS's live peer registry and participant-capacity leases are process-local, and [Railway does not provide sticky sessions across replicas](https://docs.railway.com/deployments/optimize-performance). Expose the service through a TLS-enabled WebSocket proxy, and do not place it behind a proxy that logs WebSocket request query strings without redacting `token`.
 
 To rotate room credentials, deploy a new `ROOM_TOKEN_SECRET`. This invalidates every existing host token, participant token, invite link, and locally saved room token; users must create or join rooms again.

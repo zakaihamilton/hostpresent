@@ -1,5 +1,5 @@
+import { headers } from "next/headers";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
-import { themeInitScript } from "@/lib/settings/themeScript";
 import "./globals.css";
 
 export const metadata = {
@@ -33,12 +33,13 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const nonce = (await headers()).get("x-nonce");
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Theme bootstrap must run before hydration to avoid a light/dark flash. */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script src="/theme-init.js" nonce={nonce ?? undefined} />
         <link
           rel="icon"
           type="image/png"

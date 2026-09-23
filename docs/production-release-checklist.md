@@ -10,6 +10,8 @@ endpoints.
   the Preview and Production environments.
 - Confirm `ROOM_TOKEN_SECRET`, `INTERNAL_AUTH_SECRET`, `TURN_SECRET_KEY`, and
   the signaling/TURN variables are set in the environment being promoted.
+- Confirm the Railway signaling service is configured with one replica. The
+  PeerJS registry and participant-capacity leases are process-local.
 - Confirm the authenticated signaling service uses the same
   `ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_PATH`, and `SIGNALING_SERVER_KEY` as
   the app, with `SIGNALING_AUTH_MODE=room-token-v1` configured in the app.
