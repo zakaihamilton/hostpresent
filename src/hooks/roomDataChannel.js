@@ -77,6 +77,7 @@ export function useRoomDataChannel({
   role,
   token,
   peerAuthToken,
+  peerId,
   roomId,
   enabled = true,
   displayName = "",
@@ -1044,7 +1045,13 @@ export function useRoomDataChannel({
   }, [iceServers]);
 
   useEffect(() => {
-    if (!configReady || !peerConfig || !iceServers || !peerAuthToken) {
+    if (
+      !configReady ||
+      !peerConfig ||
+      !iceServers ||
+      !peerAuthToken ||
+      !peerId
+    ) {
       return undefined;
     }
 
@@ -1246,7 +1253,7 @@ export function useRoomDataChannel({
         token: peerAuthToken,
         config: { iceServers: iceServersRef.current ?? iceServers },
       };
-      const peer = new Peer(undefined, options);
+      const peer = new Peer(peerId, options);
       peerRef.current = peer;
 
       const connectToHost = () => {
@@ -1367,6 +1374,7 @@ export function useRoomDataChannel({
     isHost,
     peerConfig,
     peerAuthToken,
+    peerId,
     roomId,
     scheduleConnectTimeout,
     schedulePeerRetry,

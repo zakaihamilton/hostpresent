@@ -1,5 +1,5 @@
 import { signIceRoomToken } from "@/lib/media/iceRoomToken";
-import { signPeerAuthToken } from "@/lib/room/peerAuthToken.mjs";
+import { createPeerAuthTicket } from "@/lib/room/peerAuthToken.mjs";
 import {
   getBearerToken,
   jsonOk,
@@ -16,7 +16,7 @@ export async function GET(request) {
   const { verified } = auth;
 
   const iceRoomToken = signIceRoomToken({ roomId: verified.roomId });
-  const peerAuthToken = signPeerAuthToken({
+  const peerAuthTicket = createPeerAuthTicket({
     roomId: verified.roomId,
     role: verified.role,
     expiresAt: verified.exp,
@@ -27,7 +27,12 @@ export async function GET(request) {
     role: verified.role,
     joinCode: verified.joinCode ?? null,
     ...(iceRoomToken ? { iceRoomToken } : {}),
-    ...(peerAuthToken ? { peerAuthToken } : {}),
+    ...(peerAuthTicket
+      ? {
+          peerAuthToken: peerAuthTicket.token,
+          peerId: peerAuthTicket.peerId,
+        }
+      : {}),
   };
 
   return jsonOk(response);

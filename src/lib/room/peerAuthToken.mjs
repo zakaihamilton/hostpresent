@@ -25,7 +25,7 @@ function signPayload(payloadPart, secret) {
   return createHmac("sha256", secret).update(payloadPart).digest();
 }
 
-export function signPeerAuthToken({ roomId, role, expiresAt }) {
+export function createPeerAuthTicket({ roomId, role, expiresAt }) {
   const secret = getRoomSigningSecret();
   const iat = Date.now();
   if (
@@ -40,6 +40,8 @@ export function signPeerAuthToken({ roomId, role, expiresAt }) {
   }
 
   const exp = Math.min(iat + PEER_AUTH_TOKEN_TTL_MS, expiresAt);
+  const jti = randomBytes(16).toString("hex");
+  const peerId = role === "host" ? `hp-${roomId}` : `pp-${jti}`;
   const payloadPart = toBase64Url(
     JSON.stringify({
       aud: PEER_AUTH_AUDIENCE,
@@ -47,11 +49,12 @@ export function signPeerAuthToken({ roomId, role, expiresAt }) {
       role,
       iat,
       exp,
-      jti: randomBytes(16).toString("base64url"),
+      jti,
+      peerId,
     }),
   );
   const signaturePart = toBase64Url(signPayload(payloadPart, secret));
-  return `${payloadPart}.${signaturePart}`;
+  return { token: `${payloadPart}.${signaturePart}`, peerId };
 }
 
 export function verifyPeerAuthToken(token) {
@@ -88,7 +91,10 @@ export function verifyPeerAuthToken(token) {
     typeof claims.iat !== "number" ||
     typeof claims.exp !== "number" ||
     typeof claims.jti !== "string" ||
-    claims.jti.length !== 22 ||
+    claims.jti.length !== 32 ||
+    typeof claims.peerId !== "string" ||
+    claims.peerId !==
+      (claims.role === "host" ? `hp-${claims.roomId}` : `pp-${claims.jti}`) ||
     claims.exp <= now ||
     claims.iat > now + 60_000 ||
     claims.exp <= claims.iat ||
@@ -100,6 +106,8 @@ export function verifyPeerAuthToken(token) {
   return {
     roomId: claims.roomId,
     role: claims.role,
+    peerId: claims.peerId,
+    jti: claims.jti,
     iat: claims.iat,
     exp: claims.exp,
   };
@@ -107,8 +115,11 @@ export function verifyPeerAuthToken(token) {
 
 export function isPeerIdAuthorizedForClaims(peerId, claims) {
   if (typeof peerId !== "string" || !claims?.roomId) return false;
-  const hostPeerId = `hp-${claims.roomId}`;
-  if (claims.role === "host") return peerId === hostPeerId;
-  if (claims.role === "participant") return !peerId.startsWith("hp-");
+  if (claims.role === "host") {
+    return peerId === `hp-${claims.roomId}` && peerId === claims.peerId;
+  }
+  if (claims.role === "participant") {
+    return peerId === `pp-${claims.jti}` && peerId === claims.peerId;
+  }
   return false;
 }
