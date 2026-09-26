@@ -43,14 +43,20 @@ Host and participants
 
 Next.js application
         ├── Creates and resolves room credentials
-        ├── Issues signed, short-lived access tokens
-        └── Provides room APIs and TURN configuration
+        ├── Authenticates each room and chooses Host Present peer IDs
+        └── Requests scoped Peerovo peer tickets
+
+Peerovo
+        ├── Authenticated PeerJS signaling
+        ├── Project → Session → Peer tickets
+        └── ICE servers and short-lived coturn credentials
 ```
 
 - The browser connects participants over WebRTC directly when possible; TURN can relay media for networks that need it.
-- PeerJS is used for signaling through the separately hosted authenticated server in `signaling-server/`. It validates signed room-scoped tickets and only allows host tokens to claim host peer IDs.
-- The signaling process uses short-lived in-memory leases to enforce the participant limit during PeerJS connections.
-- The Next.js API is stateless: it signs room credentials and provides connection configuration, but does not store live room state.
+- Peerovo owns generic PeerJS signaling, session admission, ICE configuration, and short-lived coturn credentials.
+- Host Present verifies its room token before asking Peerovo for a ticket. Host Present alone chooses the host and participant peer IDs.
+- Peerovo tickets are bound to the `hostpresent` project, the room ID as session ID, and the exact peer ID.
+- The Next.js API is stateless: it signs room credentials and requests connectivity tickets, but does not store live room state.
 - Live controls and chat travel over authenticated WebRTC data channels.
 - Routing uses URL hashes such as `#/welcome`, `#/meeting/...`, and `#/j/...`, so the app can run on hosting that does not provide server-side route rewrites.
 
@@ -60,7 +66,7 @@ Next.js application
 
 - Node.js **20.9 or newer**
 - npm
-- The Host Present authenticated PeerJS signaling server, reachable from the browser
+- A Peerovo service configured for Host Present, reachable from the app server and browser
 - A modern browser with camera, microphone, and screen-sharing support
 
 ### Run locally
@@ -71,29 +77,23 @@ cd hostpresent
 npm install
 ```
 
-Create `.env.local` with a local room secret and the connection details for your signaling server:
+Create `.env.local` with a room secret and the server-only Peerovo project credentials:
 
 ```dotenv
 ROOM_TOKEN_SECRET=replace-with-a-long-random-secret
-SIGNALING_SERVER_URL=localhost
-SIGNALING_SERVER_PATH=/
-SIGNALING_SERVER_PORT=9000
-SIGNALING_SERVER_KEY=peerjs
-SIGNALING_AUTH_MODE=room-token-v1
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+PEEROVO_API_URL=https://peerovo.example.com
+PEEROVO_PROJECT_ID=hostpresent
+PEEROVO_PROJECT_API_KEY=replace-with-a-32-character-project-key
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 ```
 
-Start the PeerJS signaling server in one terminal and the Next.js app in another:
-
-```bash
-npm run signaling
-```
+For local WebRTC work, start the Peerovo service separately with its own local configuration. Add `http://127.0.0.1:3000` to the Host Present project's Peerovo `allowedOrigins`, and use the same project API key in both services. Then start Host Present:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The welcome screen can load without signaling configuration, but a real meeting requires the authenticated signaling server, valid media connectivity, and the same `ROOM_TOKEN_SECRET` in both the Next.js app and signaling server.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The welcome screen can load without Peerovo, but a real meeting requires a reachable Peerovo service and its project credentials. The room-signing secret remains private to Host Present.
 
 ### Environment variables
 
@@ -102,33 +102,27 @@ Set these variables in `.env.local` for development or in the deployment environ
 | Variable | Purpose |
 | --- | --- |
 | `ROOM_TOKEN_SECRET` | Required high-entropy HMAC secret for room tokens and room-ID derivation. Rotating it invalidates existing room links and saved rooms. |
-| `SIGNALING_SERVER_URL` | PeerJS hostname only—do not include `https://`. Required for WebRTC. |
-| `SIGNALING_SERVER_PATH` | PeerJS path prefix; defaults to `/`. |
-| `SIGNALING_SERVER_PORT` | PeerJS port; defaults to `9000` for localhost and `443` for other hosts. |
-| `SIGNALING_SERVER_KEY` | PeerJS API key shared by the app and authenticated signaling server; defaults to `peerjs`. |
-| `SIGNALING_AUTH_MODE` | Set to `room-token-v1` to enable the role-checked signaling protocol. The signaling server validates room-scoped tickets before registering peer IDs. |
-| `SIGNALING_SECURE` | Optional `true`/`false` override for the PeerJS connection transport. It defaults to insecure for localhost and secure for other hosts. |
+| `PEEROVO_API_URL` | HTTPS base URL of the Peerovo API and signaling service. Local HTTP is accepted only for loopback addresses outside production. |
+| `PEEROVO_PROJECT_ID` | Peerovo project ID assigned to Host Present, normally `hostpresent`. |
+| `PEEROVO_PROJECT_API_KEY` | Server-only project key used to request Peerovo peer tickets. Never expose it through a `NEXT_PUBLIC_` variable. |
 | `NEXT_PUBLIC_APP_URL` | Public app origin used to build participant invite links, for example `https://hostpresent.com`. |
-| `INTERNAL_AUTH_SECRET` | HMAC secret for short-lived ICE configuration room tokens. Required when using the ICE configuration API. |
-| `TURN_SECRET_KEY` | Shared secret used to mint ephemeral CoTURN credentials. |
-| `TURN_DOMAIN` | TURN/TURNS hostname; defaults to `hostpresent.duckdns.org`. |
 
 There is no fallback room-token secret. If `ROOM_TOKEN_SECRET` is missing, room creation and code resolution fail closed. Never expose it through a `NEXT_PUBLIC_` variable.
 
 ## Production deployment
 
-Room and media state are not persisted on the server. A signaling restart does not end an active peer-to-peer meeting, but connection waiting states, participant removals, and token renewal are not persisted.
+Room and media state are not persisted on the server. A Peerovo restart does not end an active peer-to-peer meeting, but connection waiting states, participant removals, and session admission leases are not persisted.
 
-The app document is rendered per request so its Content Security Policy can use a fresh script nonce. PeerJS keeps its live registry and participant-capacity leases in process memory, so keep the Railway signaling service at one replica. Railway deploys one replica by default; [multiple replicas are not supported by PeerJS's process-local registry, and Railway does not provide sticky sessions](https://docs.railway.com/deployments/optimize-performance).
+The app document is rendered per request so its Content Security Policy can use a fresh script nonce. Peerovo keeps its live PeerJS registry and capacity leases in process memory, so run the Peerovo service as one replica unless its shared-state design is changed.
 
-For a Vercel deployment, run the authenticated signaling server as a separate WebSocket-capable service:
+For a Vercel deployment:
 
-1. Configure all required environment variables for Preview and Production.
-2. Deploy `npm run signaling` from this repository on a WebSocket-capable host. Set the same `ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_PATH`, and `SIGNALING_SERVER_KEY` on the signaling service and app. Keep the Railway signaling service at one replica. The service listens on the platform's `PORT` or `SIGNALING_SERVER_PORT`; set the app's `SIGNALING_SERVER_PORT` to the browser-facing port exposed by the TLS/WebSocket proxy (usually `443`).
-3. Set `SIGNALING_AUTH_MODE=room-token-v1` in the app and point `SIGNALING_SERVER_URL` at the authenticated server.
-4. Configure the [Vercel Firewall rate rules](docs/vercel-security.md) before exposing room and media endpoints.
-5. Complete the [production release checklist](docs/production-release-checklist.md), including verification that each rule returns `429` after its limit is exceeded.
-6. Rotate `ROOM_TOKEN_SECRET` deliberately when invalidating legacy room links and locally saved room tokens, and update both services together.
+1. Deploy Peerovo as a WebSocket-capable service and configure its `hostpresent` project with the exact Preview and Production app origins.
+2. Set `PEEROVO_API_URL`, `PEEROVO_PROJECT_ID`, and `PEEROVO_PROJECT_API_KEY` in Host Present's Preview and Production environments. Keep the project key server-only.
+3. Keep Peerovo's signing secret, project keys, and coturn secret in the Peerovo service. Host Present does not need the coturn secret.
+4. Configure the [Vercel Firewall rate rules](docs/vercel-security.md) before exposing room APIs.
+5. Complete the [production release checklist](docs/production-release-checklist.md), including Peerovo health/readiness and rate-limit checks.
+6. Rotate `ROOM_TOKEN_SECRET` deliberately when invalidating legacy room links and locally saved room tokens. This does not rotate Peerovo's independent signing keys.
 
 Treat a room code as a bearer credential and share it only with the intended meeting audience. Codes have 10 characters. Older 8-character invites have expired; create a new room to issue a fresh code.
 
@@ -137,7 +131,6 @@ Treat a room code as a bearer credential and share it only with the intended mee
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Start the Next.js development server. |
-| `npm run signaling` | Start the authenticated PeerJS signaling server. |
 | `npm run build` | Create a production build. |
 | `npm run start` | Run the production server locally. |
 | `npm run lint` | Run Biome checks. |

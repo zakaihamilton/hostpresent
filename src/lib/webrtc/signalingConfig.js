@@ -20,26 +20,36 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
-export async function fetchIceServers(sessionToken) {
-  if (!sessionToken) {
+export async function fetchIceServers(peerToken, iceConfigUrl) {
+  if (
+    typeof peerToken !== "string" ||
+    !peerToken ||
+    typeof iceConfigUrl !== "string"
+  ) {
     throw new Error("Could not load secure streaming configuration.");
   }
 
-  const stateResponse = await fetchWithTimeout("/api/rooms/state", {
-    headers: { Authorization: `Bearer ${sessionToken}` },
-  });
-  if (!stateResponse.ok) {
+  let parsedIceConfigUrl;
+  try {
+    parsedIceConfigUrl = new URL(iceConfigUrl);
+  } catch {
+    throw new Error("Could not load secure streaming configuration.");
+  }
+  if (
+    !["https:", "http:"].includes(parsedIceConfigUrl.protocol) ||
+    parsedIceConfigUrl.username ||
+    parsedIceConfigUrl.password ||
+    parsedIceConfigUrl.search ||
+    parsedIceConfigUrl.hash ||
+    !parsedIceConfigUrl.pathname.endsWith("/ice-config")
+  ) {
     throw new Error("Could not load secure streaming configuration.");
   }
 
-  const state = await stateResponse.json();
-  const roomToken = state?.iceRoomToken;
-  if (!roomToken) {
-    throw new Error("Could not load secure streaming configuration.");
-  }
-
-  const response = await fetchWithTimeout("/api/media/ice-config", {
-    headers: { "x-room-token": roomToken },
+  const response = await fetchWithTimeout(parsedIceConfigUrl.toString(), {
+    headers: { Authorization: `Bearer ${peerToken}` },
+    mode: "cors",
+    redirect: "error",
   });
   if (!response.ok) {
     throw new Error("Could not load secure streaming configuration.");

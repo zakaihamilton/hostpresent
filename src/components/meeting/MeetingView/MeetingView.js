@@ -67,9 +67,29 @@ import {
 import styles from "./MeetingView.module.css";
 
 export function MeetingView({ token, ...props }) {
+  const {
+    status: sessionStatus,
+    roomState,
+    error: sessionError,
+  } = useRoomSession({
+    role: props.role,
+    token,
+    enabled: Boolean(token),
+  });
+
   return (
-    <PeerStreamConnection sessionToken={token}>
-      <MeetingViewInner token={token} {...props} />
+    <PeerStreamConnection
+      peerAuthToken={roomState?.peerAuthToken}
+      iceConfigUrl={roomState?.iceConfigUrl}
+      sessionError={sessionError}
+    >
+      <MeetingViewInner
+        token={token}
+        {...props}
+        sessionStatus={sessionStatus}
+        roomState={roomState}
+        sessionError={sessionError}
+      />
     </PeerStreamConnection>
   );
 }
@@ -83,18 +103,20 @@ function _isTouchOrMobileDevice() {
   return hasTouch || isMobileUA || isSmallScreen;
 }
 
-function MeetingViewInner({ role, token, joinCode: routeJoinCode, onBack }) {
+function MeetingViewInner({
+  role,
+  token,
+  joinCode: routeJoinCode,
+  onBack,
+  sessionStatus,
+  roomState,
+  sessionError,
+}) {
   const isHost = role === "host";
   const roomConnectionRef = useRef(null);
   const onRemoteParticipantRef = useRef(null);
   const onRemoteHostStreamRef = useRef(null);
   const onChatMessageRef = useRef(null);
-
-  const {
-    status: sessionStatus,
-    roomState,
-    error: sessionError,
-  } = useRoomSession({ role, token, enabled: Boolean(token) });
 
   const formattedRoomId = useMemo(
     () => formatJoinCode(routeJoinCode ?? roomState?.joinCode ?? ""),

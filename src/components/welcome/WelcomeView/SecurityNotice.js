@@ -31,16 +31,16 @@ export function SecurityNotice() {
           setNotice({
             title: "[E080] Signaling not configured.",
             message:
-              "WebRTC will not work until SIGNALING_SERVER_URL is set on the server (Vercel env vars or .env.local).",
+              "WebRTC will not work until Peerovo is reachable and its project settings are configured on the server.",
           });
           return;
         }
 
-        if (data.signalingAuthMode !== "room-token-v1") {
+        if (data.signalingAuthMode !== "project-session-peerovo-v1") {
           setNotice({
             title: "[E084] Authenticated signaling is not configured.",
             message:
-              "WebRTC requires the Host Present authenticated signaling server and SIGNALING_AUTH_MODE=room-token-v1.",
+              "WebRTC requires Peerovo project, session, and peer authentication.",
           });
         }
       } catch {

@@ -59,7 +59,7 @@ describe("peerClient signaling errors", () => {
   it("returns config hint for config errors and reachability hint otherwise", () => {
     expect(
       getSignalingErrorHint(SIGNALING_ERROR.NOT_CONFIGURED, { isHost: true }),
-    ).toContain("SIGNALING_SERVER_URL");
+    ).toContain("PEEROVO_API_URL");
     expect(
       getSignalingErrorHint(SIGNALING_ERROR.HOST_TIMEOUT, { isHost: true }),
     ).toBe(HOST_SIGNING_REACHABILITY_HINT);

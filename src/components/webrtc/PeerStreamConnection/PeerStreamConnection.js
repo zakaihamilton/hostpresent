@@ -5,16 +5,22 @@ import { fetchIceServers } from "@/lib/webrtc/signalingConfig";
 import { IceConfigProvider } from "./IceConfigContext.js";
 import styles from "./PeerStreamConnection.module.css";
 
-export function PeerStreamConnection({ children, onError, sessionToken }) {
+export function PeerStreamConnection({
+  children,
+  onError,
+  peerAuthToken,
+  iceConfigUrl,
+  sessionError,
+}) {
   const [iceServers, setIceServers] = useState(null);
   const [configError, setConfigError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    if (!sessionToken) return undefined;
+    if (!peerAuthToken || !iceConfigUrl) return undefined;
 
-    void fetchIceServers(sessionToken)
+    void fetchIceServers(peerAuthToken, iceConfigUrl)
       .then((servers) => {
         if (cancelled) return;
         setIceServers(servers);
@@ -28,7 +34,15 @@ export function PeerStreamConnection({ children, onError, sessionToken }) {
     return () => {
       cancelled = true;
     };
-  }, [onError, sessionToken]);
+  }, [iceConfigUrl, onError, peerAuthToken]);
+
+  if (sessionError) {
+    return (
+      <div className={styles.root} role="alert">
+        <p className={styles.error}>{sessionError}</p>
+      </div>
+    );
+  }
 
   if (configError) {
     return (

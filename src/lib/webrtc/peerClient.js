@@ -1,16 +1,13 @@
-const DEFAULT_SIGNALING_PATH = "/";
 const DEFAULT_SIGNALING_PORT = 443;
 const DEFAULT_SIGNALING_KEY = "peerjs";
-export const REQUIRED_SIGNALING_AUTH_MODE = "room-token-v1";
-
-export { DEFAULT_SIGNALING_PATH };
+export const REQUIRED_SIGNALING_AUTH_MODE = "project-session-peerovo-v1";
 
 const SIGNALING_CONFIG_HINT =
-  "[E015] Set SIGNALING_SERVER_URL to your PeerJS hostname (no https://) in Vercel env vars or .env.local, then redeploy.";
+  "[E015] Configure PEEROVO_API_URL, PEEROVO_PROJECT_ID, and PEEROVO_PROJECT_API_KEY on the server, then redeploy.";
 
 export const SIGNALING_ERROR = {
   NOT_CONFIGURED:
-    "[E002] Signaling server is not configured. Set SIGNALING_SERVER_URL on the server to your PeerJS hostname.",
+    "[E002] Peerovo is not configured. Set the Peerovo server settings in the Host Present environment.",
   CONFIG_LOAD_FAILED: "[E001] Could not load signaling configuration.",
   HOST_TIMEOUT: "[E003] Could not reach the PeerJS server in time.",
   HOST_RETRY_EXHAUSTED:
@@ -28,35 +25,8 @@ export const HOST_SIGNING_REACHABILITY_HINT =
 export const PARTICIPANT_REACHABILITY_HINT =
   "[E014] Unable to connect to the meeting. Ask the host to join first. If the host is already in the room, your connection might be blocked by a strict firewall (like school/campus Wi-Fi), a VPN, or an ad-blocker. Try disabling VPNs/extensions, switching to a mobile hotspot, or opening in an Incognito window.";
 
-function normalizeSignalingHost(value) {
-  if (!value || typeof value !== "string") return null;
-  return value
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/\/+$/, "");
-}
-
-function normalizeSignalingPath(value) {
-  if (!value || typeof value !== "string") return DEFAULT_SIGNALING_PATH;
-  const trimmed = value.trim();
-  if (!trimmed) return DEFAULT_SIGNALING_PATH;
-  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-}
-
-export function getSignalingServerHost() {
-  return normalizeSignalingHost(process.env.SIGNALING_SERVER_URL);
-}
-
-export function getSignalingServerPath() {
-  return normalizeSignalingPath(process.env.SIGNALING_SERVER_PATH);
-}
-
 export function getSignalingConfigHint() {
   return SIGNALING_CONFIG_HINT;
-}
-
-export function isSignalingServerConfigured() {
-  return Boolean(getSignalingServerHost());
 }
 
 export function isWaitingForHostMessage(message) {
@@ -138,62 +108,22 @@ export function hostIdRetryDelayMs(attempt) {
   return Math.min(HOST_ID_RETRY_DELAY_MS * 2 ** attempt, 8000);
 }
 
-function readSignalingPortFromEnv(host) {
-  if (process.env.SIGNALING_SERVER_PORT) {
-    return Number(process.env.SIGNALING_SERVER_PORT);
-  }
-  if (host === "localhost" || host === "127.0.0.1") {
-    return 9000;
-  }
-  return DEFAULT_SIGNALING_PORT;
-}
-
-function readSignalingSecureFromEnv(host) {
-  if (process.env.SIGNALING_SECURE === "false") return false;
-  if (process.env.SIGNALING_SECURE === "true") return true;
-  if (host === "localhost" || host === "127.0.0.1") return false;
-  return true;
-}
-
-export function buildPeerJsConfig(host = getSignalingServerHost()) {
-  const resolvedHost = host ?? "localhost";
-  return {
-    host: resolvedHost,
-    port: readSignalingPortFromEnv(resolvedHost),
-    path: getSignalingServerPath(),
-    key: process.env.SIGNALING_SERVER_KEY?.trim() || DEFAULT_SIGNALING_KEY,
-    secure: readSignalingSecureFromEnv(resolvedHost),
-    // Application-level handlers surface actionable PeerJS failures. Keep the
-    // library logger quiet so expected peer-unavailable retries do not pollute
-    // browser and CI stderr.
-    debug: 0,
-    config: {
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" },
-        { urls: "stun:stun3.l.google.com:19302" },
-        { urls: "stun:stun4.l.google.com:19302" },
-      ],
-    },
-  };
-}
-
 export function getPeerJsConfigFromApi(payload) {
-  const host = normalizeSignalingHost(payload?.host);
+  const host = payload?.host;
   if (!host) return null;
-  const isLocal = host === "localhost" || host === "127.0.0.1";
+  const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(
+    host.toLowerCase(),
+  );
   return {
     host,
     port: Number(payload?.port ?? (isLocal ? 9000 : DEFAULT_SIGNALING_PORT)),
-    path: normalizeSignalingPath(payload?.path),
+    path: payload?.path ?? "/",
     key:
       typeof payload?.key === "string" && payload.key
         ? payload.key
         : DEFAULT_SIGNALING_KEY,
     secure: payload?.secure !== undefined ? payload.secure !== false : !isLocal,
     debug: 0,
-    config: payload?.config ?? undefined,
   };
 }
 

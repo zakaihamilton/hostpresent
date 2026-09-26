@@ -8,9 +8,9 @@ device picker behavior that fake media cannot prove.
 
 Run the fast suite with:
 
-```bash
+~~~bash
 npm test
-```
+~~~
 
 The media hook tests cover camera switching, microphone switching, screen-share
 start/stop, browser-ended screen capture, and outbound media sync. The
@@ -20,43 +20,54 @@ participants sidebar tests cover roster rendering and media status changes.
 
 Install browser dependencies once:
 
-```bash
+~~~bash
 npx playwright install chromium
-```
+~~~
 
-Start the local Host Present PeerJS signaling server in one terminal:
+Start Peerovo from its repository with a local .env. Configure the
+hostpresent project with the same project key HostPresent will use and the
+exact local app origin:
 
-```bash
-npm run signaling
-```
+~~~dotenv
+PORT=9000
+PEEROVO_HOST=127.0.0.1
+PEEROVO_PUBLIC_HOST=127.0.0.1
+PEEROVO_PUBLIC_PORT=9000
+PEEROVO_PUBLIC_SECURE=false
+PEEROVO_SIGNING_SECRET=local-peerovo-signing-secret-with-32-bytes
+PEEROVO_PROJECTS_JSON='{"hostpresent":{"apiKey":"local-peerovo-project-key-with-32-bytes","allowedOrigins":["http://127.0.0.1:3000"]}}'
+TURN_DOMAIN=127.0.0.1
+TURN_SECRET_KEY=local-turn-secret-with-at-least-32-bytes
+~~~
 
-For local runs, configure the app and signaling process with the same
-`ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_KEY`, and signaling path/port. The app
-also requires `SIGNALING_AUTH_MODE=room-token-v1`. Its default local values are:
+Start Peerovo with npm run dev. In HostPresent's .env.local, use the same
+project API key:
 
-```bash
-SIGNALING_SERVER_URL=localhost
-SIGNALING_SERVER_PORT=9000
-SIGNALING_SERVER_PATH=/
-SIGNALING_SERVER_KEY=peerjs
-SIGNALING_AUTH_MODE=room-token-v1
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
+~~~dotenv
+ROOM_TOKEN_SECRET=local-room-token-secret
+PEEROVO_API_URL=http://127.0.0.1:9000
+PEEROVO_PROJECT_ID=hostpresent
+PEEROVO_PROJECT_API_KEY=the-same-local-project-key
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
+~~~
 
-Then run:
+Start HostPresent in a second terminal with npm run dev, then run:
 
-```bash
+~~~bash
 RUN_WEBRTC_E2E=1 npm run test:e2e:webrtc
-```
+~~~
 
 The E2E spec launches separate browser contexts for the host and two
 participants with fake camera/microphone permissions. It creates a host room,
 joins two participants by code, checks roster propagation, sends a chat message,
 toggles participant camera state, and verifies participant leave state.
 
-## Manual QA Matrix
+The CI WebRTC job is opt-in and uses a dedicated Peerovo test deployment. Set
+the repository variables PEEROVO_E2E_API_URL and PEEROVO_E2E_PROJECT_ID plus
+the secret PEEROVO_E2E_PROJECT_API_KEY. Configure that Peerovo project to
+allow the exact CI app origin, [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-Use real browsers and devices for these checks:
+## Manual QA Matrix
 
 | Area | Scenario | Expected result |
 | --- | --- | --- |

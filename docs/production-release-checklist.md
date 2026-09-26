@@ -1,27 +1,26 @@
 # Production release checklist
 
-Use this checklist for every HostPresent promotion. The application is stateless,
-so Vercel Firewall rate rules are the enforcement point for public room and media
-endpoints.
+Use this checklist for every Host Present promotion. The application is
+stateless, so Vercel Firewall rate rules protect the public room endpoints and
+Peerovo applies connectivity-service rate limits.
 
 ## Before promotion
 
 - Configure the rules in [Vercel security setup](vercel-security.md) for both
-  the Preview and Production environments.
-- Confirm `ROOM_TOKEN_SECRET`, `INTERNAL_AUTH_SECRET`, `TURN_SECRET_KEY`, and
-  the signaling/TURN variables are set in the environment being promoted.
-- Confirm the Railway signaling service is configured with one replica. The
-  PeerJS registry and participant-capacity leases are process-local.
-- Confirm the authenticated signaling service uses the same
-  `ROOM_TOKEN_SECRET`, `SIGNALING_SERVER_PATH`, and `SIGNALING_SERVER_KEY` as
-  the app, with `SIGNALING_AUTH_MODE=room-token-v1` configured in the app.
-- Confirm the app's signaling port and secure transport match the public
-  TLS/WebSocket proxy, and the signaling process listens on its platform `PORT`
-  or `SIGNALING_SERVER_PORT`.
-- Confirm signaling access logs redact the PeerJS WebSocket `token` query
-  parameter.
-- Run `npm run lint`, `npm run test:unit -- --runInBand`, `npm run build`, and
-  `npm run test:e2e:smoke` from the release commit.
+  Preview and Production environments.
+- Confirm `ROOM_TOKEN_SECRET`, `PEEROVO_API_URL`, `PEEROVO_PROJECT_ID`, and
+  `PEEROVO_PROJECT_API_KEY` are set in the Host Present environment being
+  promoted.
+- Confirm the Host Present project in Peerovo allows the exact Preview and
+  Production browser origins.
+- Confirm the Peerovo service is healthy and ready, uses HTTPS/WSS externally,
+  and runs a single replica while its peer registry and capacity leases are
+  process-local.
+- Confirm Peerovo's proxy redacts the PeerJS WebSocket `token` query parameter.
+- Confirm coturn's REST secret is configured only in Peerovo and matches the
+  coturn server.
+- Run `npm run lint`, `npm run test:unit -- --runInBand`, `npm run build`,
+  and `npm run test:e2e:smoke` from the release commit.
 
 ## Verify Preview firewall enforcement
 
@@ -34,7 +33,9 @@ change a real meeting.
 APP_URL="$APP_URL" ./scripts/verify-vercel-firewall.sh
 ```
 
-If the script fails, correct the matching Vercel Firewall rule before promotion.
+If the script fails, correct the matching Vercel Firewall rule before
+promotion. Also verify Peerovo's ticket, ICE, and signaling limits against its
+test deployment without using production credentials.
 
 ## After production promotion
 

@@ -1,28 +1,36 @@
+import {
+  createRequestId,
+  logServerEvent,
+} from "@/lib/observability/structuredLog";
+import {
+  fetchPeerovoPublicConfig,
+  PeerovoClientError,
+} from "@/lib/peerovo/client";
 import { jsonOk } from "@/lib/room/routeHelpers";
 import { isRoomSigningConfigured } from "@/lib/room/tokens";
-import {
-  buildPeerJsConfig,
-  getSignalingServerHost,
-  getSignalingServerPath,
-  isSignalingServerConfigured,
-  REQUIRED_SIGNALING_AUTH_MODE,
-} from "@/lib/webrtc/peerClient";
 
 export const runtime = "nodejs";
 
-export async function GET(_request) {
-  const host = getSignalingServerHost();
-  const peerJs = host ? buildPeerJsConfig(host) : null;
+export async function GET() {
+  let peerovoConfig = null;
+  try {
+    peerovoConfig = await fetchPeerovoPublicConfig();
+  } catch (error) {
+    logServerEvent("peerovo_config_unavailable", {
+      requestId: createRequestId(),
+      reason:
+        error instanceof PeerovoClientError
+          ? error.reason
+          : "config_unavailable",
+    });
+  }
 
   return jsonOk({
     roomSigningConfigured: isRoomSigningConfigured(),
     signaling: "webrtc-peerjs",
-    signalingServerConfigured: isSignalingServerConfigured(),
-    signalingAuthMode:
-      process.env.SIGNALING_AUTH_MODE === REQUIRED_SIGNALING_AUTH_MODE
-        ? REQUIRED_SIGNALING_AUTH_MODE
-        : null,
-    signalingServerPath: getSignalingServerPath(),
-    peerJs,
+    signalingServerConfigured: Boolean(peerovoConfig),
+    signalingAuthMode: peerovoConfig?.signalingAuthMode ?? null,
+    signalingServerPath: peerovoConfig?.peerJs.path ?? null,
+    peerJs: peerovoConfig?.peerJs ?? null,
   });
 }

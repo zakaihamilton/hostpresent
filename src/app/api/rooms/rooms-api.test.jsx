@@ -1,4 +1,3 @@
-import { signIceRoomToken } from "@/lib/media/iceRoomToken";
 import { deriveRoomIdFromJoinCode } from "@/lib/room/roomIdentity";
 import {
   ROOM_ROLE,
@@ -73,13 +72,17 @@ describe("stateless room API routes", () => {
 
   beforeEach(() => {
     process.env.ROOM_TOKEN_SECRET = "test-room-token-secret";
-    process.env.INTERNAL_AUTH_SECRET = "test-internal-secret";
-    process.env.TURN_SECRET_KEY = "test-turn-secret";
-    process.env.TURN_DOMAIN = "turn.example.test";
+    process.env.PEEROVO_API_URL = "https://peerovo.example.test";
+    process.env.PEEROVO_PROJECT_ID = "hostpresent";
+    process.env.PEEROVO_PROJECT_API_KEY =
+      "test-peerovo-project-api-key-32bytes";
   });
 
   afterEach(() => {
     delete process.env.ROOM_TOKEN_SECRET;
+    delete process.env.PEEROVO_API_URL;
+    delete process.env.PEEROVO_PROJECT_ID;
+    delete process.env.PEEROVO_PROJECT_API_KEY;
   });
 
   it("creates only a host credential and a 10-character join code", async () => {
@@ -161,12 +164,25 @@ describe("stateless room API routes", () => {
     ).toBe(503);
   });
 
-  it("returns static token claims and a scoped ICE credential", async () => {
+  it("returns a Peerovo ticket bound to the verified Host Present peer", async () => {
     const roomId = deriveRoomIdFromJoinCode("ABCDEFGH");
     const token = signRoomToken({
       roomId,
       role: ROOM_ROLE.HOST,
       joinCode: "ABCDEFGH",
+    });
+    const roomClaims = verifyRoomToken(token);
+    const peerovoExpiresAt = Math.floor(roomClaims.exp / 1000) - 20;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        projectId: "hostpresent",
+        sessionId: roomId,
+        peerId: `hp-${roomId}`,
+        peerToken: "peerovo-peer-token",
+        expiresAt: peerovoExpiresAt,
+      }),
     });
     const { GET } = await import("./state/route");
     const response = await GET(
@@ -181,32 +197,81 @@ describe("stateless room API routes", () => {
       roomId,
       role: ROOM_ROLE.HOST,
       joinCode: "ABCDEFGH",
+      peerAuthToken: "peerovo-peer-token",
+      peerId: `hp-${roomId}`,
+      iceConfigUrl: `https://peerovo.example.test/v1/projects/hostpresent/sessions/${roomId}/peers/hp-${roomId}/ice-config`,
     });
     expect(body.participantToken).toBeUndefined();
-    expect(body.iceRoomToken).toBeTruthy();
+    expect(body.iceRoomToken).toBeUndefined();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const [peerovoUrl, options] = global.fetch.mock.calls[0];
+    expect(peerovoUrl).toBe(
+      `https://peerovo.example.test/v1/projects/hostpresent/sessions/${roomId}/peers`,
+    );
+    expect(options.headers.Authorization).toBe(
+      "Bearer test-peerovo-project-api-key-32bytes",
+    );
+    expect(JSON.parse(options.body)).toMatchObject({
+      peerId: `hp-${roomId}`,
+      expiresInSeconds: expect.any(Number),
+    });
+    expect(JSON.parse(options.body).expiresInSeconds).toBeLessThanOrEqual(
+      604800,
+    );
   });
 
-  it("accepts only a valid short-lived ICE token", async () => {
-    const { GET } = await import("../media/ice-config/route");
-    const roomToken = signIceRoomToken({ roomId: "room-1" });
-    expect(
-      (
-        await GET(
-          request("http://localhost/api/media/ice-config", {
-            headers: { "x-room-token": roomToken },
-          }),
-        )
-      ).status,
-    ).toBe(200);
-    expect(
-      (
-        await GET(
-          request(
-            `http://localhost/api/media/ice-config?roomToken=${encodeURIComponent(roomToken)}`,
-          ),
-        )
-      ).status,
-    ).toBe(403);
+  it("fails closed when Peerovo cannot issue a peer ticket", async () => {
+    const token = signRoomToken({
+      roomId: deriveRoomIdFromJoinCode("ABCDEFGH"),
+      role: ROOM_ROLE.PARTICIPANT,
+      joinCode: "ABCDEFGH",
+    });
+    global.fetch = jest.fn().mockRejectedValue(new Error("private details"));
+    const { GET } = await import("./state/route");
+    const response = await GET(
+      request("http://localhost/api/rooms/state", {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "WebRTC connectivity is unavailable.",
+    });
+  });
+
+  it("proxies public Peerovo settings without exposing the project key", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        signaling: "webrtc-peerjs",
+        signalingAuthMode: "project-session-peerovo-v1",
+        peerJs: {
+          host: "peerovo.example.test",
+          port: 443,
+          path: "/",
+          key: "peerjs",
+          secure: true,
+          debug: 0,
+        },
+      }),
+    });
+    const { GET } = await import("./config/route");
+    const response = await GET(request("http://localhost/api/rooms/config"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.signalingServerConfigured).toBe(true);
+    expect(body.signalingAuthMode).toBe("project-session-peerovo-v1");
+    expect(body.peerJs).toMatchObject({
+      host: "peerovo.example.test",
+      port: 443,
+      secure: true,
+    });
+    expect(JSON.stringify(body)).not.toContain(
+      "test-peerovo-project-api-key-32bytes",
+    );
   });
 
   it("rejects tokens with extra signature segments", () => {

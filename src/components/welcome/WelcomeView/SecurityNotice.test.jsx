@@ -30,7 +30,7 @@ describe("SecurityNotice", () => {
       json: async () => ({
         roomSigningConfigured: true,
         signalingServerConfigured: true,
-        signalingAuthMode: "room-token-v1",
+        signalingAuthMode: "project-session-peerovo-v1",
       }),
     });
 

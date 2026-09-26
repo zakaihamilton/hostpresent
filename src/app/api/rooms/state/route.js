@@ -1,7 +1,16 @@
-import { signIceRoomToken } from "@/lib/media/iceRoomToken";
-import { createPeerAuthTicket } from "@/lib/room/peerAuthToken.mjs";
+import {
+  createRequestId,
+  logServerEvent,
+} from "@/lib/observability/structuredLog";
+import {
+  getPeerovoIceConfigUrl,
+  issuePeerovoPeerToken,
+  PeerovoClientError,
+} from "@/lib/peerovo/client";
+import { createHostPresentPeerIdentity } from "@/lib/room/peerIdentity.mjs";
 import {
   getBearerToken,
+  jsonError,
   jsonOk,
   verifyRequestToken,
 } from "@/lib/room/routeHelpers";
@@ -9,33 +18,53 @@ import {
 export const runtime = "nodejs";
 
 export async function GET(request) {
+  const requestId = createRequestId();
   const token = getBearerToken(request);
   const auth = verifyRequestToken(token);
   if (auth.error) return auth.error;
 
   const { verified } = auth;
-
-  const iceRoomToken = signIceRoomToken({ roomId: verified.roomId });
-  const peerAuthTicket = createPeerAuthTicket({
+  const identity = createHostPresentPeerIdentity({
     roomId: verified.roomId,
     role: verified.role,
-    issuedAt: verified.iat,
-    expiresAt: verified.exp,
     sessionToken: token,
   });
+  if (!identity) {
+    logServerEvent("peerovo_ticket_issue_failed", {
+      requestId,
+      reason: "peer_identity_unavailable",
+    });
+    return jsonError("WebRTC connectivity is unavailable.", 503);
+  }
 
-  const response = {
-    roomId: verified.roomId,
-    role: verified.role,
-    joinCode: verified.joinCode ?? null,
-    ...(iceRoomToken ? { iceRoomToken } : {}),
-    ...(peerAuthTicket
-      ? {
-          peerAuthToken: peerAuthTicket.token,
-          peerId: peerAuthTicket.peerId,
-        }
-      : {}),
-  };
+  try {
+    const ticket = await issuePeerovoPeerToken({
+      sessionId: verified.roomId,
+      peerId: identity.peerId,
+      sessionExpiresAt: verified.exp,
+    });
+    const iceConfigUrl = getPeerovoIceConfigUrl({
+      sessionId: verified.roomId,
+      peerId: identity.peerId,
+    });
+    if (!iceConfigUrl) throw new PeerovoClientError("unconfigured");
 
-  return jsonOk(response);
+    return jsonOk({
+      roomId: verified.roomId,
+      role: verified.role,
+      joinCode: verified.joinCode ?? null,
+      peerAuthToken: ticket.peerToken,
+      peerId: identity.peerId,
+      iceConfigUrl,
+    });
+  } catch (error) {
+    logServerEvent("peerovo_ticket_issue_failed", {
+      requestId,
+      reason:
+        error instanceof PeerovoClientError
+          ? error.reason
+          : "ticket_unavailable",
+    });
+    return jsonError("WebRTC connectivity is unavailable.", 503);
+  }
 }
