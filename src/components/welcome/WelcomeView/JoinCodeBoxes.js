@@ -1,11 +1,15 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useRef } from "react";
-import { formatJoinCode, JOIN_CODE_LENGTH } from "@/lib/room/joinCodeFormat";
+import {
+  formatJoinCode,
+  JOIN_CODE_CHARSET,
+  JOIN_CODE_LENGTH,
+} from "@/lib/room/joinCodeFormat";
 import styles from "./JoinCodeBoxes.module.css";
 
 const TOTAL = JOIN_CODE_LENGTH;
-const GROUP = 4;
+const GROUP = 3;
 
 function charAt(code, index) {
   const raw = (code ?? "").replace(/-/g, "");
@@ -33,9 +37,16 @@ export function JoinCodeBoxes({
 
   const handleChange = (index, char) => {
     if (readOnly) return;
-    const upper = char.toUpperCase().replace(/[^A-Z]/g, "");
+    const upper = char.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const chars = Array.from({ length: TOTAL }, (_, i) => charAt(value, i));
-    if (!upper && char) return;
+    if (
+      (!upper && char) ||
+      Array.from(upper).some(
+        (character) => !JOIN_CODE_CHARSET.includes(character),
+      )
+    ) {
+      return;
+    }
     chars[index] = upper;
     fire(chars);
     if (upper && index < TOTAL - 1) {
@@ -74,10 +85,14 @@ export function JoinCodeBoxes({
   const handlePaste = (e) => {
     if (readOnly) return;
     e.preventDefault();
-    const text = e.clipboardData
-      .getData("text")
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .toUpperCase();
+    const text = Array.from(
+      e.clipboardData
+        .getData("text")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, ""),
+    )
+      .filter((character) => JOIN_CODE_CHARSET.includes(character))
+      .join("");
     const chars = text.slice(0, TOTAL).split("");
     const padded = Array.from({ length: TOTAL }, (_, i) => chars[i] ?? "");
     fire(padded);

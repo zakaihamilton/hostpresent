@@ -11,10 +11,8 @@ import {
 } from "@/lib/room/inviteLink";
 import {
   formatJoinCode,
-  isLegacyJoinCode,
   isValidJoinCode,
   JOIN_CODE_LENGTH,
-  LEGACY_JOIN_CODE_LENGTH,
 } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
@@ -100,13 +98,6 @@ export function WelcomeParticipantPanel({
       const normalized = normalizeRoomIdInput(code);
       if (!normalized) return;
       setResolveError("");
-      if (isLegacyJoinCode(normalized)) {
-        setResolveError(
-          "[E091] This 8-character invite code has expired. Ask the host for a new 10-character code.",
-        );
-        resolvedJoinCodeRef.current = null;
-        return;
-      }
       setIsResolving(true);
       try {
         const resolved = await resolveJoinCode(normalized, {
@@ -215,8 +206,7 @@ export function WelcomeParticipantPanel({
     />
   );
 
-  const hasLegacyJoinCode = isLegacyJoinCode(roomIdInput);
-  const allFilled = isValidJoinCode(roomIdInput) && !hasLegacyJoinCode;
+  const allFilled = isValidJoinCode(roomIdInput);
 
   if (isResolving) {
     return (
@@ -256,9 +246,7 @@ export function WelcomeParticipantPanel({
               />
             </div>
             <p className={ps.joinHint}>
-              {hasLegacyJoinCode
-                ? `This ${LEGACY_JOIN_CODE_LENGTH}-character invite has expired. Ask the host for a new ${JOIN_CODE_LENGTH}-character code.`
-                : `Enter the ${JOIN_CODE_LENGTH}-character code from the host.`}
+              Enter the {JOIN_CODE_LENGTH}-character code from the host.
             </p>
           </div>
         </div>

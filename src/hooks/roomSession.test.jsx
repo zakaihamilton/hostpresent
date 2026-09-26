@@ -137,7 +137,7 @@ describe("useRoomSession", () => {
       jsonResponse({
         roomId: "room-1",
         role: "host",
-        joinCode: "ABCDEFGH",
+        joinCode: "ABC123DEF",
       }),
     );
 
@@ -175,7 +175,7 @@ describe("useRoomSession", () => {
     const created = {
       roomId: "room-new",
       hostToken: "host-token",
-      joinCode: "ABCDEFGH",
+      joinCode: "ABC123DEF",
     };
     fetch.mockResolvedValue(jsonResponse(created));
 
@@ -196,7 +196,7 @@ describe("useRoomSession", () => {
       expect.objectContaining({
         roomId: "room-new",
         hostToken: "host-token",
-        joinCode: "ABCDEFGH",
+        joinCode: "ABC123DEF",
       }),
     );
     expect(setActiveHostToken).toHaveBeenCalledWith("host-token");

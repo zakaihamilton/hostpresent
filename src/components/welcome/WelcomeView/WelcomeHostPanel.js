@@ -6,7 +6,7 @@ import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
-import { formatJoinCode, isLegacyJoinCode } from "@/lib/room/joinCodeFormat";
+import { formatJoinCode, isValidJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   normalizeDisplayNameInput,
@@ -116,8 +116,9 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     legacyToken,
   ]);
 
-  const formattedJoinCode = joinCode ? formatJoinCode(joinCode) : "";
-  const isRetiredJoinCode = isLegacyJoinCode(joinCode);
+  const formattedJoinCode = isValidJoinCode(joinCode)
+    ? formatJoinCode(joinCode)
+    : "";
   const inviteLink = joinCode ? buildParticipantInviteLink(joinCode) : "";
 
   const handleCopyJoinCode = async () => {
@@ -210,9 +211,8 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
       <div className={shared.panelIntro}>
         <h2 className={shared.panelTitle}>Host a session</h2>
         <p className={shared.panelText}>
-          {isRetiredJoinCode
-            ? "This room uses an expired 8-character invite code. Create a new room to invite participants."
-            : "Your room is ready. Share the invite, name the session, then start presenting."}
+          Your room is ready. Share the invite, name the session, then start
+          presenting.
         </p>
       </div>
 
@@ -283,7 +283,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
                 type="button"
                 className={`${shared.button} ${shared.buttonCopyInline}`}
                 onClick={handleCopyJoinCode}
-                disabled={!formattedJoinCode || isRetiredJoinCode}
+                disabled={!formattedJoinCode}
               >
                 {activeShareTab === "code" && copyMessage
                   ? copyMessage

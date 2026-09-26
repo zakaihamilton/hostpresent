@@ -21,7 +21,7 @@ Host Present is a role-aware meeting room built around a single presenter. Parti
 
 ## Features
 
-- **Host and participant roles** — Create a room as a host or join with a 10-character code such as `ABCD-EFGH-JK`. Older 8-character invites have expired; hosts can create a new room to get a fresh code.
+- **Host and participant roles** — Create a room as a host or join with a nine-character code such as `ABC-123-DEF`.
 - **Presenter-first layout** — Keep the host feed prominent while showing an optional participant gallery.
 - **Screen sharing** — Share a screen, window, or browser tab, with support for system or tab audio when the browser provides it.
 - **Local recording** — Record in the browser, pause and resume, then save the meeting locally when finished.
@@ -124,7 +124,7 @@ For a Vercel deployment:
 5. Complete the [production release checklist](docs/production-release-checklist.md), including Peerovo health/readiness and rate-limit checks.
 6. Rotate `ROOM_TOKEN_SECRET` deliberately when invalidating legacy room links and locally saved room tokens. This does not rotate Peerovo's independent signing keys.
 
-Treat a room code as a bearer credential and share it only with the intended meeting audience. Codes have 10 characters. Older 8-character invites have expired; create a new room to issue a fresh code.
+Treat a room code as a bearer credential and share it only with the intended meeting audience. Codes have nine uppercase letters and numbers, displayed in three-character groups.
 
 ## Development commands
 

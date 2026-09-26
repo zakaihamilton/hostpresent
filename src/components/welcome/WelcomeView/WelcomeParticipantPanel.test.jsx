@@ -22,7 +22,7 @@ jest.mock("@/lib/room/inviteLink", () => ({
     value
       .replace(/[\s-]+/g, "")
       .toUpperCase()
-      .match(/.{1,4}/g)
+      .match(/.{1,3}/g)
       ?.join("-") ?? "",
   normalizeRoomIdInput: (value) => value.trim().toUpperCase(),
   resolveJoinCode: jest.fn(),
@@ -49,49 +49,30 @@ describe("WelcomeParticipantPanel", () => {
 
     expect(screen.getByLabelText("Character 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Character 6")).toBeInTheDocument();
-    expect(screen.getByLabelText("Character 10")).toBeInTheDocument();
+    expect(screen.getByLabelText("Character 9")).toBeInTheDocument();
     expect(
       document.querySelector('label[for="join-code-box-0"]'),
     ).toHaveTextContent("Room code");
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
   });
 
-  it("rejects expired 8-character codes and accepts new 10-character codes", async () => {
+  it("accepts nine-character mixed codes", async () => {
     const user = userEvent.setup();
     const { resolveJoinCode } = await import("@/lib/room/inviteLink");
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGHJK",
+      joinCode: "ABC123DEF",
     });
 
     render(<WelcomeParticipantPanel {...defaultProps} />);
 
-    for (let i = 0; i < 6; i++) {
-      const char = String.fromCharCode(65 + i);
+    for (const [i, char] of Array.from("ABC123DE").entries()) {
       await user.type(screen.getByLabelText(`Character ${i + 1}`), char);
     }
 
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
-
-    for (const [index, character] of ["G", "H"].entries()) {
-      await user.type(
-        screen.getByLabelText(`Character ${index + 7}`),
-        character,
-      );
-    }
-
-    expect(
-      screen.getByText(/8-character invite has expired/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Join meeting" })).toBeDisabled();
-
-    for (const [index, character] of ["J", "K"].entries()) {
-      await user.type(
-        screen.getByLabelText(`Character ${index + 9}`),
-        character,
-      );
-    }
+    await user.type(screen.getByLabelText("Character 9"), "F");
     expect(screen.getByRole("button", { name: "Join meeting" })).toBeEnabled();
   });
 
@@ -100,19 +81,19 @@ describe("WelcomeParticipantPanel", () => {
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGHJK",
+      joinCode: "ABC123DEF",
     });
 
     render(
       <WelcomeParticipantPanel
         {...defaultProps}
-        joinCode="ABCDEFGHJK"
+        joinCode="ABC123DEF"
         autoJoinFromRoute={false}
       />,
     );
 
     expect(screen.getByLabelText("Character 1")).toHaveValue("A");
-    expect(screen.getByLabelText("Character 5")).toHaveValue("E");
+    expect(screen.getByLabelText("Character 5")).toHaveValue("2");
     expect(screen.queryByText("Joining meeting…")).not.toBeInTheDocument();
     expect(resolveJoinCode).not.toHaveBeenCalled();
   });
@@ -123,13 +104,13 @@ describe("WelcomeParticipantPanel", () => {
     resolveJoinCode.mockResolvedValue({
       roomId: "room-1",
       participantToken: "participant-token",
-      joinCode: "ABCDEFGHJK",
+      joinCode: "ABC123DEF",
     });
 
     render(
       <WelcomeParticipantPanel
         {...defaultProps}
-        joinCode="ABCDEFGHJK"
+        joinCode="ABC123DEF"
         autoJoinFromRoute
         navigate={navigate}
       />,
@@ -137,14 +118,14 @@ describe("WelcomeParticipantPanel", () => {
 
     await waitFor(() => {
       expect(resolveJoinCode).toHaveBeenCalledWith(
-        "ABCDEFGHJK",
+        "ABC123DEF",
         expect.objectContaining({ deviceId: expect.any(String) }),
       );
     });
     expect(navigate).toHaveBeenCalledWith({
       view: "meeting",
       role: "participant",
-      joinCode: "ABCDEFGHJK",
+      joinCode: "ABC123DEF",
     });
   });
 

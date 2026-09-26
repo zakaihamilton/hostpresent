@@ -22,7 +22,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
 import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
-import { formatJoinCode, isLegacyJoinCode } from "@/lib/room/joinCodeFormat";
+import { formatJoinCode, isValidJoinCode } from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -118,19 +118,15 @@ function MeetingViewInner({
   const onRemoteHostStreamRef = useRef(null);
   const onChatMessageRef = useRef(null);
 
+  const roomJoinCode = routeJoinCode ?? roomState?.joinCode ?? "";
   const formattedRoomId = useMemo(
-    () => formatJoinCode(routeJoinCode ?? roomState?.joinCode ?? ""),
-    [routeJoinCode, roomState?.joinCode],
+    () => (isValidJoinCode(roomJoinCode) ? formatJoinCode(roomJoinCode) : ""),
+    [roomJoinCode],
   );
-  const hasRetiredInviteCode =
-    isHost && isLegacyJoinCode(routeJoinCode ?? roomState?.joinCode ?? "");
-
   const inviteLink = useMemo(
     () =>
-      isHost && formattedRoomId
-        ? buildParticipantInviteLink(routeJoinCode ?? roomState?.joinCode ?? "")
-        : "",
-    [isHost, formattedRoomId, routeJoinCode, roomState?.joinCode],
+      isHost && formattedRoomId ? buildParticipantInviteLink(roomJoinCode) : "",
+    [isHost, formattedRoomId, roomJoinCode],
   );
 
   const [inviteBarVisible, setInviteBarVisible] = useState(false);
@@ -971,9 +967,7 @@ function MeetingViewInner({
         isRecordingPaused={isRecordingPaused}
         recordingDurationSeconds={recordingSeconds}
         onShowInviteLink={
-          isHost && (inviteLink || hasRetiredInviteCode) && !inviteBarVisible
-            ? handleShowInviteBar
-            : null
+          isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
         }
         onSessionTitleChange={isHost ? handleSessionTitleChange : null}
         revealTitleOnLogoClick={!isHost}
@@ -988,20 +982,20 @@ function MeetingViewInner({
         isHost={isHost}
         hostPresent={hostPresent}
         connectionError={roomConnection?.connectionError}
+        activeConnectionsCount={roomConnection?.activeConnectionsCount ?? 0}
         isWaitingForHost={isWaitingForHostMessage(
           roomConnection?.connectionError,
         )}
         isFatalConnectionError={fatalConnectionError}
       />
 
-      {isHost && (inviteLink || hasRetiredInviteCode) && inviteBarVisible
+      {isHost && inviteLink && inviteBarVisible
         ? <InviteBar
             inviteLink={inviteLink}
             inviteCopyMessage={inviteCopyMessage}
             onCopyInviteLink={handleCopyInviteLink}
             onDismiss={handleDismissInviteBar}
             roomId={formattedRoomId}
-            retiredInviteCode={hasRetiredInviteCode}
           />
         : null}
 
@@ -1108,7 +1102,7 @@ function MeetingViewInner({
         isOpen={isDiagnosticsOpen}
         onClose={() => setIsDiagnosticsOpen(false)}
         role={role}
-        roomId={formattedRoomId || roomState?.joinCode}
+        roomId={formattedRoomId || null}
         connectionStatus={roomConnection?.status}
         localParticipantId={roomConnection?.localParticipantId}
         peerConfig={roomConnection?.peerConfig}

@@ -54,7 +54,7 @@ describe("WelcomeView", () => {
       <WelcomeView
         role={APP_ROLE.HOST}
         token={null}
-        joinCode="ABCDEFGH"
+        joinCode="ABC123DEF"
         navigate={navigate}
         navigateJoinCode={() => {}}
         navigateParticipantWelcome={() => {}}

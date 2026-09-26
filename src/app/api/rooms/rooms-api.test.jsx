@@ -7,7 +7,7 @@ import {
 } from "@/lib/room/tokens";
 
 jest.mock("@/lib/room/joinCode", () => ({
-  createJoinCode: jest.fn(() => "ABCDEFGHJK"),
+  createJoinCode: jest.fn(() => "ABC123DEF"),
 }));
 
 class TestHeaders {
@@ -85,7 +85,7 @@ describe("stateless room API routes", () => {
     delete process.env.PEEROVO_PROJECT_API_KEY;
   });
 
-  it("creates only a host credential and a 10-character join code", async () => {
+  it("creates only a host credential and a nine-character mixed join code", async () => {
     const { POST } = await import("./route");
     const response = await POST(
       request("http://localhost/api/rooms", { method: "POST" }),
@@ -93,7 +93,7 @@ describe("stateless room API routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.joinCode).toBe("ABCDEFGHJK");
+    expect(body.joinCode).toBe("ABC123DEF");
     expect(body.participantToken).toBeUndefined();
     expect(verifyRoomToken(body.hostToken)).toMatchObject({
       role: ROOM_ROLE.HOST,
@@ -116,7 +116,7 @@ describe("stateless room API routes", () => {
       request("http://localhost/api/rooms/resolve", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code: "ABCD-EFGH-JK" }),
+        body: JSON.stringify({ code: "ABC-123-DEF" }),
       }),
     );
     const body = await response.json();
@@ -125,20 +125,20 @@ describe("stateless room API routes", () => {
     expect(body.waiting).toBeUndefined();
     expect(verifyRoomToken(body.participantToken)).toMatchObject({
       role: ROOM_ROLE.PARTICIPANT,
-      roomId: deriveRoomIdFromJoinCode("ABCDEFGHJK"),
+      roomId: deriveRoomIdFromJoinCode("ABC123DEF"),
     });
   });
 
-  it("rejects malformed and secretless participant code resolution", async () => {
+  it("rejects previous code formats and secretless participant code resolution", async () => {
     const { POST } = await import("./resolve/route");
-    const retiredCodeResponse = await POST(
+    const previousCodeResponse = await POST(
       request("http://localhost/api/rooms/resolve", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code: "ABCDEFGH" }),
+        body: JSON.stringify({ code: "ABCDEFGHJK" }),
       }),
     );
-    expect(retiredCodeResponse.status).toBe(410);
+    expect(previousCodeResponse.status).toBe(400);
     expect(
       (
         await POST(
@@ -157,7 +157,7 @@ describe("stateless room API routes", () => {
           request("http://localhost/api/rooms/resolve", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ code: "ABCDEFGHJK" }),
+            body: JSON.stringify({ code: "ABC123DEF" }),
           }),
         )
       ).status,
@@ -165,11 +165,11 @@ describe("stateless room API routes", () => {
   });
 
   it("returns a Peerovo ticket bound to the verified Host Present peer", async () => {
-    const roomId = deriveRoomIdFromJoinCode("ABCDEFGH");
+    const roomId = deriveRoomIdFromJoinCode("ABC123DEF");
     const token = signRoomToken({
       roomId,
       role: ROOM_ROLE.HOST,
-      joinCode: "ABCDEFGH",
+      joinCode: "ABC123DEF",
     });
     const roomClaims = verifyRoomToken(token);
     const peerovoExpiresAt = Math.floor(roomClaims.exp / 1000) - 20;
@@ -196,7 +196,7 @@ describe("stateless room API routes", () => {
     expect(body).toMatchObject({
       roomId,
       role: ROOM_ROLE.HOST,
-      joinCode: "ABCDEFGH",
+      joinCode: "ABC123DEF",
       peerAuthToken: "peerovo-peer-token",
       peerId: `hp-${roomId}`,
       iceConfigUrl: `https://peerovo.example.test/v1/projects/hostpresent/sessions/${roomId}/peers/hp-${roomId}/ice-config`,
@@ -222,9 +222,9 @@ describe("stateless room API routes", () => {
 
   it("fails closed when Peerovo cannot issue a peer ticket", async () => {
     const token = signRoomToken({
-      roomId: deriveRoomIdFromJoinCode("ABCDEFGH"),
+      roomId: deriveRoomIdFromJoinCode("ABC123DEF"),
       role: ROOM_ROLE.PARTICIPANT,
-      joinCode: "ABCDEFGH",
+      joinCode: "ABC123DEF",
     });
     global.fetch = jest.fn().mockRejectedValue(new Error("private details"));
     const { GET } = await import("./state/route");
@@ -278,7 +278,7 @@ describe("stateless room API routes", () => {
     const token = signRoomToken({
       roomId: "room-1",
       role: ROOM_ROLE.HOST,
-      joinCode: "ABCDEFGH",
+      joinCode: "ABC123DEF",
     });
     expect(verifyRoomToken(`${token}.forged`)).toBeNull();
   });
@@ -288,7 +288,7 @@ describe("stateless room API routes", () => {
     const token = signRoomToken({
       roomId: "room-1",
       role: ROOM_ROLE.HOST,
-      joinCode: "ABCDEFGH",
+      joinCode: "ABC123DEF",
     });
     const claims = verifyRoomToken(token);
 
