@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { isWaitingForParticipantsMessage } from "@/lib/webrtc/peerClient";
 import styles from "./ConnectionBanner.module.css";
 
 export const ConnectionBanner = memo(function ConnectionBanner({
@@ -7,7 +8,13 @@ export const ConnectionBanner = memo(function ConnectionBanner({
   connectionError,
   isWaitingForHost,
   isFatalConnectionError,
+  activeConnectionsCount = 0,
 }) {
+  const isWaitingForParticipants =
+    isHost &&
+    activeConnectionsCount === 0 &&
+    isWaitingForParticipantsMessage(connectionError);
+
   return (
     <>
       {!isHost && !hostPresent && connectionError
@@ -33,7 +40,21 @@ export const ConnectionBanner = memo(function ConnectionBanner({
           </div>
         : null}
 
-      {isHost && connectionError && !isFatalConnectionError
+      {isWaitingForParticipants
+        ? <output
+            className={styles.hostWaitingBanner}
+            role="status"
+          >
+            <p className={styles.hostWaitingText}>
+              Waiting for participants to join.
+            </p>
+          </output>
+        : null}
+
+      {isHost &&
+      connectionError &&
+      !isFatalConnectionError &&
+      !isWaitingForParticipants
         ? <div className={styles.signalingErrorBanner} role="alert">
             <p className={styles.signalingErrorText}>{connectionError}</p>
           </div>

@@ -1,6 +1,7 @@
-const GROUP_SIZE = 4;
-const JOIN_CODE_LENGTH = 10;
-const LEGACY_JOIN_CODE_LENGTH = 8;
+const GROUP_SIZE = 3;
+const JOIN_CODE_LENGTH = 9;
+const JOIN_CODE_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
+const JOIN_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ0-9]+$/;
 
 export function normalizeJoinCode(code) {
   if (typeof code !== "string") return "";
@@ -16,21 +17,11 @@ export function formatJoinCode(code) {
   );
 }
 
-export function isLegacyJoinCode(code) {
-  const normalized = normalizeJoinCode(code);
-  return (
-    normalized.length === LEGACY_JOIN_CODE_LENGTH &&
-    /^[ABCDEFGHJKLMNPQRSTUVWXYZ]+$/.test(normalized)
-  );
-}
-
 export function isValidJoinCode(code) {
   const normalized = normalizeJoinCode(code);
   return (
-    (normalized.length === JOIN_CODE_LENGTH ||
-      normalized.length === LEGACY_JOIN_CODE_LENGTH) &&
-    /^[ABCDEFGHJKLMNPQRSTUVWXYZ]+$/.test(normalized)
+    normalized.length === JOIN_CODE_LENGTH && JOIN_CODE_PATTERN.test(normalized)
   );
 }
 
-export { JOIN_CODE_LENGTH, LEGACY_JOIN_CODE_LENGTH };
+export { JOIN_CODE_CHARSET, JOIN_CODE_LENGTH };

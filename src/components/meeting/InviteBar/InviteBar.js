@@ -12,7 +12,6 @@ export const InviteBar = memo(function InviteBar({
   onCopyInviteLink,
   onDismiss,
   roomId,
-  retiredInviteCode = false,
 }) {
   const dialogId = useId();
   const inviteCopyButtonLabel = inviteCopyMessage || "Copy link";
@@ -93,32 +92,28 @@ export const InviteBar = memo(function InviteBar({
         </div>
 
         <p className={styles.description}>
-          {retiredInviteCode
-            ? "This room’s 8-character invite code has expired. Create a new room from the welcome screen to invite participants."
-            : "Share this link with others so they can join your meeting."}
+          Share this link with others so they can join your meeting.
         </p>
 
-        {!retiredInviteCode && (
-          <div className={styles.shareBar}>
-            <input
-              className={styles.shareInput}
-              readOnly
-              value={inviteLink}
-              aria-label="Participant invite link"
-              onFocus={(event) => event.currentTarget.select()}
-            />
-            <button
-              type="button"
-              className={shareButtonClassName}
-              onClick={onCopyInviteLink}
-              aria-live="polite"
-            >
-              {inviteCopyButtonLabel}
-            </button>
-          </div>
-        )}
+        <div className={styles.shareBar}>
+          <input
+            className={styles.shareInput}
+            readOnly
+            value={inviteLink}
+            aria-label="Participant invite link"
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <button
+            type="button"
+            className={shareButtonClassName}
+            onClick={onCopyInviteLink}
+            aria-live="polite"
+          >
+            {inviteCopyButtonLabel}
+          </button>
+        </div>
 
-        {roomId && !retiredInviteCode && (
+        {roomId && (
           <div className={styles.codeSection}>
             <span className={styles.codeLabel}>Room code</span>
             <div className={styles.codeRow}>

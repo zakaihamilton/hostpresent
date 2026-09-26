@@ -121,7 +121,7 @@ jest.mock("@/hooks/roomSession", () => ({
   },
   useRoomSession: () => ({
     status: "open",
-    roomState: { roomId: "room-1", joinCode: "ABCDEFGH" },
+    roomState: { roomId: "room-1", joinCode: "ABC123DEF" },
     error: "",
   }),
 }));

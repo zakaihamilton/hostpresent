@@ -1,16 +1,14 @@
 import { randomBytes } from "node:crypto";
-import { JOIN_CODE_LENGTH } from "./joinCodeFormat.js";
+import { JOIN_CODE_CHARSET, JOIN_CODE_LENGTH } from "./joinCodeFormat.js";
 
-const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-// New 10-character codes provide about 46 bits of entropy. The resolver still
-// Recognizes the 8-character shape so old links can show an expiration message.
+// Nine characters from this 34-symbol alphabet provide about 46 bits of entropy.
 const CODE_LENGTH = JOIN_CODE_LENGTH;
 
 export function createJoinCode() {
   const bytes = randomBytes(CODE_LENGTH);
   let code = "";
   for (let i = 0; i < CODE_LENGTH; i += 1) {
-    code += CHARSET[bytes[i] % CHARSET.length];
+    code += JOIN_CODE_CHARSET[bytes[i] % JOIN_CODE_CHARSET.length];
   }
   return code;
 }

@@ -1,6 +1,5 @@
 import {
   formatJoinCode,
-  isLegacyJoinCode,
   isValidJoinCode,
   normalizeJoinCode,
 } from "./joinCodeFormat.js";
@@ -10,7 +9,7 @@ export function buildParticipantInviteLink(joinCode) {
     process.env.NEXT_PUBLIC_APP_URL ??
     (typeof window !== "undefined" ? window.location.origin : "");
   const normalized = normalizeJoinCode(joinCode);
-  if (!isValidJoinCode(normalized) || isLegacyJoinCode(normalized)) return "";
+  if (!isValidJoinCode(normalized)) return "";
   const formatted = formatJoinCode(joinCode);
   return `${origin}/#/j/${formatted}`;
 }
