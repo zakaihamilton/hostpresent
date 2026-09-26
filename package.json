@@ -2,6 +2,7 @@
   "name": "hostpresent",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.12.1",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",
