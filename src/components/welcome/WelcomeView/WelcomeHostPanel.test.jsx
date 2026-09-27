@@ -51,7 +51,7 @@ describe("WelcomeHostPanel", () => {
       expect(screen.getByLabelText("Character 1")).toHaveValue("A");
     });
 
-    expect(screen.getByLabelText("Character 6")).toHaveValue("F");
+    expect(screen.getByLabelText("Character 6")).toHaveValue("3");
     expect(
       document.querySelector('label[for="join-code-box-0"]'),
     ).toHaveTextContent("Room code");

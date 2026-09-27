@@ -106,6 +106,7 @@ export function RemoteParticipants({
   const [audioList, setAudioList] = useState([]);
 
   const participantProfilesRef = useRef(new Map());
+  const peerMediaStateRef = useRef(new Map());
   const streamListenerCleanupsRef = useRef(new Map());
   const speakingCleanupsRef = useRef(new Map());
   const hostSpeakingCleanupRef = useRef(null);
@@ -177,15 +178,16 @@ export function RemoteParticipants({
       if (!isHost) return;
       for (const [id, profile] of participantProfilesRef.current) {
         if (id === participantId) continue;
+        const participant = videoParticipants.find((entry) => entry.id === id);
         roomConnectionRef.current?.sendToParticipant(
           participantId,
           createParticipantProfileBroadcastMessage({
             participantId: id,
             displayName: profile.displayName,
             mode: profile.mode,
-            screenSharing:
-              videoParticipants.find((entry) => entry.id === id)
-                ?.isScreenSharing ?? false,
+            screenSharing: participant?.isScreenSharing ?? false,
+            isAudioMuted: participant?.isAudioMuted ?? false,
+            isVideoMuted: participant?.isVideoMuted ?? false,
             present: true,
           }),
         );
@@ -241,10 +243,20 @@ export function RemoteParticipants({
         streamListenerCleanupsRef.current.delete(participant.id);
         speakingCleanupsRef.current.get(participant.id)?.();
         speakingCleanupsRef.current.delete(participant.id);
-        setVideoParticipants((previous) =>
-          previous.filter((entry) => entry.id !== participant.id),
-        );
-        broadcastPeerLeft(participant.id);
+        if (participant.preserveProfile) {
+          setVideoParticipants((previous) =>
+            previous.map((entry) =>
+              entry.id === participant.id
+                ? { ...entry, stream: null, isSpeaking: false }
+                : entry,
+            ),
+          );
+        } else {
+          setVideoParticipants((previous) =>
+            previous.filter((entry) => entry.id !== participant.id),
+          );
+          broadcastPeerLeft(participant.id);
+        }
         return;
       }
 
@@ -282,9 +294,15 @@ export function RemoteParticipants({
             id: participant.id,
             name: nextName ?? "Guest",
             avatarColor: participantColor(participant.id),
-            isAudioMuted: false,
-            isVideoMuted: false,
-            isScreenSharing: false,
+            isAudioMuted:
+              peerMediaStateRef.current.get(participant.id)?.isAudioMuted ??
+              false,
+            isVideoMuted:
+              peerMediaStateRef.current.get(participant.id)?.isVideoMuted ??
+              false,
+            isScreenSharing:
+              peerMediaStateRef.current.get(participant.id)?.isScreenSharing ??
+              false,
             stream: participant.stream ?? null,
             mode: nextMode ?? PARTICIPANT_MODE.AVAILABLE,
           },
@@ -321,11 +339,37 @@ export function RemoteParticipants({
     if (!message?.participantId) return;
 
     if (message.present === false) {
+      peerMediaStateRef.current.delete(message.participantId);
+      streamListenerCleanupsRef.current.get(message.participantId)?.();
+      streamListenerCleanupsRef.current.delete(message.participantId);
+      speakingCleanupsRef.current.get(message.participantId)?.();
+      speakingCleanupsRef.current.delete(message.participantId);
       setPeerParticipants((previous) =>
+        previous.filter((entry) => entry.id !== message.participantId),
+      );
+      setVideoParticipants((previous) =>
         previous.filter((entry) => entry.id !== message.participantId),
       );
       return;
     }
+
+    const previousMediaState =
+      peerMediaStateRef.current.get(message.participantId) ?? {};
+    const nextMediaState = {
+      isScreenSharing:
+        typeof message.screenSharing === "boolean"
+          ? message.screenSharing
+          : (previousMediaState.isScreenSharing ?? false),
+      isAudioMuted:
+        typeof message.isAudioMuted === "boolean"
+          ? message.isAudioMuted
+          : (previousMediaState.isAudioMuted ?? false),
+      isVideoMuted:
+        typeof message.isVideoMuted === "boolean"
+          ? message.isVideoMuted
+          : (previousMediaState.isVideoMuted ?? false),
+    };
+    peerMediaStateRef.current.set(message.participantId, nextMediaState);
 
     const nextName = resolveDisplayName(message.displayName);
     const nextMode =
@@ -340,7 +384,7 @@ export function RemoteParticipants({
       if (existing) {
         return previous.map((entry) =>
           entry.id === message.participantId
-            ? { ...entry, name: nextName, mode: nextMode }
+            ? { ...entry, name: nextName, mode: nextMode, ...nextMediaState }
             : entry,
         );
       }
@@ -350,9 +394,7 @@ export function RemoteParticipants({
           id: message.participantId,
           name: nextName,
           mode: nextMode,
-          isScreenSharing: Boolean(message.screenSharing),
-          isAudioMuted: Boolean(message.isAudioMuted),
-          isVideoMuted: Boolean(message.isVideoMuted),
+          ...nextMediaState,
           isSpeaking: false,
           avatarColor: participantColor(message.participantId),
         },
@@ -366,7 +408,7 @@ export function RemoteParticipants({
               ...entry,
               name: nextName,
               mode: nextMode,
-              isScreenSharing: Boolean(message.screenSharing),
+              ...nextMediaState,
             }
           : entry,
       ),
@@ -375,6 +417,11 @@ export function RemoteParticipants({
 
   const setParticipantScreenSharing = useCallback(
     (participantId, isScreenSharing) => {
+      const mediaState = peerMediaStateRef.current.get(participantId) ?? {};
+      peerMediaStateRef.current.set(participantId, {
+        ...mediaState,
+        isScreenSharing,
+      });
       setVideoParticipants((previous) =>
         previous.map((entry) =>
           entry.id === participantId ? { ...entry, isScreenSharing } : entry,
@@ -556,6 +603,14 @@ export function RemoteParticipants({
           const videoChanged =
             message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED ||
             message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED;
+          const previousMediaState =
+            peerMediaStateRef.current.get(message.participantId) ?? {};
+          const nextMediaState = {
+            ...previousMediaState,
+            ...(audioChanged ? { isAudioMuted: peerAudioMuted } : {}),
+            ...(videoChanged ? { isVideoMuted: peerVideoMuted } : {}),
+          };
+          peerMediaStateRef.current.set(message.participantId, nextMediaState);
           setPeerParticipants(function updatePeer(prev) {
             return prev.map(function mapPeer(entry) {
               if (entry.id !== message.participantId) return entry;
@@ -565,6 +620,17 @@ export function RemoteParticipants({
               return updated;
             });
           });
+          setVideoParticipants((previous) =>
+            previous.map((entry) =>
+              entry.id === message.participantId
+                ? {
+                    ...entry,
+                    ...(audioChanged ? { isAudioMuted: peerAudioMuted } : {}),
+                    ...(videoChanged ? { isVideoMuted: peerVideoMuted } : {}),
+                  }
+                : entry,
+            ),
+          );
           break;
         }
         default:

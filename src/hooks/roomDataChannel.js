@@ -107,6 +107,7 @@ export function useRoomDataChannel({
   const iceServersRef = useRef(null);
   const connectionsRef = useRef(new Map());
   const mediaCallsRef = useRef(new Map());
+  const preservingParticipantMediaCallsRef = useRef(new WeakSet());
   const inboundStreamsRef = useRef(new Map());
   const relayCallsRef = useRef(new Map());
   const peerDeviceIdsRef = useRef(new Map());
@@ -443,6 +444,9 @@ export function useRoomDataChannel({
       if (!relayFrom) {
         const existing = mediaCallsRef.current.get(remoteId);
         if (existing && existing !== call) {
+          if (isHost) {
+            preservingParticipantMediaCallsRef.current.add(existing);
+          }
           existing.close();
         }
         mediaCallsRef.current.set(remoteId, call);
@@ -472,7 +476,10 @@ export function useRoomDataChannel({
 
       call.on("close", () => {
         if (destroyedRef.current) return;
-        if (!relayFrom && mediaCallsRef.current.get(remoteId) === call) {
+        const isCurrentCall =
+          relayFrom !== null || mediaCallsRef.current.get(remoteId) === call;
+        if (!isCurrentCall) return;
+        if (!relayFrom) {
           mediaCallsRef.current.delete(remoteId);
         }
         if (isHost) {
@@ -480,6 +487,8 @@ export function useRoomDataChannel({
             onRemoteParticipantRef.current?.({
               id: participantId,
               stream: null,
+              preserveProfile:
+                preservingParticipantMediaCallsRef.current.has(call),
             });
             syncRelayForSource(participantId, null);
           }
@@ -814,8 +823,17 @@ export function useRoomDataChannel({
             if (targetId) {
               const existingCall = mediaCallsRef.current.get(targetId);
               if (existingCall) {
+                preservingParticipantMediaCallsRef.current.add(existingCall);
                 existingCall.close();
-                mediaCallsRef.current.delete(targetId);
+                if (mediaCallsRef.current.get(targetId) === existingCall) {
+                  mediaCallsRef.current.delete(targetId);
+                  onRemoteParticipantRef.current?.({
+                    id: targetId,
+                    stream: null,
+                    preserveProfile: true,
+                  });
+                  syncRelayForSource(targetId, null);
+                }
               }
               ensureMediaCall(targetId).catch((error) => {
                 console.warn("[peer] renegotiation media call failed", error);
@@ -854,6 +872,7 @@ export function useRoomDataChannel({
       isHost,
       notifyHandlers,
       scheduleReconnectToHost,
+      syncRelayForSource,
       syncRelayForViewer,
       updateConnectedState,
     ],
