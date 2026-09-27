@@ -755,9 +755,7 @@ export function Recording({
   ]);
 
   stopForStorageRef.current = () => {
-    if (recordingStopRequestedRef.current || !isRecordingRef.current) {
-      return;
-    }
+    if (recordingStopRequestedRef.current) return;
     recordingStopRequestedRef.current = true;
     updateDownloadProgress(
       "warning",
