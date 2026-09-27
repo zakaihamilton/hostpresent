@@ -41,10 +41,7 @@ export const ConnectionBanner = memo(function ConnectionBanner({
         : null}
 
       {isWaitingForParticipants
-        ? <output
-            className={styles.hostWaitingBanner}
-            role="status"
-          >
+        ? <output className={styles.hostWaitingBanner}>
             <p className={styles.hostWaitingText}>
               Waiting for participants to join.
             </p>

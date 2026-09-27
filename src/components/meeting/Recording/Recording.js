@@ -89,7 +89,7 @@ export function Recording({
   const persistedStopRef = useRef(null);
   const liveCaptureStopTimerRef = useRef(null);
   const captureSaveCompletionRef = useRef(null);
-  const storageStopRequestedRef = useRef(false);
+  const recordingStopRequestedRef = useRef(false);
 
   const publishRecordingState = useCallback(
     (active, paused = false) => {
@@ -121,10 +121,7 @@ export function Recording({
       if (!estimate?.quota) return;
       const available = estimate.quota - (estimate.usage ?? 0);
       if (available < MIN_RECORDING_STORAGE_BYTES) {
-        if (!storageStopRequestedRef.current) {
-          storageStopRequestedRef.current = true;
-          stopForStorageRef.current?.();
-        }
+        stopForStorageRef.current?.();
         return;
       }
       if (estimate.usage / estimate.quota > 0.9) {
@@ -551,7 +548,7 @@ export function Recording({
     videoChunkCountRef.current = 0;
     audioChunkCountRef.current = 0;
     persistedStopRef.current = null;
-    storageStopRequestedRef.current = false;
+    recordingStopRequestedRef.current = false;
     setSavedRecording(null);
 
     await rebuildRecorder();
@@ -633,7 +630,7 @@ export function Recording({
     audioChunkCountRef.current = saved.meta.tracks.audio.chunkCount;
     const session = await beginRecordingSegment();
     recordingSessionRef.current = session;
-    storageStopRequestedRef.current = false;
+    recordingStopRequestedRef.current = false;
     await rebuildRecorder();
     setSavedRecording(null);
     setCanResumeSavedRecording(false);
@@ -681,6 +678,7 @@ export function Recording({
   const stopRecording = useCallback(() => {
     if (!isHost) return;
 
+    recordingStopRequestedRef.current = true;
     setIsRecording(false);
     setIsRecordingPaused(false);
     resetRecordingTimer();
@@ -757,20 +755,23 @@ export function Recording({
   ]);
 
   stopForStorageRef.current = () => {
+    if (recordingStopRequestedRef.current || !isRecordingRef.current) {
+      return;
+    }
+    recordingStopRequestedRef.current = true;
     updateDownloadProgress(
       "warning",
       0,
       "Storage is full. Saving the partial recording.",
     );
-    Promise.all([
-      closeActiveRecordingSegment("storage-failure"),
-      updateRecordingSession({ status: "interrupted" }),
-    ]).catch(() => {});
     stopRecording();
   };
 
   const stopRecordingAsync = useCallback(async () => {
     if (!isHost) return;
+
+    recordingStopRequestedRef.current = true;
+    isRecordingRef.current = false;
 
     if (webCodecsWorkerRef.current) {
       updateDownloadProgress("preparing", 5);
@@ -778,7 +779,6 @@ export function Recording({
       const saving = new Promise((resolve) => {
         captureSaveCompletionRef.current = resolve;
       });
-      isRecordingRef.current = false;
       captureWorker.postMessage({ type: "stop" });
       await stopActiveRecorders(
         mediaRecorderRef.current,

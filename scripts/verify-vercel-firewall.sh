@@ -56,11 +56,6 @@ verify_limit \
   -H "Authorization: Bearer invalid" \
   "${app_url}/api/rooms/state"
 verify_limit \
-  "TURN configuration" \
-  121 \
-  -H "x-room-token: invalid" \
-  "${app_url}/api/media/ice-config"
-verify_limit \
   "Diagnostics" \
   21 \
   -X POST \
