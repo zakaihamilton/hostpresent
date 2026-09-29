@@ -63,8 +63,10 @@
 }
 
 .menuBtn {
-  width: 30px;
+  width: 36px;
   height: 44px;
+  padding: 0 12px 0 0;
+  justify-content: flex-end;
   border-radius: 0 10px 10px 0;
 }
 
@@ -317,7 +319,7 @@
   }
 
   .menuBtn {
-    width: 28px;
+    width: 36px;
   }
 }
 
@@ -329,7 +331,7 @@
   }
 
   .menuBtn {
-    width: 26px;
+    width: 36px;
   }
 
   .menu {
@@ -377,6 +379,6 @@
   }
 
   .menuBtn {
-    width: 24px;
+    width: 36px;
   }
 }
