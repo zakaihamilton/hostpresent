@@ -26,47 +26,27 @@ const PARTICIPANT_STATUS_RELAY_TYPES = new Set([
 export function bindRoomConnection(
   conn,
   { remoteId, remoteName = "Guest" },
-  {
-    isHost,
-    destroyedRef,
-    updateConnectedState,
-    createHostPresencePayload,
-    onRemoteParticipantRef,
-    ensureMediaCall,
-    syncRelayForViewer,
-    sendParticipantProfileRef,
-    scheduleReconnectToHost,
-    roomIdRef,
-    participantDisplayNamesRef,
-    hostDisplayNameRef,
-    localParticipantIdRef,
-    connectionsRef,
-    notifyHandlers,
-    onChatMessageRef,
-    peerDeviceIdsRef,
-    preservingParticipantMediaCallsRef,
-    mediaCallsRef,
-    syncRelayForSource,
-    setHostPresent,
-    setConnectionError,
-  },
+  context,
 ) {
   const connectionPeerId = conn.peer || remoteId;
 
   const handleOpen = () => {
-    if (destroyedRef.current) return;
-    updateConnectedState(1);
-    if (isHost) {
-      sendOnConnection(conn, createHostPresencePayload());
-      onRemoteParticipantRef.current?.({ id: remoteId, name: remoteName });
-      ensureMediaCall(remoteId).catch((error) => {
+    if (context.destroyedRef.current) return;
+    context.updateConnectedState(1);
+    if (context.isHost) {
+      sendOnConnection(conn, context.createHostPresencePayload());
+      context.onRemoteParticipantRef.current?.({
+        id: remoteId,
+        name: remoteName,
+      });
+      context.ensureMediaCall(remoteId).catch((error) => {
         console.warn("[peer] placeOutgoingMediaCall failed", error);
       });
-      syncRelayForViewer(remoteId);
+      context.syncRelayForViewer(remoteId);
       return;
     }
 
-    sendParticipantProfileRef.current();
+    context.sendParticipantProfileRef.current();
   };
 
   if (conn.open) {
@@ -76,17 +56,17 @@ export function bindRoomConnection(
   }
 
   conn.on("close", () => {
-    if (destroyedRef.current) return;
-    updateConnectedState(-1);
-    if (isHost) {
-      onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
+    if (context.destroyedRef.current) return;
+    context.updateConnectedState(-1);
+    if (context.isHost) {
+      context.onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
       return;
     }
-    scheduleReconnectToHost();
+    context.scheduleReconnectToHost();
   });
 
   conn.on("data", (raw) => {
-    if (destroyedRef.current) return;
+    if (context.destroyedRef.current) return;
     try {
       const payload = typeof raw === "string" ? raw : JSON.stringify(raw);
       if (
@@ -100,24 +80,25 @@ export function bindRoomConnection(
       if (isChatMessage(message)) {
         const authenticatedMessage = authenticateChatMessage(message, {
           senderId: connectionPeerId,
-          expectedSenderId: isHost
+          expectedSenderId: context.isHost
             ? connectionPeerId
-            : hostPeerId(roomIdRef.current),
-          senderName: isHost
-            ? (participantDisplayNamesRef.current.get(connectionPeerId) ??
-              "Guest")
-            : hostDisplayNameRef.current || "Host",
-          allowHostRelay: !isHost,
+            : hostPeerId(context.roomIdRef.current),
+          senderName: context.isHost
+            ? (context.participantDisplayNamesRef.current.get(
+                connectionPeerId,
+              ) ?? "Guest")
+            : context.hostDisplayNameRef.current || "Host",
+          allowHostRelay: !context.isHost,
         });
         if (!authenticatedMessage) return;
 
-        if (isHost) {
+        if (context.isHost) {
           const hostRelayedMessage = {
             ...authenticatedMessage,
             relayedByHost: true,
           };
           if (authenticatedMessage.type === SIGNALING_MESSAGE.CHAT_MESSAGE) {
-            for (const [id, connection] of connectionsRef.current) {
+            for (const [id, connection] of context.connectionsRef.current) {
               if (id !== connectionPeerId) {
                 sendOnConnection(connection, hostRelayedMessage);
               }
@@ -128,9 +109,9 @@ export function bindRoomConnection(
               SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
             authenticatedMessage.recipientId
           ) {
-            const hostId = hostPeerId(roomIdRef.current);
+            const hostId = hostPeerId(context.roomIdRef.current);
             if (authenticatedMessage.recipientId !== hostId) {
-              const recipientConnection = connectionsRef.current.get(
+              const recipientConnection = context.connectionsRef.current.get(
                 authenticatedMessage.recipientId,
               );
               if (recipientConnection) {
@@ -141,15 +122,16 @@ export function bindRoomConnection(
           }
         }
         if (
-          !isHost &&
+          !context.isHost &&
           authenticatedMessage.type ===
             SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
-          authenticatedMessage.recipientId !== localParticipantIdRef.current
+          authenticatedMessage.recipientId !==
+            context.localParticipantIdRef.current
         ) {
           return;
         }
-        notifyHandlers(authenticatedMessage);
-        onChatMessageRef.current?.(authenticatedMessage);
+        context.notifyHandlers(authenticatedMessage);
+        context.onChatMessageRef.current?.(authenticatedMessage);
         return;
       }
 
@@ -159,20 +141,20 @@ export function bindRoomConnection(
       });
       if (
         !canReceiveSignalingMessage({
-          isHost,
+          isHost: context.isHost,
           message: resolvedMessage,
           senderId: connectionPeerId,
-          localParticipantId: localParticipantIdRef.current,
+          localParticipantId: context.localParticipantIdRef.current,
         })
       ) {
         return;
       }
-      notifyHandlers(resolvedMessage);
+      context.notifyHandlers(resolvedMessage);
       if (
-        isHost &&
+        context.isHost &&
         resolvedMessage.type === SIGNALING_MESSAGE.PARTICIPANT_PROFILE
       ) {
-        participantDisplayNamesRef.current.set(
+        context.participantDisplayNamesRef.current.set(
           connectionPeerId,
           resolvedMessage.displayName || "Guest",
         );
@@ -180,54 +162,60 @@ export function bindRoomConnection(
           typeof resolvedMessage.deviceId === "string" &&
           resolvedMessage.deviceId
         ) {
-          peerDeviceIdsRef.current.set(
+          context.peerDeviceIdsRef.current.set(
             connectionPeerId,
             resolvedMessage.deviceId,
           );
         }
       }
-      if (!isHost && resolvedMessage.type === SIGNALING_MESSAGE.HOST_PRESENT) {
-        hostDisplayNameRef.current = resolvedMessage.displayName || "Host";
+      if (
+        !context.isHost &&
+        resolvedMessage.type === SIGNALING_MESSAGE.HOST_PRESENT
+      ) {
+        context.hostDisplayNameRef.current =
+          resolvedMessage.displayName || "Host";
       }
       if (
-        isHost &&
+        context.isHost &&
         resolvedMessage.type === SIGNALING_MESSAGE.MEDIA_RENEGOTIATE
       ) {
         const targetId = resolvedMessage.participantId || connectionPeerId;
         if (targetId) {
-          const existingCall = mediaCallsRef.current.get(targetId);
+          const existingCall = context.mediaCallsRef.current.get(targetId);
           if (existingCall) {
-            preservingParticipantMediaCallsRef.current.add(existingCall);
+            context.preservingParticipantMediaCallsRef.current.add(
+              existingCall,
+            );
             existingCall.close();
-            if (mediaCallsRef.current.get(targetId) === existingCall) {
-              mediaCallsRef.current.delete(targetId);
-              onRemoteParticipantRef.current?.({
+            if (context.mediaCallsRef.current.get(targetId) === existingCall) {
+              context.mediaCallsRef.current.delete(targetId);
+              context.onRemoteParticipantRef.current?.({
                 id: targetId,
                 stream: null,
                 preserveProfile: true,
               });
-              syncRelayForSource(targetId, null);
+              context.syncRelayForSource(targetId, null);
             }
           }
-          ensureMediaCall(targetId).catch((error) => {
+          context.ensureMediaCall(targetId).catch((error) => {
             console.warn("[peer] renegotiation media call failed", error);
           });
         }
       }
       if (
-        isHost &&
+        context.isHost &&
         resolvedMessage.participantId &&
         PARTICIPANT_STATUS_RELAY_TYPES.has(resolvedMessage.type)
       ) {
-        for (const [id, connection] of connectionsRef.current) {
+        for (const [id, connection] of context.connectionsRef.current) {
           if (id !== connectionPeerId) {
             sendOnConnection(connection, resolvedMessage);
           }
         }
       }
-      if (!isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
-        setHostPresent(true);
-        setConnectionError(null);
+      if (!context.isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
+        context.setHostPresent(true);
+        context.setConnectionError(null);
       }
     } catch (error) {
       console.warn("[peer] invalid message", error);

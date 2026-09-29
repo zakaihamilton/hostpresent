@@ -48,6 +48,26 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
+
+async function hasRelayCandidate(peerConnections) {
+  for (const peerConnection of peerConnections) {
+    if (!peerConnection) continue;
+    try {
+      const stats = await peerConnection.getStats();
+      for (const report of stats.values()) {
+        if (report.type !== "candidate-pair" || report.state !== "succeeded") {
+          continue;
+        }
+        const localCandidate = stats.get(report.localCandidateId);
+        if (localCandidate?.candidateType === "relay") return true;
+      }
+    } catch {
+      // Ignore individual peer stats errors and inspect the remaining peers.
+    }
+  }
+  return false;
+}
+
 export function useRoomDataChannel({
   role,
   token,
@@ -482,6 +502,32 @@ export function useRoomDataChannel({
     [isHost],
   );
 
+  const deliverChatMessage = useCallback(
+    (message, recipientId) => {
+      if (isHost) {
+        let sent = false;
+        if (recipientId) {
+          sent = sendOnConnection(
+            connectionsRef.current.get(recipientId),
+            message,
+          );
+        } else {
+          for (const conn of connectionsRef.current.values()) {
+            if (sendOnConnection(conn, message)) sent = true;
+          }
+        }
+        notifyHandlers(message);
+        onChatMessageRef.current?.(message);
+        return sent;
+      }
+
+      const sent = sendOnConnection(hostConnectionRef.current, message);
+      if (sent) onChatMessageRef.current?.(message);
+      return sent;
+    },
+    [isHost, notifyHandlers],
+  );
+
   const sendChatMessage = useCallback(
     (text) => {
       const senderId = isHost
@@ -493,26 +539,9 @@ export function useRoomDataChannel({
         text,
       });
       if (!message.text) return false;
-
-      if (isHost) {
-        let sent = false;
-        for (const conn of connectionsRef.current.values()) {
-          if (sendOnConnection(conn, message)) sent = true;
-        }
-        notifyHandlers(message);
-        if (onChatMessageRef.current) {
-          onChatMessageRef.current(message);
-        }
-        return sent;
-      }
-
-      const sent = sendOnConnection(hostConnectionRef.current, message);
-      if (sent && onChatMessageRef.current) {
-        onChatMessageRef.current(message);
-      }
-      return sent;
+      return deliverChatMessage(message);
     },
-    [isHost, roomId, notifyHandlers],
+    [deliverChatMessage, isHost, roomId],
   );
 
   const sendPrivateChatMessage = useCallback(
@@ -527,24 +556,9 @@ export function useRoomDataChannel({
         text,
       });
       if (!message.text || !recipientId) return false;
-
-      if (isHost) {
-        const conn = connectionsRef.current.get(recipientId);
-        const sent = sendOnConnection(conn, message);
-        notifyHandlers(message);
-        if (onChatMessageRef.current) {
-          onChatMessageRef.current(message);
-        }
-        return sent;
-      }
-
-      const sent = sendOnConnection(hostConnectionRef.current, message);
-      if (sent && onChatMessageRef.current) {
-        onChatMessageRef.current(message);
-      }
-      return sent;
+      return deliverChatMessage(message, recipientId);
     },
-    [isHost, roomId, notifyHandlers],
+    [deliverChatMessage, isHost, roomId],
   );
 
   const schedulePeerRetry = useCallback(
@@ -681,8 +695,8 @@ export function useRoomDataChannel({
     };
     teardownPeerRef.current = teardownPeer;
 
-    const startHostPeer = (Peer) => {
-      if (destroyedRef.current) return;
+    const createPeer = (Peer, id) => {
+      if (destroyedRef.current) return null;
 
       teardownPeer();
       scheduleConnectTimeout();
@@ -692,8 +706,14 @@ export function useRoomDataChannel({
         token: peerAuthToken,
         config: { iceServers: iceServersRef.current ?? iceServers },
       };
-      const peer = new Peer(hostPeerId(roomId), options);
+      const peer = new Peer(id, options);
       peerRef.current = peer;
+      return peer;
+    };
+
+    const startHostPeer = (Peer) => {
+      const peer = createPeer(Peer, hostPeerId(roomId));
+      if (!peer) return;
 
       peer.on("open", () => {
         if (destroyedRef.current || peer !== peerRef.current) return;
@@ -810,18 +830,8 @@ export function useRoomDataChannel({
     };
 
     const startParticipantPeer = (Peer) => {
-      if (destroyedRef.current) return;
-
-      teardownPeer();
-      scheduleConnectTimeout();
-      const baseOptions = peerConfigRef.current ?? peerConfig;
-      const options = {
-        ...baseOptions,
-        token: peerAuthToken,
-        config: { iceServers: iceServersRef.current ?? iceServers },
-      };
-      const peer = new Peer(peerId, options);
-      peerRef.current = peer;
+      const peer = createPeer(Peer, peerId);
+      if (!peer) return;
 
       const connectToHost = () => {
         if (
@@ -994,59 +1004,17 @@ export function useRoomDataChannel({
     }
 
     const interval = setInterval(async () => {
-      let turnUsed = false;
-      for (const conn of connectionsRef.current.values()) {
-        const pc = conn.peerConnection;
-        if (!pc) continue;
-        try {
-          const stats = await pc.getStats();
-          for (const report of stats.values()) {
-            if (
-              report.type === "candidate-pair" &&
-              report.state === "succeeded"
-            ) {
-              const localCandidate = stats.get(report.localCandidateId);
-              if (localCandidate && localCandidate.candidateType === "relay") {
-                turnUsed = true;
-                break;
-              }
-            }
-          }
-        } catch {
-          // ignore
-        }
-        if (turnUsed) break;
-      }
-
-      if (!turnUsed) {
-        for (const call of mediaCallsRef.current.values()) {
-          const pc = call.peerConnection;
-          if (!pc) continue;
-          try {
-            const stats = await pc.getStats();
-            for (const report of stats.values()) {
-              if (
-                report.type === "candidate-pair" &&
-                report.state === "succeeded"
-              ) {
-                const localCandidate = stats.get(report.localCandidateId);
-                if (
-                  localCandidate &&
-                  localCandidate.candidateType === "relay"
-                ) {
-                  turnUsed = true;
-                  break;
-                }
-              }
-            }
-          } catch {
-            // ignore
-          }
-          if (turnUsed) break;
-        }
-      }
-
-      setIsTurnActive(turnUsed);
+      const peerConnections = [
+        ...Array.from(
+          connectionsRef.current.values(),
+          (conn) => conn.peerConnection,
+        ),
+        ...Array.from(
+          mediaCallsRef.current.values(),
+          (call) => call.peerConnection,
+        ),
+      ];
+      setIsTurnActive(await hasRelayCandidate(peerConnections));
     }, 3000);
 
     return () => clearInterval(interval);

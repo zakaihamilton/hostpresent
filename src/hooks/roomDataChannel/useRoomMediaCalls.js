@@ -16,6 +16,21 @@ import {
   ensureRelayCall as ensureRelayCallInMap,
 } from "@/lib/webrtc/relayCalls";
 
+function resolveOutboundStreams(
+  streamOverrides,
+  localStreamRef,
+  screenStreamRef,
+) {
+  const localStream = Object.hasOwn(streamOverrides, "localStream")
+    ? streamOverrides.localStream
+    : localStreamRef.current;
+  const screenStream = Object.hasOwn(streamOverrides, "screenStream")
+    ? streamOverrides.screenStream
+    : screenStreamRef.current;
+
+  return { localStream, screenStream };
+}
+
 export function useRoomMediaCalls({
   isHost,
   peerRef,
@@ -205,20 +220,14 @@ export function useRoomMediaCalls({
         const peer = peerRef.current;
         if (!peer) return;
 
-        const hasLocalStreamOverride = Object.hasOwn(
+        const {
+          localStream: outboundLocalStream,
+          screenStream: outboundScreenStream,
+        } = resolveOutboundStreams(
           streamOverrides,
-          "localStream",
+          localStreamRef,
+          screenStreamRef,
         );
-        const hasScreenStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "screenStream",
-        );
-        const outboundLocalStream = hasLocalStreamOverride
-          ? streamOverrides.localStream
-          : localStreamRef.current;
-        const outboundScreenStream = hasScreenStreamOverride
-          ? streamOverrides.screenStream
-          : screenStreamRef.current;
 
         const outbound = await buildOutboundMediaStream(
           outboundLocalStream,
@@ -253,20 +262,14 @@ export function useRoomMediaCalls({
   const enqueueSync = useCallback(
     async (streamOverrides = {}) => {
       const next = syncQueueRef.current.then(async () => {
-        const hasLocalStreamOverride = Object.hasOwn(
+        const {
+          localStream: outboundLocalStream,
+          screenStream: outboundScreenStream,
+        } = resolveOutboundStreams(
           streamOverrides,
-          "localStream",
+          localStreamRef,
+          screenStreamRef,
         );
-        const hasScreenStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "screenStream",
-        );
-        const outboundLocalStream = hasLocalStreamOverride
-          ? streamOverrides.localStream
-          : localStreamRef.current;
-        const outboundScreenStream = hasScreenStreamOverride
-          ? streamOverrides.screenStream
-          : screenStreamRef.current;
 
         if (isHost) {
           const tasks = [];
