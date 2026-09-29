@@ -30,8 +30,7 @@ export function MeetingTitle({
     }
   }, [onSessionTitleChange]);
 
-  const handleTitleSubmit = useCallback(() => {
-    setIsEditingTitle(false);
+  const saveTitle = useCallback(() => {
     const trimmed = editedTitle.trim();
     if (trimmed !== (sessionTitle || "")) {
       onSessionTitleChange(trimmed);
@@ -39,6 +38,11 @@ export function MeetingTitle({
       setEditedTitle(sessionTitle || "");
     }
   }, [editedTitle, sessionTitle, onSessionTitleChange]);
+
+  const handleTitleSubmit = useCallback(() => {
+    setIsEditingTitle(false);
+    saveTitle();
+  }, [saveTitle]);
 
   const handleTitleKeyDown = useCallback(
     (e) => {
@@ -68,13 +72,8 @@ export function MeetingTitle({
 
   const handleRenamePopupSubmit = useCallback(() => {
     setIsRenamePopupOpen(false);
-    const trimmed = editedTitle.trim();
-    if (trimmed !== (sessionTitle || "")) {
-      onSessionTitleChange(trimmed);
-    } else {
-      setEditedTitle(sessionTitle || "");
-    }
-  }, [editedTitle, sessionTitle, onSessionTitleChange]);
+    saveTitle();
+  }, [saveTitle]);
 
   const handleRenamePopupKeyDown = useCallback(
     (e) => {

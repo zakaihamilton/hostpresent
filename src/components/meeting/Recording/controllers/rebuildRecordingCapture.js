@@ -21,32 +21,58 @@ import {
   supportsWebCodecsRecordingCodecs,
 } from "../webCodecsRecording";
 
-export async function rebuildRecordingCapture({
-  canvasRendererRef,
-  audioMixerRef,
-  focusedIdRef,
-  videoParticipantsRef,
-  localStreamRef,
-  screenStreamRef,
-  webCodecsWorkerRef,
-  isRecordingRef,
-  recordingSessionRef,
-  persistedStopRef,
-  finalizeRecordingDownload,
-  resolveCaptureSaveCompletion,
-  updateDownloadProgress,
-  liveCaptureStopTimerRef,
-  exportDirectoryRef,
-  recordingFormatsRef,
-  mediaRecorderRef,
-  chunkIndexRef,
-  videoChunkCountRef,
-  monitorStorageEstimate,
-  stopForStorageRef,
-  audioRecorderRef,
-  audioChunkCountRef,
-  compositeStreamRef,
-}) {
+export async function rebuildRecordingCapture({ media, storage, callbacks }) {
+  const {
+    canvasRendererRef,
+    audioMixerRef,
+    focusedIdRef,
+    videoParticipantsRef,
+    localStreamRef,
+    screenStreamRef,
+    webCodecsWorkerRef,
+    isRecordingRef,
+    mediaRecorderRef,
+    audioRecorderRef,
+    compositeStreamRef,
+  } = media;
+  const {
+    recordingSessionRef,
+    persistedStopRef,
+    liveCaptureStopTimerRef,
+    exportDirectoryRef,
+    recordingFormatsRef,
+    chunkIndexRef,
+    videoChunkCountRef,
+    audioChunkCountRef,
+    stopForStorageRef,
+  } = storage;
+  const {
+    finalizeRecordingDownload,
+    resolveCaptureSaveCompletion,
+    updateDownloadProgress,
+    monitorStorageEstimate,
+  } = callbacks;
+  const persistFragment = (stream, index, blob) => {
+    saveRecordingFragment({ stream, index, blob })
+      .then((session) => {
+        recordingSessionRef.current = session;
+        return getRecordingStorageEstimate();
+      })
+      .then(monitorStorageEstimate)
+      .catch(() => stopForStorageRef.current?.());
+  };
+  const handleVideoFragment = (event) => {
+    if (!(event.data?.size > 0)) return;
+    const index = chunkIndexRef.current++;
+    videoChunkCountRef.current = index + 1;
+    persistFragment("video", index, event.data);
+  };
+  const handleAudioFragment = (event) => {
+    if (!(event.data?.size > 0)) return;
+    const index = audioChunkCountRef.current++;
+    persistFragment("audio", index, event.data);
+  };
+
   if (!canvasRendererRef.current) {
     canvasRendererRef.current = new CanvasVideoRenderer();
     canvasRendererRef.current.start();
@@ -247,19 +273,7 @@ export async function rebuildRecordingCapture({
       { mimeType: recordingFormatsRef.current.recoveryVideo.mimeType },
     );
     mediaRecorderRef.current = mirrorRecorder;
-    mirrorRecorder.ondataavailable = (event) => {
-      if (event.data?.size <= 0) return;
-      const index = chunkIndexRef.current;
-      chunkIndexRef.current = index + 1;
-      videoChunkCountRef.current = index + 1;
-      saveRecordingFragment({ stream: "video", index, blob: event.data })
-        .then((saved) => {
-          recordingSessionRef.current = saved;
-          return getRecordingStorageEstimate();
-        })
-        .then(monitorStorageEstimate)
-        .catch(() => stopForStorageRef.current?.());
-    };
+    mirrorRecorder.ondataavailable = handleVideoFragment;
     mirrorRecorder.start(5000);
 
     if (recAudioTrack) {
@@ -268,18 +282,7 @@ export async function rebuildRecordingCapture({
         { mimeType: recordingFormatsRef.current.recoveryAudio.mimeType },
       );
       audioRecorderRef.current = mirrorAudioRecorder;
-      mirrorAudioRecorder.ondataavailable = (event) => {
-        if (event.data?.size <= 0) return;
-        const index = audioChunkCountRef.current;
-        audioChunkCountRef.current = index + 1;
-        saveRecordingFragment({ stream: "audio", index, blob: event.data })
-          .then((saved) => {
-            recordingSessionRef.current = saved;
-            return getRecordingStorageEstimate();
-          })
-          .then(monitorStorageEstimate)
-          .catch(() => stopForStorageRef.current?.());
-      };
+      mirrorAudioRecorder.ondataavailable = handleAudioFragment;
       mirrorAudioRecorder.start(5000);
     }
     return;
@@ -298,20 +301,7 @@ export async function rebuildRecordingCapture({
   const recorder = createRecorder(compositeStreamRef.current, options);
   mediaRecorderRef.current = recorder;
 
-  recorder.ondataavailable = (event) => {
-    if (event.data?.size > 0) {
-      const idx = chunkIndexRef.current;
-      chunkIndexRef.current = idx + 1;
-      videoChunkCountRef.current = idx + 1;
-      saveRecordingFragment({ stream: "video", index: idx, blob: event.data })
-        .then((session) => {
-          recordingSessionRef.current = session;
-          return getRecordingStorageEstimate();
-        })
-        .then(monitorStorageEstimate)
-        .catch(() => stopForStorageRef.current?.());
-    }
-  };
+  recorder.ondataavailable = handleVideoFragment;
 
   if (recAudioTrack) {
     const audioOptions = {
@@ -322,19 +312,7 @@ export async function rebuildRecordingCapture({
       audioOptions,
     );
     audioRecorderRef.current = audioRecorder;
-    audioRecorder.ondataavailable = (event) => {
-      if (event.data?.size > 0) {
-        const index = audioChunkCountRef.current;
-        audioChunkCountRef.current = index + 1;
-        saveRecordingFragment({ stream: "audio", index, blob: event.data })
-          .then((session) => {
-            recordingSessionRef.current = session;
-            return getRecordingStorageEstimate();
-          })
-          .then(monitorStorageEstimate)
-          .catch(() => stopForStorageRef.current?.());
-      }
-    };
+    audioRecorder.ondataavailable = handleAudioFragment;
     audioRecorder.start(5000);
   } else {
     audioRecorderRef.current = null;

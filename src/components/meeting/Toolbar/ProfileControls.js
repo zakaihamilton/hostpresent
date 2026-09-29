@@ -19,40 +19,11 @@ import {
 } from "@/lib/settings/displayNameSettings";
 import styles from "./ProfileControls.module.css";
 import { ProfileDeviceSettings } from "./ProfileDeviceSettings";
+import { computePopupPosition } from "./popupPosition";
 import { useMicrophoneTest } from "./useMicrophoneTest";
 
-const POPUP_GAP = 12;
-const VIEWPORT_PADDING = 8;
 function btnClass(...classes) {
   return [styles.btn, ...classes.filter(Boolean)].join(" ");
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function computePopupPosition(anchorRect, popupRect) {
-  const width = popupRect.width;
-  let left = anchorRect.left;
-
-  // Align to anchor left or center, keep in viewport
-  left = clamp(
-    left,
-    VIEWPORT_PADDING,
-    window.innerWidth - width - VIEWPORT_PADDING,
-  );
-
-  let top = anchorRect.top - POPUP_GAP - popupRect.height;
-  if (top < VIEWPORT_PADDING) {
-    top = anchorRect.bottom + POPUP_GAP;
-  }
-  top = clamp(
-    top,
-    VIEWPORT_PADDING,
-    window.innerHeight - popupRect.height - VIEWPORT_PADDING,
-  );
-
-  return { top, left };
 }
 
 export function ProfileControls({
@@ -109,7 +80,7 @@ export function ProfileControls({
 
     const anchorRect = anchor.getBoundingClientRect();
     const popupRect = popup.getBoundingClientRect();
-    setPopupCoords(computePopupPosition(anchorRect, popupRect));
+    setPopupCoords(computePopupPosition(anchorRect, popupRect, { gap: 12 }));
   }, []);
 
   useEffect(() => {
