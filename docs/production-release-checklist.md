@@ -8,8 +8,9 @@ Peerovo applies connectivity-service rate limits.
 
 - Configure the rules in [Vercel security setup](vercel-security.md) for both
   Preview and Production environments.
-- Confirm `ROOM_TOKEN_SECRET`, `PEEROVO_API_URL`, `PEEROVO_PROJECT_ID`, and
-  `PEEROVO_PROJECT_API_KEY` are set in the Host Present environment being
+- Confirm `ROOM_TOKEN_SECRET` was generated with at least 32 bytes of
+  cryptographic randomness, and that `PEEROVO_API_URL`, `PEEROVO_PROJECT_ID`,
+  and `PEEROVO_PROJECT_API_KEY` are set in the Host Present environment being
   promoted.
 - Confirm the Host Present project in Peerovo allows the exact Preview and
   Production browser origins.

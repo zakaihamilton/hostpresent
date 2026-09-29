@@ -2,7 +2,8 @@ import { createHostPresentPeerIdentity } from "./peerIdentity.mjs";
 
 describe("Host Present Peerovo identity", () => {
   beforeEach(() => {
-    process.env.ROOM_TOKEN_SECRET = "test-room-token-secret";
+    process.env.ROOM_TOKEN_SECRET =
+      "test-room-token-secret-with-at-least-32-bytes";
   });
 
   afterEach(() => {

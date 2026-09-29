@@ -1,14 +1,11 @@
 import { createHmac } from "node:crypto";
+import { getSigningSecret } from "./tokens.js";
 
 const MAX_SESSION_TOKEN_LENGTH = 2048;
 const RESOURCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
-function getRoomSigningSecret() {
-  return process.env.ROOM_TOKEN_SECRET?.trim() || null;
-}
-
 export function createHostPresentPeerIdentity({ roomId, role, sessionToken }) {
-  const secret = getRoomSigningSecret();
+  const secret = getSigningSecret();
   if (
     !secret ||
     typeof roomId !== "string" ||

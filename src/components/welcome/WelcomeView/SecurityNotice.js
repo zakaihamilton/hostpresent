@@ -22,7 +22,7 @@ export function SecurityNotice() {
           setNotice({
             title: "[E081] Room signing is not configured.",
             message:
-              "Room creation, code resolution, and saved room access are unavailable until ROOM_TOKEN_SECRET is set on the server.",
+              "Room creation, code resolution, and saved room access require a ROOM_TOKEN_SECRET of at least 32 bytes on the server.",
           });
           return;
         }

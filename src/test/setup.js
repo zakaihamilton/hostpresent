@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 
-process.env.ROOM_TOKEN_SECRET = "test-room-token-secret";
+process.env.ROOM_TOKEN_SECRET = "test-room-token-secret-with-at-least-32-bytes";
 
 class ResizeObserverMock {
   observe() {}

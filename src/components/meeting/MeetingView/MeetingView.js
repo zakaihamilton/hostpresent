@@ -1,15 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ConnectionBanner } from "@/components/meeting/ConnectionBanner/ConnectionBanner";
-import { DiagnosticsPopup } from "@/components/meeting/DiagnosticsPopup";
-import { Header } from "@/components/meeting/Header";
-import { InviteBar } from "@/components/meeting/InviteBar/InviteBar";
 import { Recording } from "@/components/meeting/Recording";
-import { Toolbar } from "@/components/meeting/Toolbar";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
-import { MeetingLoading } from "@/components/ui/MeetingLoading";
 import { PeerStreamConnection } from "@/components/webrtc/PeerStreamConnection";
 import {
   useConfirmDialog,
@@ -17,7 +9,7 @@ import {
   useRoomDataChannel,
   useSessionTimers,
 } from "@/hooks";
-import { ROOM_SESSION_STATUS, useRoomSession } from "@/hooks/roomSession";
+import { useRoomSession } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
 import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
@@ -33,14 +25,6 @@ import {
   saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
 import {
-  loadChatVisible,
-  loadGalleryVisible,
-  loadSidebarVisible,
-  saveChatVisible,
-  saveGalleryVisible,
-  saveSidebarVisible,
-} from "@/lib/settings/layoutSettings";
-import {
   getRoomTitleByHostToken,
   updateRoomTitle,
 } from "@/lib/settings/roomSettings";
@@ -50,21 +34,24 @@ import {
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
 import {
-  getSignalingConfigHint,
-  getSignalingErrorHint,
   hostPeerId,
   isFatalSignalingError,
   isSignalingConfigError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
 import { getAutoFocusTargetId } from "./autoFocus";
+import { MeetingControls } from "./components/MeetingControls";
+import { MeetingHeaderArea } from "./components/MeetingHeaderArea";
 import { MeetingWorkspace } from "./components/MeetingWorkspace";
 import { MediaControls } from "./hooks/MediaControls";
 import {
   attachSpeakingDetector,
   RemoteParticipants,
 } from "./hooks/RemoteParticipants";
+import { useMeetingLayoutState } from "./hooks/useMeetingLayoutState";
+import { useMeetingViewModels } from "./hooks/useMeetingViewModels";
 import styles from "./MeetingView.module.css";
+import { getMeetingStatusScreen } from "./meetingStatusScreen";
 
 export function MeetingView({ token, ...props }) {
   const {
@@ -92,15 +79,6 @@ export function MeetingView({ token, ...props }) {
       />
     </PeerStreamConnection>
   );
-}
-
-function _isTouchOrMobileDevice() {
-  if (typeof window === "undefined" || typeof navigator === "undefined")
-    return false;
-  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-  const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isSmallScreen = window.innerWidth <= 1024 || window.innerHeight <= 700;
-  return hasTouch || isMobileUA || isSmallScreen;
 }
 
 function MeetingViewInner({
@@ -131,58 +109,16 @@ function MeetingViewInner({
 
   const [inviteBarVisible, setInviteBarVisible] = useState(false);
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
-  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [isPipVisible, setIsPipVisible] = useState(false);
-  const [isChatVisible, setIsChatVisible] = useState(false);
-  const [hasUnreadChat, setHasUnreadChat] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      if (typeof window === "undefined") return false;
-      return window.innerWidth <= 1024 || window.innerHeight <= 550;
-    };
-
-    const handleResize = () => {
-      const mobile = checkIsMobile();
-      setIsMobile(mobile);
-      if (mobile) {
-        // Always clear panels on mobile resize — never persist open state
-        saveChatVisible(false);
-        saveSidebarVisible(false);
-        setIsSidebarVisible(false);
-        setIsChatVisible(false);
-      }
-    };
-
-    // Hydration-safe: read from localStorage strictly on client mount
-    setIsGalleryVisible(loadGalleryVisible());
-    const isMobileDevice = checkIsMobile();
-    setIsMobile(isMobileDevice);
-    if (isMobileDevice) {
-      // Mobile: always start with panels closed and wipe any stale persisted state
-      saveChatVisible(false);
-      saveSidebarVisible(false);
-      setIsSidebarVisible(false);
-      setIsChatVisible(false);
-    } else {
-      setIsSidebarVisible(loadSidebarVisible());
-      setIsChatVisible(loadChatVisible());
-    }
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-  useEffect(() => {
-    saveGalleryVisible(isGalleryVisible);
-  }, [isGalleryVisible]);
-  useEffect(() => {
-    if (!isMobile) saveSidebarVisible(isSidebarVisible);
-  }, [isMobile, isSidebarVisible]);
-  useEffect(() => {
-    if (!isMobile) saveChatVisible(isChatVisible);
-  }, [isMobile, isChatVisible]);
+  const layout = useMeetingLayoutState();
+  const {
+    isGalleryVisible,
+    isSidebarVisible,
+    isPipVisible,
+    isChatVisible,
+    hasUnreadChat,
+    isMobile,
+    setHasUnreadChat,
+  } = layout;
   const [chatMessages, setChatMessages] = useState([]);
   const chatIdCounterRef = useRef(0);
   const [timersEnabled, setTimersEnabled] = useState(false);
@@ -328,7 +264,7 @@ function MeetingViewInner({
     if (isChatVisible) {
       setHasUnreadChat(false);
     }
-  }, [isChatVisible]);
+  }, [isChatVisible, setHasUnreadChat]);
 
   const handleSendChatMessage = useCallback((text, recipientId) => {
     if (recipientId) {
@@ -674,48 +610,12 @@ function MeetingViewInner({
     );
   }, [isHost, effectiveFocusedId]);
 
-  const handleToggleGallery = useCallback(() => {
-    setIsGalleryVisible((v) => !v);
-  }, []);
-
-  const handleToggleSidebar = useCallback(() => {
-    setIsSidebarVisible((v) => {
-      const next = !v;
-      if (next && isMobile) {
-        setIsChatVisible(false);
-      }
-      return next;
-    });
-  }, [isMobile]);
-
-  const handleTogglePip = useCallback(() => {
-    setIsPipVisible((v) => !v);
-  }, []);
-
-  const handleToggleChat = useCallback(() => {
-    setIsChatVisible((v) => {
-      const next = !v;
-      if (next && isMobile) {
-        setIsSidebarVisible(false);
-      }
-      return next;
-    });
-  }, [isMobile]);
-
   const handleShowInviteBar = useCallback(() => {
     setInviteBarVisible(true);
   }, []);
 
   const handleDismissInviteBar = useCallback(() => {
     setInviteBarVisible(false);
-  }, []);
-
-  const handleCloseSidebar = useCallback(() => {
-    setIsSidebarVisible(false);
-  }, []);
-
-  const handleCloseChat = useCallback(() => {
-    setIsChatVisible(false);
   }, []);
 
   const handleDismissError = useCallback(() => {
@@ -738,266 +638,83 @@ function MeetingViewInner({
     }, 2500);
   };
 
-  const chatParticipants = useMemo(() => {
-    const list = [];
-    if (isHost) {
-      for (const p of videoParticipants) {
-        list.push({ id: p.id, name: p.name || "Guest" });
-      }
-      for (const p of audioList) {
-        list.push({ id: p.id, name: p.name || "Guest" });
-      }
-    } else {
-      if (hostDisplayName) {
-        list.push({ id: "host", name: hostDisplayName });
-      }
-      for (const p of peerParticipants) {
-        list.push({ id: p.id, name: p.name || "Guest" });
-      }
-    }
-    return list;
-  }, [isHost, videoParticipants, audioList, hostDisplayName, peerParticipants]);
+  const { chatParticipants, galleryParticipants, primaryViewProps } =
+    useMeetingViewModels({
+      isHost,
+      videoParticipants,
+      audioList,
+      peerParticipants,
+      hostDisplayName,
+      effectiveFocusedId,
+      roomConnection,
+      hostStream,
+      hostAudioMuted,
+      hostVideoMuted,
+      hostScreenSharing,
+      hostIsSpeaking,
+      hostStreamPlaybackMuted,
+      localStream,
+      screenStream,
+      isScreenAudioShared,
+      isAudioMuted,
+      resolvedDisplayName,
+    });
 
-  const galleryParticipants = useMemo(() => {
-    if (isHost) {
-      return videoParticipants;
-    }
-
-    const nameById = new Map(
-      peerParticipants.map((participant) => [participant.id, participant.name]),
-    );
-    const localId = roomConnection?.localParticipantId;
-    const tiles = [];
-
-    if (hostStream) {
-      tiles.push({
-        id: "host",
-        name: hostDisplayName,
-        stream: hostStream,
-        isAudioMuted: hostAudioMuted,
-        isVideoMuted: hostVideoMuted,
-        isScreenSharing: hostScreenSharing,
-        isSpeaking: hostIsSpeaking,
-        avatarColor: "#6366f1",
-      });
-    }
-
-    for (const participant of videoParticipants) {
-      if (participant.id === localId) continue;
-      tiles.push({
-        ...participant,
-        name: nameById.get(participant.id) || participant.name,
-      });
-    }
-
-    return tiles;
-  }, [
-    hostAudioMuted,
-    hostDisplayName,
-    hostIsSpeaking,
-    hostStream,
-    hostVideoMuted,
-    hostScreenSharing,
+  const statusScreen = getMeetingStatusScreen({
+    sessionStatus,
+    sessionError,
+    handleBack,
+    handleDisconnectBack,
+    signalingConfigError,
+    meetingDisconnectReason,
+    fatalConnectionError,
     isHost,
-    peerParticipants,
-    roomConnection?.localParticipantId,
-    videoParticipants,
-  ]);
-
-  const primaryViewProps = useMemo(() => {
-    const focusedParticipant =
-      effectiveFocusedId && effectiveFocusedId !== "host"
-        ? videoParticipants.find(
-            (participant) => participant.id === effectiveFocusedId,
-          )
-        : null;
-    const focusedIsSelf =
-      !isHost &&
-      effectiveFocusedId &&
-      effectiveFocusedId === roomConnection?.localParticipantId;
-    const viewingFocusedParticipant = Boolean(
-      focusedParticipant || focusedIsSelf,
-    );
-    const viewingHostStream =
-      !viewingFocusedParticipant && !isHost && Boolean(hostStream);
-    const activeMain = focusedIsSelf
-      ? screenStream || localStream
-      : focusedParticipant?.stream || screenStream || localStream;
-    const isLocalCamera =
-      !viewingHostStream &&
-      !screenStream &&
-      (focusedIsSelf || !focusedParticipant);
-    return {
-      stream: viewingHostStream ? hostStream : activeMain,
-      isMirrored: isLocalCamera,
-      label: viewingFocusedParticipant
-        ? focusedIsSelf
-          ? screenStream
-            ? "You are sharing your screen"
-            : resolvedDisplayName
-          : focusedParticipant.isScreenSharing
-            ? `${focusedParticipant.name} is sharing a screen`
-            : focusedParticipant.name
-        : viewingHostStream
-          ? hostScreenSharing
-            ? `${hostDisplayName} is sharing a screen`
-            : hostDisplayName
-          : screenStream
-            ? isScreenAudioShared
-              ? "You are sharing your screen with audio"
-              : "You are sharing your screen"
-            : resolvedDisplayName,
-      isMuted: viewingHostStream
-        ? hostStreamPlaybackMuted
-        : focusedParticipant
-          ? focusedParticipant.isSelf || !focusedParticipant.stream
-          : screenStream
-            ? !isScreenAudioShared
-            : true,
-      isAudioMuted: viewingHostStream
-        ? hostAudioMuted
-        : focusedParticipant
-          ? focusedParticipant.isAudioMuted
-          : isAudioMuted,
-      isVideoMuted: viewingHostStream
-        ? hostVideoMuted && !hostScreenSharing
-        : focusedParticipant
-          ? focusedParticipant.isVideoMuted &&
-            !focusedParticipant.isScreenSharing
-          : false,
-    };
-  }, [
-    effectiveFocusedId,
-    hostStream,
-    isHost,
-    screenStream,
-    localStream,
-    hostDisplayName,
-    hostScreenSharing,
-    isScreenAudioShared,
-    resolvedDisplayName,
-    hostAudioMuted,
-    hostStreamPlaybackMuted,
-    hostVideoMuted,
-    roomConnection?.localParticipantId,
-    videoParticipants,
-    isAudioMuted,
-  ]);
-
-  if (sessionStatus === ROOM_SESSION_STATUS.LOADING) {
-    return <MeetingLoading message="Loading room…" />;
-  }
-
-  if (sessionStatus === ROOM_SESSION_STATUS.ERROR) {
-    return (
-      <MeetingJoinError
-        title="Could not join meeting"
-        message={sessionError || "Failed to load room session."}
-        onBack={handleBack}
-      />
-    );
-  }
-
-  if (signalingConfigError) {
-    return (
-      <MeetingJoinError
-        title="Signaling not configured"
-        message={signalingConfigError}
-        hint={getSignalingConfigHint()}
-        onBack={handleBack}
-      />
-    );
-  }
-
-  if (meetingDisconnectReason === "limit_reached") {
-    return (
-      <MeetingJoinError
-        title="Meeting limit reached"
-        message="This meeting has reached the 6-hour limit."
-        onBack={handleDisconnectBack}
-      />
-    );
-  }
-
-  if (meetingDisconnectReason === "ended") {
-    return (
-      <MeetingJoinError
-        title="Meeting ended"
-        message="The host has ended this meeting."
-        onBack={handleDisconnectBack}
-      />
-    );
-  }
-
-  if (meetingDisconnectReason === "full") {
-    return (
-      <MeetingJoinError
-        title="Meeting is full"
-        message="This meeting has reached the maximum capacity of 30 participants."
-        onBack={handleDisconnectBack}
-      />
-    );
-  }
-
-  if (fatalConnectionError) {
-    return (
-      <MeetingJoinError
-        title="Could not connect to meeting"
-        message={fatalConnectionError}
-        hint={getSignalingErrorHint(fatalConnectionError, { isHost })}
-        onBack={handleBack}
-      />
-    );
-  }
+  });
+  if (statusScreen) return statusScreen;
 
   return (
     <div className={styles.app}>
-      {isRecording && (
-        <div
-          className={`${styles.recordingBar} ${isRecordingPaused ? styles.recordingBarPaused : ""}`}
-          aria-hidden
-        />
-      )}
-
-      <Header
-        meetingDurationSeconds={meetingSeconds}
-        roomId={formattedRoomId || null}
-        sessionTitle={sessionTitle || null}
+      <MeetingHeaderArea
         isRecording={isRecording}
         isRecordingPaused={isRecordingPaused}
-        recordingDurationSeconds={recordingSeconds}
-        onShowInviteLink={
-          isHost && inviteLink && !inviteBarVisible ? handleShowInviteBar : null
-        }
-        onSessionTitleChange={isHost ? handleSessionTitleChange : null}
-        revealTitleOnLogoClick={!isHost}
-        showRecording={isHost}
-        onStartRecording={startRecording}
-        onPauseRecording={pauseRecording}
-        onResumeRecording={resumeRecording}
-        onStopRecording={stopRecording}
+        headerProps={{
+          meetingDurationSeconds: meetingSeconds,
+          roomId: formattedRoomId || null,
+          sessionTitle: sessionTitle || null,
+          isRecording,
+          isRecordingPaused,
+          recordingDurationSeconds: recordingSeconds,
+          onShowInviteLink:
+            isHost && inviteLink && !inviteBarVisible
+              ? handleShowInviteBar
+              : null,
+          onSessionTitleChange: isHost ? handleSessionTitleChange : null,
+          revealTitleOnLogoClick: !isHost,
+          showRecording: isHost,
+          onStartRecording: startRecording,
+          onPauseRecording: pauseRecording,
+          onResumeRecording: resumeRecording,
+          onStopRecording: stopRecording,
+        }}
+        connectionProps={{
+          isHost,
+          hostPresent,
+          connectionError: roomConnection?.connectionError,
+          activeConnectionsCount: roomConnection?.activeConnectionsCount ?? 0,
+          isWaitingForHost: isWaitingForHostMessage(
+            roomConnection?.connectionError,
+          ),
+          isFatalConnectionError: fatalConnectionError,
+        }}
+        inviteProps={{
+          visible: Boolean(isHost && inviteLink && inviteBarVisible),
+          inviteLink,
+          inviteCopyMessage,
+          onCopyInviteLink: handleCopyInviteLink,
+          onDismiss: handleDismissInviteBar,
+          roomId: formattedRoomId,
+        }}
       />
-
-      <ConnectionBanner
-        isHost={isHost}
-        hostPresent={hostPresent}
-        connectionError={roomConnection?.connectionError}
-        activeConnectionsCount={roomConnection?.activeConnectionsCount ?? 0}
-        isWaitingForHost={isWaitingForHostMessage(
-          roomConnection?.connectionError,
-        )}
-        isFatalConnectionError={fatalConnectionError}
-      />
-
-      {isHost && inviteLink && inviteBarVisible
-        ? <InviteBar
-            inviteLink={inviteLink}
-            inviteCopyMessage={inviteCopyMessage}
-            onCopyInviteLink={handleCopyInviteLink}
-            onDismiss={handleDismissInviteBar}
-            roomId={formattedRoomId}
-          />
-        : null}
 
       <MeetingWorkspace
         chatPanelProps={{
@@ -1029,12 +746,9 @@ function MeetingViewInner({
         isPipVisible={isPipVisible}
         isSidebarVisible={isSidebarVisible}
         localStream={localStream}
-        onCloseChat={handleCloseChat}
-        onClosePanels={() => {
-          handleCloseSidebar();
-          handleCloseChat();
-        }}
-        onCloseSidebar={handleCloseSidebar}
+        onCloseChat={layout.closeChat}
+        onClosePanels={layout.closePanels}
+        onCloseSidebar={layout.closeSidebar}
         onDismissDownload={dismissDownloadBanner}
         onDismissError={handleDismissError}
         onShowDiagnostics={() => setIsDiagnosticsOpen(true)}
@@ -1096,71 +810,69 @@ function MeetingViewInner({
         videoParticipants={galleryParticipants}
       />
 
-      <ConfirmDialog {...dialogProps} />
-
-      <DiagnosticsPopup
-        isOpen={isDiagnosticsOpen}
-        onClose={() => setIsDiagnosticsOpen(false)}
-        role={role}
-        roomId={formattedRoomId || null}
-        connectionStatus={roomConnection?.status}
-        localParticipantId={roomConnection?.localParticipantId}
-        peerConfig={roomConnection?.peerConfig}
-        iceServers={roomConnection?.iceServers}
-        activeConnectionsCount={roomConnection?.activeConnectionsCount}
-        connectionError={roomConnection?.connectionError}
-        onReconnect={roomConnection?.reconnect}
-        onSendDiagnosticReport={sendDiagnosticReport}
-        isTurnActive={roomConnection?.isTurnActive}
-      />
-
-      <Toolbar
-        isAudioMuted={isAudioMuted}
-        isVideoMuted={isVideoMuted}
-        screenStream={screenStream}
-        shareScreenAudio={shareScreenAudio}
-        isScreenAudioShared={isScreenAudioShared}
-        isGalleryVisible={isGalleryVisible}
-        isSidebarVisible={isSidebarVisible}
-        isPipVisible={isPipVisible}
-        isChatVisible={isChatVisible}
-        hasUnreadChat={hasUnreadChat}
-        displayName={displayNameInput}
-        onDisplayNameChange={handleDisplayNameChange}
-        participantMode={participantMode}
-        onParticipantModeChange={
-          handleDisplayNameChange ? handleParticipantModeChange : null
-        }
-        availableMicrophones={availableMicrophones}
-        selectedMicrophone={selectedMicrophone}
-        onMicrophoneChange={switchMicrophone}
-        isVoiceIsolationEnabled={isVoiceIsolationEnabled}
-        isVoiceIsolationChanging={isVoiceIsolationChanging}
-        onVoiceIsolationChange={setVoiceIsolation}
-        availableSpeakers={availableSpeakers}
-        selectedSpeaker={selectedSpeaker}
-        onSpeakerChange={switchSpeaker}
-        availableCameras={availableCameras}
-        selectedCamera={selectedCamera}
-        onCameraChange={switchCamera}
-        onToggleAudio={toggleAudio}
-        onToggleVideo={toggleVideo}
-        onToggleScreenShare={toggleScreenShare}
-        onShareScreenAudioChange={setShareScreenAudioPreference}
-        onToggleGallery={handleToggleGallery}
-        onToggleSidebar={handleToggleSidebar}
-        onTogglePip={handleTogglePip}
-        onToggleChat={handleToggleChat}
-        isHost={isHost}
-        onEndMeeting={handleEndMeeting}
-        onLeave={handleBack}
-        participantCount={
-          isHost
+      <MeetingControls
+        confirmDialogProps={dialogProps}
+        diagnosticsProps={{
+          isOpen: isDiagnosticsOpen,
+          onClose: () => setIsDiagnosticsOpen(false),
+          role,
+          roomId: formattedRoomId || null,
+          connectionStatus: roomConnection?.status,
+          localParticipantId: roomConnection?.localParticipantId,
+          peerConfig: roomConnection?.peerConfig,
+          iceServers: roomConnection?.iceServers,
+          activeConnectionsCount: roomConnection?.activeConnectionsCount,
+          connectionError: roomConnection?.connectionError,
+          onReconnect: roomConnection?.reconnect,
+          onSendDiagnosticReport: sendDiagnosticReport,
+          isTurnActive: roomConnection?.isTurnActive,
+        }}
+        toolbarProps={{
+          isAudioMuted,
+          isVideoMuted,
+          screenStream,
+          shareScreenAudio,
+          isScreenAudioShared,
+          isGalleryVisible,
+          isSidebarVisible,
+          isPipVisible,
+          isChatVisible,
+          hasUnreadChat,
+          displayName: displayNameInput,
+          onDisplayNameChange: handleDisplayNameChange,
+          participantMode,
+          onParticipantModeChange: handleDisplayNameChange
+            ? handleParticipantModeChange
+            : null,
+          availableMicrophones,
+          selectedMicrophone,
+          onMicrophoneChange: switchMicrophone,
+          isVoiceIsolationEnabled,
+          isVoiceIsolationChanging,
+          onVoiceIsolationChange: setVoiceIsolation,
+          availableSpeakers,
+          selectedSpeaker,
+          onSpeakerChange: switchSpeaker,
+          availableCameras,
+          selectedCamera,
+          onCameraChange: switchCamera,
+          onToggleAudio: toggleAudio,
+          onToggleVideo: toggleVideo,
+          onToggleScreenShare: toggleScreenShare,
+          onShareScreenAudioChange: setShareScreenAudioPreference,
+          onToggleGallery: layout.toggleGallery,
+          onToggleSidebar: layout.toggleSidebar,
+          onTogglePip: layout.togglePip,
+          onToggleChat: layout.toggleChat,
+          isHost,
+          onEndMeeting: handleEndMeeting,
+          onLeave: handleBack,
+          participantCount: isHost
             ? 1 + videoParticipants.length + audioList.length
-            : 2 + peerParticipants.length
-        }
-        mediaPublishingEnabled={canPublishMedia}
-        allowScreenShare={canPublishMedia}
+            : 2 + peerParticipants.length,
+          mediaPublishingEnabled: canPublishMedia,
+          allowScreenShare: canPublishMedia,
+        }}
       />
     </div>
   );
