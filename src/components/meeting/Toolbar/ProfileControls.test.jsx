@@ -129,7 +129,7 @@ describe("ProfileControls", () => {
     ).toBeInTheDocument();
   });
 
-  it("associates device labels with their selectors", async () => {
+  it("associates device labels with custom selectors", async () => {
     const user = userEvent.setup();
     const device = (deviceId, label) => ({ deviceId, label });
 
@@ -138,16 +138,161 @@ describe("ProfileControls", () => {
         displayName="Alex"
         onDisplayNameChange={() => {}}
         availableMicrophones={[device("mic-1", "Desk mic")]}
+        selectedMicrophone="mic-1"
         availableSpeakers={[device("speaker-1", "Desk speakers")]}
+        selectedSpeaker="speaker-1"
         availableCameras={[device("camera-1", "Desk camera")]}
+        selectedCamera="camera-1"
       />,
     );
 
     await user.click(getProfileButton());
 
-    expect(screen.getByLabelText("Microphone")).toHaveValue("mic-1");
-    expect(screen.getByLabelText("Audio output")).toHaveValue("speaker-1");
-    expect(screen.getByLabelText("Camera")).toHaveValue("camera-1");
+    expect(
+      screen.getByRole("combobox", { name: /^Microphone:/ }),
+    ).toHaveTextContent("Desk mic");
+    expect(
+      screen.getByRole("combobox", { name: /^Audio output:/ }),
+    ).toHaveTextContent("Desk speakers");
+    expect(
+      screen.getByRole("combobox", { name: /^Camera:/ }),
+    ).toHaveTextContent("Desk camera");
+  });
+
+  it("opens the device list and selects an option with the keyboard", async () => {
+    const user = userEvent.setup();
+    const onMicrophoneChange = jest.fn();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        availableMicrophones={[
+          { deviceId: "mic-1", label: "Desk mic" },
+          { deviceId: "mic-2", label: "USB microphone" },
+        ]}
+        selectedMicrophone="mic-1"
+        onMicrophoneChange={onMicrophoneChange}
+      />,
+    );
+
+    await user.click(getProfileButton());
+    const microphone = screen.getByRole("combobox", { name: /^Microphone:/ });
+    microphone.focus();
+    await user.keyboard("{ArrowDown}");
+
+    const listbox = screen.getByRole("listbox", { name: "Microphone" });
+    expect(listbox).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Desk mic" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await user.keyboard("{ArrowDown}");
+    expect(microphone).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "USB microphone" }).id,
+    );
+    await user.keyboard("{Home}");
+    expect(microphone).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Desk mic" }).id,
+    );
+    await user.keyboard("{End}");
+    await user.keyboard("{Enter}");
+
+    expect(onMicrophoneChange).toHaveBeenCalledWith("mic-2");
+    expect(screen.queryByRole("listbox", { name: "Microphone" })).toBeNull();
+    expect(microphone).toHaveFocus();
+  });
+
+  it("selects audio output and camera devices by pointer", async () => {
+    const user = userEvent.setup();
+    const onSpeakerChange = jest.fn();
+    const onCameraChange = jest.fn();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        availableSpeakers={[
+          { deviceId: "speaker-1", label: "Desk speakers" },
+          { deviceId: "speaker-2", label: "USB speakers" },
+        ]}
+        selectedSpeaker="speaker-1"
+        onSpeakerChange={onSpeakerChange}
+        availableCameras={[
+          { deviceId: "camera-1", label: "Built-in camera" },
+          { deviceId: "camera-2", label: "External camera" },
+        ]}
+        selectedCamera="camera-1"
+        onCameraChange={onCameraChange}
+      />,
+    );
+
+    await user.click(getProfileButton());
+    await user.click(screen.getByRole("combobox", { name: /^Audio output:/ }));
+    await user.click(screen.getByRole("option", { name: "USB speakers" }));
+    expect(onSpeakerChange).toHaveBeenCalledWith("speaker-2");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: /^Camera:/ }));
+    await user.click(screen.getByRole("option", { name: "External camera" }));
+    expect(onCameraChange).toHaveBeenCalledWith("camera-2");
+  });
+
+  it("closes a device list with Escape and restores trigger focus", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        availableCameras={[{ deviceId: "camera-1", label: "Desk camera" }]}
+        selectedCamera="camera-1"
+      />,
+    );
+
+    await user.click(getProfileButton());
+    const camera = screen.getByRole("combobox", { name: /^Camera:/ });
+    await user.click(camera);
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("listbox", { name: "Camera" })).toBeNull();
+    expect(camera).toHaveFocus();
+  });
+
+  it("closes a device list when another part of the profile popup is clicked", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileControls
+        displayName="Alex"
+        onDisplayNameChange={() => {}}
+        availableSpeakers={[{ deviceId: "speaker-1", label: "Desk speakers" }]}
+        selectedSpeaker="speaker-1"
+      />,
+    );
+
+    await user.click(getProfileButton());
+    await user.click(screen.getByRole("combobox", { name: /^Audio output:/ }));
+    await user.click(screen.getByText("Audio & video devices"));
+
+    expect(screen.queryByRole("listbox", { name: "Audio output" })).toBeNull();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("preserves the device empty states", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileControls displayName="Alex" onDisplayNameChange={() => {}} />,
+    );
+    await user.click(getProfileButton());
+
+    expect(screen.getByText("No microphones detected")).toBeInTheDocument();
+    expect(screen.getByText("Default system output")).toBeInTheDocument();
+    expect(screen.getByText("No cameras detected")).toBeInTheDocument();
   });
 
   it("toggles voice isolation", async () => {

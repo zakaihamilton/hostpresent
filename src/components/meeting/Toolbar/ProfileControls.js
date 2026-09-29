@@ -8,6 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ParticipantModeToggle } from "@/components/meeting/ParticipantModeToggle";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { UserCircle } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -147,14 +148,17 @@ export function ProfileControls({
   useEffect(() => {
     if (!popupOpen) return;
 
-    requestAnimationFrame(() => {
-      popupRef.current?.querySelector("input, select, button")?.focus();
+    const focusFrame = requestAnimationFrame(() => {
+      if (!popupRef.current?.contains(document.activeElement)) {
+        popupRef.current?.querySelector("input, button")?.focus();
+      }
     });
 
     const handlePointerDown = (event) => {
       if (
         clusterRef.current?.contains(event.target) ||
-        popupRef.current?.contains(event.target)
+        popupRef.current?.contains(event.target) ||
+        event.target.closest?.("[data-custom-select-listbox]")
       ) {
         return;
       }
@@ -171,6 +175,7 @@ export function ProfileControls({
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      cancelAnimationFrame(focusFrame);
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
@@ -382,19 +387,16 @@ export function ProfileControls({
                       ? <p className={styles.emptyDevices}>
                           No microphones detected
                         </p>
-                      : <select
+                      : <CustomSelect
                           id="microphone-device"
-                          className={styles.deviceSelect}
+                          label="Microphone"
                           value={selectedMicrophone}
-                          onChange={(e) => onMicrophoneChange?.(e.target.value)}
-                          aria-label="Select microphone"
-                        >
-                          {availableMicrophones.map((mic) => (
-                            <option key={mic.deviceId} value={mic.deviceId}>
-                              {mic.label || "Microphone"}
-                            </option>
-                          ))}
-                        </select>}
+                          options={availableMicrophones.map((mic) => ({
+                            value: mic.deviceId,
+                            label: mic.label || "Microphone",
+                          }))}
+                          onChange={onMicrophoneChange}
+                        />}
 
                     <label className={styles.voiceIsolationToggle}>
                       <input
@@ -460,19 +462,16 @@ export function ProfileControls({
                       ? <p className={styles.emptyDevices}>
                           Default system output
                         </p>
-                      : <select
+                      : <CustomSelect
                           id="speaker-device"
-                          className={styles.deviceSelect}
+                          label="Audio output"
                           value={selectedSpeaker}
-                          onChange={(e) => onSpeakerChange?.(e.target.value)}
-                          aria-label="Select speaker"
-                        >
-                          {availableSpeakers.map((spk) => (
-                            <option key={spk.deviceId} value={spk.deviceId}>
-                              {spk.label || "Speaker"}
-                            </option>
-                          ))}
-                        </select>}
+                          options={availableSpeakers.map((spk) => ({
+                            value: spk.deviceId,
+                            label: spk.label || "Speaker",
+                          }))}
+                          onChange={onSpeakerChange}
+                        />}
                   </div>
 
                   <div className={styles.deviceField}>
@@ -486,19 +485,16 @@ export function ProfileControls({
                       ? <p className={styles.emptyDevices}>
                           No cameras detected
                         </p>
-                      : <select
+                      : <CustomSelect
                           id="camera-device"
-                          className={styles.deviceSelect}
+                          label="Camera"
                           value={selectedCamera}
-                          onChange={(e) => onCameraChange?.(e.target.value)}
-                          aria-label="Select camera"
-                        >
-                          {availableCameras.map((cam) => (
-                            <option key={cam.deviceId} value={cam.deviceId}>
-                              {cam.label || "Camera"}
-                            </option>
-                          ))}
-                        </select>}
+                          options={availableCameras.map((cam) => ({
+                            value: cam.deviceId,
+                            label: cam.label || "Camera",
+                          }))}
+                          onChange={onCameraChange}
+                        />}
                   </div>
                 </section>
               </div>

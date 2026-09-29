@@ -6,7 +6,11 @@ import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
-import { formatJoinCode, isValidJoinCode } from "@/lib/room/joinCodeFormat";
+import {
+  formatJoinCode,
+  isValidJoinCode,
+  normalizeJoinCode,
+} from "@/lib/room/joinCodeFormat";
 import {
   loadDisplayName,
   normalizeDisplayNameInput,
@@ -30,6 +34,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const [hostToken, setHostToken] = useState(null);
   const [joinCode, setJoinCode] = useState(null);
   const [copyMessage, setCopyMessage] = useState("");
+  const [roomCreationError, setRoomCreationError] = useState("");
   const [initializing, setInitializing] = useState(true);
   const [isActionPending, setIsActionPending] = useState(false);
   const [recentRooms, setRecentRooms] = useState([]);
@@ -45,7 +50,10 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const applyRoom = useCallback(
     (room) => {
       setHostToken(room.hostToken);
-      setJoinCode(room.joinCode ?? null);
+      const normalizedJoinCode = normalizeJoinCode(room.joinCode ?? "");
+      setJoinCode(
+        isValidJoinCode(normalizedJoinCode) ? normalizedJoinCode : null,
+      );
       setSessionTitle(room.title ?? "");
       markHostRoomUsed(room.hostToken);
       refreshRecentRooms();
@@ -53,16 +61,28 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     [markHostRoomUsed, refreshRecentRooms],
   );
 
-  const { error, createRoom, roomState } = useRoomSession({
+  const { error, status, createRoom, roomState } = useRoomSession({
     role: APP_ROLE.HOST,
     token: hostToken,
     enabled: Boolean(hostToken),
   });
 
+  const createAndApplyRoom = useCallback(async () => {
+    const created = await createRoom();
+    persistRoom(created);
+    applyRoom(created);
+    setRoomCreationError("");
+    navigate({
+      view: APP_VIEW.WELCOME,
+      role: APP_ROLE.HOST,
+    });
+  }, [applyRoom, createRoom, navigate, persistRoom]);
+
   useEffect(() => {
-    if (!roomState?.joinCode) return;
+    const normalizedJoinCode = normalizeJoinCode(roomState?.joinCode ?? "");
+    if (!isValidJoinCode(normalizedJoinCode)) return;
     setJoinCode((current) =>
-      current === roomState.joinCode ? current : roomState.joinCode,
+      current === normalizedJoinCode ? current : normalizedJoinCode,
     );
   }, [roomState?.joinCode]);
 
@@ -91,13 +111,12 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
         }
 
         setIsActionPending(true);
-        const created = await createRoom();
-        persistRoom(created);
-        applyRoom(created);
-        navigate({
-          view: APP_VIEW.WELCOME,
-          role: APP_ROLE.HOST,
-        });
+        await createAndApplyRoom();
+      } catch (createError) {
+        setRoomCreationError(
+          createError.message ||
+            "[E020] Failed to create a room with a valid room code",
+        );
       } finally {
         setInitializing(false);
         setIsActionPending(false);
@@ -108,10 +127,9 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
     void initialize();
   }, [
     applyRoom,
-    createRoom,
+    createAndApplyRoom,
     getSavedRoom,
     navigate,
-    persistRoom,
     refreshRecentRooms,
     legacyToken,
   ]);
@@ -119,7 +137,10 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   const formattedJoinCode = isValidJoinCode(joinCode)
     ? formatJoinCode(joinCode)
     : "";
-  const inviteLink = joinCode ? buildParticipantInviteLink(joinCode) : "";
+  const hasValidJoinCode = isValidJoinCode(joinCode);
+  const inviteLink = hasValidJoinCode
+    ? buildParticipantInviteLink(joinCode)
+    : "";
 
   const handleCopyJoinCode = async () => {
     if (!formattedJoinCode) return;
@@ -137,15 +158,15 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
 
   const handleGenerateRoom = async () => {
     setCopyMessage("");
+    setRoomCreationError("");
     setIsActionPending(true);
     try {
-      const created = await createRoom();
-      persistRoom(created);
-      applyRoom(created);
-      navigate({
-        view: APP_VIEW.WELCOME,
-        role: APP_ROLE.HOST,
-      });
+      await createAndApplyRoom();
+    } catch (createError) {
+      setRoomCreationError(
+        createError.message ||
+          "[E020] Failed to create a room with a valid room code",
+      );
     } finally {
       setIsActionPending(false);
     }
@@ -173,7 +194,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   };
 
   const handleJoinMeeting = () => {
-    if (!hostToken || isActionPending) return;
+    if (!hostToken || !hasValidJoinCode || isActionPending) return;
     setIsActionPending(true);
     markHostRoomUsed(hostToken);
     if (sessionTitle) updateRoomTitle(hostToken, sessionTitle);
@@ -209,10 +230,13 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
   return (
     <div className={shared.welcomePanel}>
       <div className={shared.panelIntro}>
-        <h2 className={shared.panelTitle}>Host a session</h2>
+        <h2 className={shared.panelTitle}>
+          {hostToken ? "Host a session" : "Create a room"}
+        </h2>
         <p className={shared.panelText}>
-          Your room is ready. Share the invite, name the session, then start
-          presenting.
+          {hostToken
+            ? "Your room is ready. Share the invite, name the session, then start presenting."
+            : "Create a room to get a shareable invite and room code."}
         </p>
       </div>
 
@@ -326,7 +350,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
           type="button"
           className={shared.button}
           onClick={handleJoinMeeting}
-          disabled={!hostToken || isActionPending}
+          disabled={!hostToken || !hasValidJoinCode || isActionPending}
         >
           Start meeting
         </button>
@@ -337,7 +361,7 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
             onClick={handleGenerateRoom}
             disabled={isActionPending}
           >
-            New room
+            {hostToken ? "New room" : "Create room"}
           </button>
           <RecentRoomsTrigger
             rooms={recentRooms}
@@ -357,7 +381,16 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
       </div>
 
       <div className={shared.statusArea} aria-live="polite">
-        {error ? <p className={shared.statusError}>{error}</p> : null}
+        {roomCreationError || error
+          ? <p className={shared.statusError}>{roomCreationError || error}</p>
+          : null}
+        {hostToken && !hasValidJoinCode && !error
+          ? <p className={shared.status}>
+              {status === "loading"
+                ? "Checking this room’s code…"
+                : "This room has no valid code. Create a new room to continue."}
+            </p>
+          : null}
         {isActionPending ? <p className={shared.status}>Working…</p> : null}
       </div>
     </div>

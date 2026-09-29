@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isValidJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
 import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import {
@@ -77,7 +78,26 @@ async function createRoomRequest() {
   if (!response.ok) {
     throw new Error("[E020] Failed to create room");
   }
-  return response.json();
+
+  let created;
+  try {
+    created = await response.json();
+  } catch {
+    throw new Error("[E020] Failed to create a room with a valid room code");
+  }
+
+  const joinCode = normalizeJoinCode(created?.joinCode);
+  if (
+    typeof created?.roomId !== "string" ||
+    !created.roomId ||
+    typeof created?.hostToken !== "string" ||
+    !created.hostToken ||
+    !isValidJoinCode(joinCode)
+  ) {
+    throw new Error("[E020] Failed to create a room with a valid room code");
+  }
+
+  return { ...created, joinCode };
 }
 
 export function useRoomSettings() {
