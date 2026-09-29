@@ -77,10 +77,13 @@ cd hostpresent
 npm install
 ```
 
-Create `.env.local` with a room secret and the server-only Peerovo project credentials:
+Create `.env.local` with a generated room secret and the server-only Peerovo
+project credentials. Generate the secret with `openssl rand -base64 32`, then
+paste its output as `ROOM_TOKEN_SECRET`:
 
 ```dotenv
-ROOM_TOKEN_SECRET=replace-with-a-long-random-secret
+# Paste the output of: openssl rand -base64 32
+ROOM_TOKEN_SECRET=
 PEEROVO_API_URL=https://peerovo.example.com
 PEEROVO_PROJECT_ID=hostpresent
 PEEROVO_PROJECT_API_KEY=replace-with-a-32-character-project-key
@@ -101,13 +104,16 @@ Set these variables in `.env.local` for development or in the deployment environ
 
 | Variable | Purpose |
 | --- | --- |
-| `ROOM_TOKEN_SECRET` | Required high-entropy HMAC secret for room tokens and room-ID derivation. Rotating it invalidates existing room links and saved rooms. |
+| `ROOM_TOKEN_SECRET` | Required HMAC secret of at least 32 bytes. Generate it with `openssl rand -base64 32`; shorter values are treated as unconfigured. Rotating it invalidates existing room links and saved rooms. |
 | `PEEROVO_API_URL` | HTTPS base URL of the Peerovo API and signaling service. Local HTTP is accepted only for loopback addresses outside production. |
 | `PEEROVO_PROJECT_ID` | Peerovo project ID assigned to Host Present, normally `hostpresent`. |
 | `PEEROVO_PROJECT_API_KEY` | Server-only project key used to request Peerovo peer tickets. Never expose it through a `NEXT_PUBLIC_` variable. |
 | `NEXT_PUBLIC_APP_URL` | Public app origin used to build participant invite links, for example `https://hostpresent.com`. |
 
-There is no fallback room-token secret. If `ROOM_TOKEN_SECRET` is missing, room creation and code resolution fail closed. Never expose it through a `NEXT_PUBLIC_` variable.
+There is no fallback room-token secret. If `ROOM_TOKEN_SECRET` is missing or
+shorter than 32 bytes, room creation and code resolution fail closed. The app
+can check length, but secret randomness still depends on using a cryptographically
+secure generator. Never expose it through a `NEXT_PUBLIC_` variable.
 
 ## Production deployment
 

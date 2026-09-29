@@ -41,10 +41,10 @@ TURN_SECRET_KEY=local-turn-secret-with-at-least-32-bytes
 ~~~
 
 Start Peerovo with npm run dev. In HostPresent's .env.local, use the same
-project API key:
+project API key. Generate `ROOM_TOKEN_SECRET` with `openssl rand -base64 32`:
 
 ~~~dotenv
-ROOM_TOKEN_SECRET=local-room-token-secret
+ROOM_TOKEN_SECRET=
 PEEROVO_API_URL=http://127.0.0.1:9000
 PEEROVO_PROJECT_ID=hostpresent
 PEEROVO_PROJECT_API_KEY=the-same-local-project-key

@@ -71,7 +71,8 @@ describe("stateless room API routes", () => {
   });
 
   beforeEach(() => {
-    process.env.ROOM_TOKEN_SECRET = "test-room-token-secret";
+    process.env.ROOM_TOKEN_SECRET =
+      "test-room-token-secret-with-at-least-32-bytes";
     process.env.PEEROVO_API_URL = "https://peerovo.example.test";
     process.env.PEEROVO_PROJECT_ID = "hostpresent";
     process.env.PEEROVO_PROJECT_API_KEY =

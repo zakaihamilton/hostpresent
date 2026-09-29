@@ -6,11 +6,21 @@ import { ROOM_ROLE } from "./roles.js";
 // remains the durable, stateless participant credential; a leaked token
 // therefore has a bounded useful lifetime.
 export const ROOM_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+export const ROOM_TOKEN_SECRET_MIN_BYTES = 32;
 
 export { ROOM_ROLE } from "./roles.js";
 
 export function getSigningSecret() {
-  return process.env.ROOM_TOKEN_SECRET?.trim() || null;
+  const secret = process.env.ROOM_TOKEN_SECRET?.trim();
+  // Length does not prove randomness, so deployment guidance supplies a
+  // cryptographically generated value and this check rejects short secrets.
+  if (
+    !secret ||
+    Buffer.byteLength(secret, "utf8") < ROOM_TOKEN_SECRET_MIN_BYTES
+  ) {
+    return null;
+  }
+  return secret;
 }
 
 export function isRoomSigningConfigured() {

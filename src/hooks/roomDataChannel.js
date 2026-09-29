@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIceServers } from "@/components/webrtc/PeerStreamConnection";
 import {
-  authenticateChatMessage,
-  canReceiveSignalingMessage,
   canSendSignalingMessage,
   isParticipantStatusMessage,
-  resolveParticipantStatusMessage,
 } from "@/lib/room/messageAuth";
 import { MAX_PARTICIPANT_CONNECTIONS } from "@/lib/room/peerLimits.mjs";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
@@ -16,22 +13,12 @@ import {
   createChatMessage,
   createChatPrivateMessage,
   createHostPresentMessage,
-  createMediaRenegotiateMessage,
   createParticipantProfileMessage,
   createRoomFullMessage,
-  isChatMessage,
   isSignalingMessage,
-  parseSignalingMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import {
-  buildOutboundMediaStream,
-  destroyOutboundAudioMixer,
-  pickOutboundVideoTrack,
-  resolveOutboundAudioTrack,
-  syncOutboundTracks,
-} from "@/lib/webrtc/outboundMedia";
-import { needsMediaRenegotiation } from "@/lib/webrtc/outboundMediaReconciliation";
+import { destroyOutboundAudioMixer } from "@/lib/webrtc/outboundMedia";
 import {
   connectionRetryDelayMs,
   hostIdRetryDelayMs,
@@ -49,30 +36,18 @@ import {
   SIGNALING_CONNECT_TIMEOUT_MS,
   SIGNALING_ERROR,
 } from "@/lib/webrtc/peerClient";
-import {
-  closeRelayCallsForSource as closeRelayCallsForSourceInMap,
-  closeRelayCallsForViewer as closeRelayCallsForViewerInMap,
-  ensureRelayCall as ensureRelayCallInMap,
-} from "@/lib/webrtc/relayCalls";
 import { clearWindowTimer } from "@/lib/webrtc/roomConnectionLifecycle";
 import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
+import { bindRoomConnection } from "./roomDataChannel/bindRoomConnection";
+import { sendOnConnection } from "./roomDataChannel/sendOnConnection";
+import { useRoomMediaCalls } from "./roomDataChannel/useRoomMediaCalls";
+
+export { sendOnConnection } from "./roomDataChannel/sendOnConnection";
 
 const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
-const MAX_DATA_CHANNEL_MESSAGE_CHARS = 16_384;
-
-export function sendOnConnection(conn, message) {
-  if (!conn?.open) return false;
-  try {
-    conn.send(JSON.stringify(message));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function useRoomDataChannel({
   role,
   token,
@@ -378,493 +353,61 @@ export function useRoomDataChannel({
     send(createHostPresencePayload());
   }, [createHostPresencePayload, enabled, isHost, screenStream, send, token]);
 
-  const closeRelayCallsForViewer = useCallback((viewerId) => {
-    closeRelayCallsForViewerInMap(relayCallsRef.current, viewerId);
-  }, []);
-
-  const closeRelayCallsForSource = useCallback((sourceId) => {
-    closeRelayCallsForSourceInMap(
-      relayCallsRef.current,
-      inboundStreamsRef.current,
-      sourceId,
-    );
-  }, []);
-
-  const ensureRelayCall = useCallback(
-    (viewerId, sourceId) => {
-      if (!isHost || viewerId === sourceId) return;
-
-      ensureRelayCallInMap({
-        relayCalls: relayCallsRef.current,
-        inboundStreams: inboundStreamsRef.current,
-        peer: peerRef.current,
-        viewerId,
-        sourceId,
-        onFailure: () => console.warn("[peer] relay call failed"),
-      });
-    },
-    [isHost],
-  );
-
-  const syncRelayForViewer = useCallback(
-    (viewerId) => {
-      if (!isHost) return;
-      for (const sourceId of inboundStreamsRef.current.keys()) {
-        ensureRelayCall(viewerId, sourceId);
-      }
-    },
-    [ensureRelayCall, isHost],
-  );
-
-  const syncRelayForSource = useCallback(
-    (sourceId, stream) => {
-      if (!isHost) return;
-      if (!stream) {
-        closeRelayCallsForSource(sourceId);
-        return;
-      }
-      inboundStreamsRef.current.set(sourceId, stream);
-      for (const viewerId of connectionsRef.current.keys()) {
-        ensureRelayCall(viewerId, sourceId);
-      }
-    },
-    [closeRelayCallsForSource, ensureRelayCall, isHost],
-  );
-
-  const bindMediaCall = useCallback(
-    (call, remoteId) => {
-      if (!call) return;
-
-      const relayFrom =
-        typeof call.metadata?.relayFrom === "string"
-          ? call.metadata.relayFrom
-          : null;
-      const participantId = relayFrom || remoteId;
-
-      if (!relayFrom) {
-        const existing = mediaCallsRef.current.get(remoteId);
-        if (existing && existing !== call) {
-          if (isHost) {
-            preservingParticipantMediaCallsRef.current.add(existing);
-          }
-          existing.close();
-        }
-        mediaCallsRef.current.set(remoteId, call);
-      }
-
-      call.on("stream", (remoteStream) => {
-        if (destroyedRef.current) return;
-        if (isHost) {
-          onRemoteParticipantRef.current?.({
-            id: participantId,
-            stream: remoteStream,
-          });
-          if (!relayFrom) {
-            syncRelayForSource(participantId, remoteStream);
-          }
-          return;
-        }
-        if (relayFrom) {
-          onRemoteParticipantRef.current?.({
-            id: relayFrom,
-            stream: remoteStream,
-          });
-          return;
-        }
-        onRemoteHostStreamRef.current?.(remoteStream);
-      });
-
-      call.on("close", () => {
-        if (destroyedRef.current) return;
-        const isCurrentCall =
-          relayFrom !== null || mediaCallsRef.current.get(remoteId) === call;
-        if (!isCurrentCall) return;
-        if (!relayFrom) {
-          mediaCallsRef.current.delete(remoteId);
-        }
-        if (isHost) {
-          if (!relayFrom) {
-            onRemoteParticipantRef.current?.({
-              id: participantId,
-              stream: null,
-              preserveProfile:
-                preservingParticipantMediaCallsRef.current.has(call),
-            });
-            syncRelayForSource(participantId, null);
-          }
-          return;
-        }
-        if (relayFrom) {
-          onRemoteParticipantRef.current?.({ id: relayFrom, stream: null });
-          return;
-        }
-        onRemoteHostStreamRef.current?.(null);
-      });
-
-      call.on("error", (error) => {
-        if (destroyedRef.current) return;
-        console.warn("[peer] media call error", error);
-      });
-    },
-    [isHost, syncRelayForSource],
-  );
-
-  const answerIncomingCall = useCallback(
-    (call, remoteId, { receiveOnly = false } = {}) => {
-      bindMediaCall(call, remoteId);
-      if (receiveOnly) {
-        call.answer();
-        return;
-      }
-      void (async () => {
-        if (destroyedRef.current) return;
-        const outbound = await buildOutboundMediaStream(
-          localStreamRef.current,
-          screenStreamRef.current,
-        );
-        if (destroyedRef.current) return;
-        if (outbound) {
-          call.answer(outbound);
-        } else {
-          call.answer();
-        }
-      })().catch((error) => {
-        console.warn("[peer] handle incoming call failed", error);
-      });
-    },
-    [bindMediaCall],
-  );
-
-  const ensureMediaCall = useCallback(
-    async (remoteId, streamOverrides = {}) => {
-      const next = syncQueueRef.current.then(async () => {
-        const peer = peerRef.current;
-        if (!peer) return;
-
-        const hasLocalStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "localStream",
-        );
-        const hasScreenStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "screenStream",
-        );
-        const outboundLocalStream = hasLocalStreamOverride
-          ? streamOverrides.localStream
-          : localStreamRef.current;
-        const outboundScreenStream = hasScreenStreamOverride
-          ? streamOverrides.screenStream
-          : screenStreamRef.current;
-
-        const outbound = await buildOutboundMediaStream(
-          outboundLocalStream,
-          outboundScreenStream,
-        );
-        if (!outbound) return;
-
-        const existing = mediaCallsRef.current.get(remoteId);
-        if (existing) {
-          const peerConnection = existing.peerConnection;
-          if (peerConnection && peerConnection.connectionState !== "closed") {
-            await syncOutboundTracks(
-              existing,
-              outboundLocalStream,
-              outboundScreenStream,
-            );
-          }
-          return;
-        }
-
-        const call = peer.call(remoteId, outbound);
-        if (!call) return;
-        bindMediaCall(call, remoteId);
-      });
-      syncQueueRef.current = next.catch(() => {});
-      return next;
-    },
-    [bindMediaCall],
-  );
-
-  const syncQueueRef = useRef(Promise.resolve());
-
-  const enqueueSync = useCallback(
-    async (streamOverrides = {}) => {
-      const next = syncQueueRef.current.then(async () => {
-        const hasLocalStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "localStream",
-        );
-        const hasScreenStreamOverride = Object.hasOwn(
-          streamOverrides,
-          "screenStream",
-        );
-        const outboundLocalStream = hasLocalStreamOverride
-          ? streamOverrides.localStream
-          : localStreamRef.current;
-        const outboundScreenStream = hasScreenStreamOverride
-          ? streamOverrides.screenStream
-          : screenStreamRef.current;
-
-        if (isHost) {
-          const tasks = [];
-          for (const call of mediaCallsRef.current.values()) {
-            tasks.push(
-              syncOutboundTracks(
-                call,
-                outboundLocalStream,
-                outboundScreenStream,
-              ),
-            );
-          }
-          await Promise.all(tasks);
-
-          for (const remoteId of connectionsRef.current.keys()) {
-            await ensureMediaCall(remoteId, streamOverrides);
-          }
-          return;
-        }
-
-        const hostId = hostPeerId(roomIdRef.current);
-        const existing = mediaCallsRef.current.get(hostId);
-        const hasVideoTrack = Boolean(
-          pickOutboundVideoTrack(outboundLocalStream, outboundScreenStream),
-        );
-        const hasAudioTrack = Boolean(
-          await resolveOutboundAudioTrack(
-            outboundLocalStream,
-            outboundScreenStream,
-          ),
-        );
-
-        // Check senders before syncOutboundTracks — addTrack alone does not
-        // renegotiate PeerJS SDP when the call was answered with no tracks.
-        if (existing) {
-          if (
-            needsMediaRenegotiation(existing, { hasVideoTrack, hasAudioTrack })
-          ) {
-            send(createMediaRenegotiateMessage());
-            return;
-          }
-          await syncOutboundTracks(
-            existing,
-            outboundLocalStream,
-            outboundScreenStream,
-          );
-          return;
-        }
-
-        if (hasVideoTrack || hasAudioTrack) {
-          send(createMediaRenegotiateMessage());
-        }
-      });
-      syncQueueRef.current = next.catch(() => {});
-      return next;
-    },
-    [isHost, ensureMediaCall, send],
-  );
-
-  useEffect(() => {
-    enqueueSync().catch((error) => {
-      console.warn("[peer] syncAllOutboundTracks failed", error);
-    });
-  }, [enqueueSync]);
+  const {
+    answerIncomingCall,
+    closeRelayCallsForSource,
+    closeRelayCallsForViewer,
+    enqueueSync,
+    ensureMediaCall,
+    syncRelayForSource,
+    syncRelayForViewer,
+  } = useRoomMediaCalls({
+    isHost,
+    peerRef,
+    destroyedRef,
+    mediaCallsRef,
+    preservingParticipantMediaCallsRef,
+    relayCallsRef,
+    inboundStreamsRef,
+    connectionsRef,
+    localStreamRef,
+    screenStreamRef,
+    onRemoteParticipantRef,
+    onRemoteHostStreamRef,
+    roomIdRef,
+    send,
+  });
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
-      const connectionPeerId = conn.peer || remoteId;
-      const handleOpen = () => {
-        if (destroyedRef.current) return;
-        updateConnectedState(1);
-        if (isHost) {
-          sendOnConnection(conn, createHostPresencePayload());
-          onRemoteParticipantRef.current?.({ id: remoteId, name: remoteName });
-          ensureMediaCall(remoteId).catch((error) => {
-            console.warn("[peer] placeOutgoingMediaCall failed", error);
-          });
-          syncRelayForViewer(remoteId);
-          return;
-        }
-
-        sendParticipantProfileRef.current();
-      };
-
-      if (conn.open) {
-        handleOpen();
-      } else {
-        conn.on("open", handleOpen);
-      }
-
-      conn.on("close", () => {
-        if (destroyedRef.current) return;
-        updateConnectedState(-1);
-        if (isHost) {
-          onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
-          return;
-        }
-        scheduleReconnectToHost();
-      });
-
-      conn.on("data", (raw) => {
-        if (destroyedRef.current) return;
-        try {
-          const payload = typeof raw === "string" ? raw : JSON.stringify(raw);
-          if (
-            typeof payload !== "string" ||
-            payload.length > MAX_DATA_CHANNEL_MESSAGE_CHARS
-          ) {
-            return;
-          }
-          const message = parseSignalingMessage(payload);
-
-          if (isChatMessage(message)) {
-            const authenticatedMessage = authenticateChatMessage(message, {
-              senderId: connectionPeerId,
-              expectedSenderId: isHost
-                ? connectionPeerId
-                : hostPeerId(roomIdRef.current),
-              senderName: isHost
-                ? (participantDisplayNamesRef.current.get(connectionPeerId) ??
-                  "Guest")
-                : hostDisplayNameRef.current || "Host",
-              allowHostRelay: !isHost,
-            });
-            if (!authenticatedMessage) return;
-
-            if (isHost) {
-              const hostRelayedMessage = {
-                ...authenticatedMessage,
-                relayedByHost: true,
-              };
-              if (
-                authenticatedMessage.type === SIGNALING_MESSAGE.CHAT_MESSAGE
-              ) {
-                for (const [id, c] of connectionsRef.current) {
-                  if (id !== connectionPeerId) {
-                    sendOnConnection(c, hostRelayedMessage);
-                  }
-                }
-              }
-              if (
-                authenticatedMessage.type ===
-                  SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
-                authenticatedMessage.recipientId
-              ) {
-                const hostId = hostPeerId(roomIdRef.current);
-                if (authenticatedMessage.recipientId !== hostId) {
-                  const recipientConn = connectionsRef.current.get(
-                    authenticatedMessage.recipientId,
-                  );
-                  if (recipientConn) {
-                    sendOnConnection(recipientConn, hostRelayedMessage);
-                  }
-                  return;
-                }
-              }
-            }
-            if (
-              !isHost &&
-              authenticatedMessage.type ===
-                SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE &&
-              authenticatedMessage.recipientId !== localParticipantIdRef.current
-            ) {
-              return;
-            }
-            notifyHandlers(authenticatedMessage);
-            if (onChatMessageRef.current) {
-              onChatMessageRef.current(authenticatedMessage);
-            }
-            return;
-          }
-
-          if (!isSignalingMessage(message)) return;
-          const resolvedMessage = resolveParticipantStatusMessage(message, {
-            senderId: connectionPeerId,
-          });
-          if (
-            !canReceiveSignalingMessage({
-              isHost,
-              message: resolvedMessage,
-              senderId: connectionPeerId,
-              localParticipantId: localParticipantIdRef.current,
-            })
-          ) {
-            return;
-          }
-          notifyHandlers(resolvedMessage);
-          if (
-            isHost &&
-            resolvedMessage.type === SIGNALING_MESSAGE.PARTICIPANT_PROFILE
-          ) {
-            participantDisplayNamesRef.current.set(
-              connectionPeerId,
-              resolvedMessage.displayName || "Guest",
-            );
-            if (
-              typeof resolvedMessage.deviceId === "string" &&
-              resolvedMessage.deviceId
-            ) {
-              peerDeviceIdsRef.current.set(
-                connectionPeerId,
-                resolvedMessage.deviceId,
-              );
-            }
-          }
-          if (
-            !isHost &&
-            resolvedMessage.type === SIGNALING_MESSAGE.HOST_PRESENT
-          ) {
-            hostDisplayNameRef.current = resolvedMessage.displayName || "Host";
-          }
-          if (
-            isHost &&
-            resolvedMessage.type === SIGNALING_MESSAGE.MEDIA_RENEGOTIATE
-          ) {
-            const targetId = resolvedMessage.participantId || connectionPeerId;
-            if (targetId) {
-              const existingCall = mediaCallsRef.current.get(targetId);
-              if (existingCall) {
-                preservingParticipantMediaCallsRef.current.add(existingCall);
-                existingCall.close();
-                if (mediaCallsRef.current.get(targetId) === existingCall) {
-                  mediaCallsRef.current.delete(targetId);
-                  onRemoteParticipantRef.current?.({
-                    id: targetId,
-                    stream: null,
-                    preserveProfile: true,
-                  });
-                  syncRelayForSource(targetId, null);
-                }
-              }
-              ensureMediaCall(targetId).catch((error) => {
-                console.warn("[peer] renegotiation media call failed", error);
-              });
-            }
-          }
-          if (isHost && resolvedMessage.participantId) {
-            const participantStatusRelayTypes = new Set([
-              SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
-              SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
-              SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
-              SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED,
-              SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED,
-              SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
-            ]);
-            if (participantStatusRelayTypes.has(resolvedMessage.type)) {
-              for (const [id, c] of connectionsRef.current) {
-                if (id !== connectionPeerId) {
-                  sendOnConnection(c, resolvedMessage);
-                }
-              }
-            }
-          }
-          if (!isHost && message.type === SIGNALING_MESSAGE.HOST_PRESENT) {
-            setHostPresent(true);
-            setConnectionError(null);
-          }
-        } catch (error) {
-          console.warn("[peer] invalid message", error);
-        }
-      });
+      bindRoomConnection(
+        conn,
+        { remoteId, remoteName },
+        {
+          isHost,
+          destroyedRef,
+          updateConnectedState,
+          createHostPresencePayload,
+          onRemoteParticipantRef,
+          ensureMediaCall,
+          syncRelayForViewer,
+          sendParticipantProfileRef,
+          scheduleReconnectToHost,
+          roomIdRef,
+          participantDisplayNamesRef,
+          hostDisplayNameRef,
+          localParticipantIdRef,
+          connectionsRef,
+          notifyHandlers,
+          onChatMessageRef,
+          peerDeviceIdsRef,
+          preservingParticipantMediaCallsRef,
+          mediaCallsRef,
+          syncRelayForSource,
+          setHostPresent,
+          setConnectionError,
+        },
+      );
     },
     [
       createHostPresencePayload,

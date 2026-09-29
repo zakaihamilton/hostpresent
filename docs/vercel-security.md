@@ -33,7 +33,9 @@ guide.
 Required Host Present environment variables:
 
 - `ROOM_TOKEN_SECRET`: a unique, randomly generated secret with at least 32
-  bytes of entropy. It must not use a `NEXT_PUBLIC_` prefix.
+  bytes of entropy. Host Present rejects values shorter than 32 bytes; generate
+  the value with `openssl rand -base64 32`. It must not use a `NEXT_PUBLIC_`
+  prefix.
 - `PEEROVO_API_URL`: HTTPS base URL of the Peerovo service.
 - `PEEROVO_PROJECT_ID`: the configured project ID, normally `hostpresent`.
 - `PEEROVO_PROJECT_API_KEY`: a server-only project key with at least 32 bytes.
