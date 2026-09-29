@@ -10,7 +10,6 @@ import {
   useSessionTimers,
 } from "@/hooks";
 import { useRoomSession } from "@/hooks/roomSession";
-import { copyTextToClipboard } from "@/lib/clipboard";
 import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
 import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
@@ -34,12 +33,10 @@ import {
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
 import {
-  hostPeerId,
   isFatalSignalingError,
   isSignalingConfigError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
-import { getAutoFocusTargetId } from "./autoFocus";
 import { MeetingControls } from "./components/MeetingControls";
 import { MeetingHeaderArea } from "./components/MeetingHeaderArea";
 import { MeetingWorkspace } from "./components/MeetingWorkspace";
@@ -48,6 +45,9 @@ import {
   attachSpeakingDetector,
   RemoteParticipants,
 } from "./hooks/RemoteParticipants";
+import { useMeetingChat } from "./hooks/useMeetingChat";
+import { useMeetingFocus } from "./hooks/useMeetingFocus";
+import { useMeetingInvite } from "./hooks/useMeetingInvite";
 import { useMeetingLayoutState } from "./hooks/useMeetingLayoutState";
 import { useMeetingViewModels } from "./hooks/useMeetingViewModels";
 import styles from "./MeetingView.module.css";
@@ -107,8 +107,13 @@ function MeetingViewInner({
     [isHost, formattedRoomId, roomJoinCode],
   );
 
-  const [inviteBarVisible, setInviteBarVisible] = useState(false);
-  const [inviteCopyMessage, setInviteCopyMessage] = useState("");
+  const {
+    inviteBarVisible,
+    inviteCopyMessage,
+    handleShowInviteBar,
+    handleDismissInviteBar,
+    handleCopyInviteLink,
+  } = useMeetingInvite(inviteLink);
   const layout = useMeetingLayoutState();
   const {
     isGalleryVisible,
@@ -119,8 +124,6 @@ function MeetingViewInner({
     isMobile,
     setHasUnreadChat,
   } = layout;
-  const [chatMessages, setChatMessages] = useState([]);
-  const chatIdCounterRef = useRef(0);
   const [timersEnabled, setTimersEnabled] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState(() =>
     loadDisplayName(),
@@ -141,7 +144,6 @@ function MeetingViewInner({
     () => resolveDisplayName(displayNameInput),
     [displayNameInput],
   );
-  const inviteCopyTimerRef = useRef(null);
 
   const { meetingSeconds, recordingSeconds, resetRecordingTimer } =
     useSessionTimers({
@@ -233,46 +235,15 @@ function MeetingViewInner({
     });
   }, [roomConnection]);
 
-  onChatMessageRef.current = (message) => {
-    const localId = isHost
-      ? roomState?.roomId
-        ? hostPeerId(roomState.roomId)
-        : ""
-      : (roomConnectionRef.current?.localParticipantId ?? "");
-    const isSelf = message.senderId === localId;
-    const id = `${message.timestamp}-${message.senderId}-${chatIdCounterRef.current}`;
-    chatIdCounterRef.current += 1;
-    setChatMessages((previous) => [
-      ...previous,
-      {
-        id,
-        senderId: message.senderId,
-        senderName: message.senderName || "Guest",
-        text: message.text,
-        timestamp: message.timestamp,
-        isPrivate: message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE,
-        recipientId: message.recipientId,
-        isSelf,
-      },
-    ]);
-    if (!isChatVisible) {
-      setHasUnreadChat(true);
-    }
-  };
-
-  useEffect(() => {
-    if (isChatVisible) {
-      setHasUnreadChat(false);
-    }
-  }, [isChatVisible, setHasUnreadChat]);
-
-  const handleSendChatMessage = useCallback((text, recipientId) => {
-    if (recipientId) {
-      roomConnectionRef.current?.sendPrivateChatMessage(text, recipientId);
-    } else {
-      roomConnectionRef.current?.sendChatMessage(text);
-    }
-  }, []);
+  const { chatMessages, receiveChatMessage, handleSendChatMessage } =
+    useMeetingChat({
+      isHost,
+      roomId: roomState?.roomId,
+      roomConnectionRef,
+      isChatVisible,
+      setHasUnreadChat,
+    });
+  onChatMessageRef.current = receiveChatMessage;
 
   const {
     isAudioMuted,
@@ -348,58 +319,17 @@ function MeetingViewInner({
   onRemoteParticipantRef.current = handleRemoteParticipant;
   onRemoteHostStreamRef.current = handleRemoteHostStream;
 
-  const AUTO_FOCUS_INACTIVITY_MS = 3000;
-
-  const autoFocusTargetId = useMemo(
-    () =>
-      getAutoFocusTargetId({
-        focusedParticipantId,
-        videoParticipants,
-        isHost,
-        localIsSpeaking,
-        localVideoAvailable: Boolean(screenStream) || !isVideoMuted,
-        hostIsSpeaking,
-        hostVideoAvailable: hostScreenSharing || !hostVideoMuted,
-        hostIsScreenSharing: isHost ? Boolean(screenStream) : hostScreenSharing,
-      }),
-    [
-      focusedParticipantId,
-      videoParticipants,
-      isHost,
-      localIsSpeaking,
-      screenStream,
-      isVideoMuted,
-      hostIsSpeaking,
-      hostScreenSharing,
-      hostVideoMuted,
-    ],
-  );
-
-  const [effectiveFocusedId, setEffectiveFocusedId] = useState(
-    focusedParticipantId || "host",
-  );
-  const hostIsActivelySpeaking = isHost ? localIsSpeaking : hostIsSpeaking;
-
-  useEffect(() => {
-    if (focusedParticipantId !== "") {
-      setEffectiveFocusedId(focusedParticipantId);
-      return undefined;
-    }
-
-    // A host who starts speaking should take the stage immediately. Keep the
-    // brief inactivity delay only for the no-one-is-speaking fallback, so the
-    // stage does not jump back to the host between short pauses.
-    if (autoFocusTargetId !== "host" || hostIsActivelySpeaking) {
-      setEffectiveFocusedId(autoFocusTargetId);
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setEffectiveFocusedId(autoFocusTargetId);
-    }, AUTO_FOCUS_INACTIVITY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [focusedParticipantId, autoFocusTargetId, hostIsActivelySpeaking]);
+  const effectiveFocusedId = useMeetingFocus({
+    focusedParticipantId,
+    videoParticipants,
+    isHost,
+    localIsSpeaking,
+    screenStream,
+    isVideoMuted,
+    hostIsSpeaking,
+    hostScreenSharing,
+    hostVideoMuted,
+  });
 
   const {
     downloadState,
@@ -487,9 +417,6 @@ function MeetingViewInner({
         cleanup?.();
       }
       streamListenerCleanupsRef?.current?.clear();
-      if (inviteCopyTimerRef.current) {
-        clearTimeout(inviteCopyTimerRef.current);
-      }
     };
   }, [
     streamListenerCleanupsRef?.current?.clear,
@@ -610,33 +537,9 @@ function MeetingViewInner({
     );
   }, [isHost, effectiveFocusedId]);
 
-  const handleShowInviteBar = useCallback(() => {
-    setInviteBarVisible(true);
-  }, []);
-
-  const handleDismissInviteBar = useCallback(() => {
-    setInviteBarVisible(false);
-  }, []);
-
   const handleDismissError = useCallback(() => {
     setErrorMsg("");
   }, [setErrorMsg]);
-
-  const handleCopyInviteLink = async () => {
-    if (!inviteLink) return;
-
-    if (inviteCopyTimerRef.current) {
-      clearTimeout(inviteCopyTimerRef.current);
-    }
-
-    const copied = await copyTextToClipboard(inviteLink);
-    setInviteCopyMessage(copied ? "Copied!" : "Copy failed");
-
-    inviteCopyTimerRef.current = setTimeout(() => {
-      setInviteCopyMessage("");
-      inviteCopyTimerRef.current = null;
-    }, 2500);
-  };
 
   const { chatParticipants, galleryParticipants, primaryViewProps } =
     useMeetingViewModels({
