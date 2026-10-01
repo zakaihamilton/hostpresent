@@ -12,6 +12,7 @@ import {
   createParticipantVideoMutedMessage,
   createParticipantVideoUnmutedMessage,
 } from "@/lib/signaling/messages";
+import { PUBLISHER_VIDEO_CONSTRAINTS } from "@/lib/webrtc/audienceQuality";
 import { prepareOutboundAudioMix } from "@/lib/webrtc/outboundMedia";
 
 const VOICE_ISOLATION_STORAGE_KEY = "hostpresent.voiceIsolation";
@@ -43,6 +44,7 @@ function loadVoiceIsolationPreference() {
 export function MediaControls({
   isHost,
   participantMode = PARTICIPANT_MODE.AVAILABLE,
+  publishingGranted = false,
   roomConnection,
   localStream,
   setLocalStream,
@@ -81,6 +83,8 @@ export function MediaControls({
   const [availableSpeakers, setAvailableSpeakers] = useState([]);
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
 
+  const setScreenStreamRef = useRef(setScreenStream);
+  setScreenStreamRef.current = setScreenStream;
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
   const activeScreenStreamRef = useRef(screenStream);
@@ -91,7 +95,16 @@ export function MediaControls({
   const syncOutboundMediaRef = useRef(roomConnection?.syncOutboundMedia);
   syncOutboundMediaRef.current = roomConnection?.syncOutboundMedia;
   const isListeningOnly =
-    !isHost && participantMode === PARTICIPANT_MODE.LISTENING;
+    !isHost &&
+    (!publishingGranted || participantMode === PARTICIPANT_MODE.LISTENING);
+
+  const publishingAllowedRef = useRef(!isListeningOnly);
+  publishingAllowedRef.current = !isListeningOnly;
+  const keepAcquiredStream = useCallback((stream) => {
+    if (publishingAllowedRef.current) return true;
+    for (const track of stream.getTracks()) track.stop();
+    return false;
+  }, []);
 
   const isScreenAudioShared = Boolean(
     screenStream?.getAudioTracks().some((track) => track.readyState === "live"),
@@ -145,13 +158,14 @@ export function MediaControls({
     const initLocalMedia = async () => {
       if (isListeningOnly) {
         setLocalStream(null);
+        setScreenStreamRef.current(null);
         void syncOutboundMediaRef.current?.({ localStream: null });
         return;
       }
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: PUBLISHER_VIDEO_CONSTRAINTS,
           audio: audioConstraintsForDevice(
             undefined,
             initialVoiceIsolationRef.current,
@@ -162,6 +176,7 @@ export function MediaControls({
           for (const track of stream.getTracks()) track.stop();
           return;
         }
+        if (!keepAcquiredStream(stream)) return;
         stream.getAudioTracks().forEach((track) => {
           track.enabled = !initialAudioMutedRef.current;
         });
@@ -213,7 +228,7 @@ export function MediaControls({
         }
       }
     };
-  }, [isListeningOnly, setLocalStream]);
+  }, [isListeningOnly, setLocalStream, keepAcquiredStream]);
 
   // Once local media first becomes available, push tracks onto any open PeerJS calls.
   // Device switches/toggles call syncOutboundMedia explicitly.
@@ -230,7 +245,13 @@ export function MediaControls({
 
   const switchCamera = useCallback(
     async (deviceId) => {
-      if (!localStream || !deviceId || !navigator.mediaDevices) return;
+      if (
+        !publishingAllowedRef.current ||
+        !localStream ||
+        !deviceId ||
+        !navigator.mediaDevices
+      )
+        return;
 
       const videoTrack = localStream.getVideoTracks()[0];
       if (videoTrack?.getSettings().deviceId === deviceId) return;
@@ -239,10 +260,14 @@ export function MediaControls({
 
       try {
         const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId } },
+          video: {
+            ...PUBLISHER_VIDEO_CONSTRAINTS,
+            deviceId: { exact: deviceId },
+          },
           audio: false,
         });
 
+        if (!keepAcquiredStream(newStream)) return;
         const newTrack = newStream.getVideoTracks()[0];
         if (videoTrack) {
           localStream.removeTrack(videoTrack);
@@ -259,19 +284,25 @@ export function MediaControls({
         );
       }
     },
-    [localStream, isVideoMuted, roomConnection],
+    [localStream, isVideoMuted, roomConnection, keepAcquiredStream],
   );
 
   const acquireReplacementVideoTrack = useCallback(async () => {
-    if (!localStream || !navigator.mediaDevices) return null;
+    if (
+      !publishingAllowedRef.current ||
+      !localStream ||
+      !navigator.mediaDevices
+    )
+      return null;
 
     const constraints = selectedCamera
-      ? { deviceId: { exact: selectedCamera } }
-      : true;
+      ? { ...PUBLISHER_VIDEO_CONSTRAINTS, deviceId: { exact: selectedCamera } }
+      : PUBLISHER_VIDEO_CONSTRAINTS;
     const newStream = await navigator.mediaDevices.getUserMedia({
       video: constraints,
       audio: false,
     });
+    if (!keepAcquiredStream(newStream)) return null;
     const newTrack = newStream.getVideoTracks()[0] ?? null;
     if (!newTrack) {
       for (const track of newStream.getTracks()) {
@@ -286,11 +317,17 @@ export function MediaControls({
     }
     localStream.addTrack(newTrack);
     return newTrack;
-  }, [localStream, selectedCamera]);
+  }, [localStream, selectedCamera, keepAcquiredStream]);
 
   const switchMicrophone = useCallback(
     async (deviceId) => {
-      if (!localStream || !deviceId || !navigator.mediaDevices) return;
+      if (
+        !publishingAllowedRef.current ||
+        !localStream ||
+        !deviceId ||
+        !navigator.mediaDevices
+      )
+        return;
 
       const audioTrack = localStream.getAudioTracks()[0];
       if (audioTrack?.getSettings().deviceId === deviceId) return;
@@ -303,6 +340,7 @@ export function MediaControls({
           video: false,
         });
 
+        if (!keepAcquiredStream(newStream)) return;
         const newTrack = newStream.getAudioTracks()[0];
         if (audioTrack) {
           localStream.removeTrack(audioTrack);
@@ -319,7 +357,13 @@ export function MediaControls({
         );
       }
     },
-    [isAudioMuted, isVoiceIsolationEnabled, localStream, roomConnection],
+    [
+      isAudioMuted,
+      isVoiceIsolationEnabled,
+      localStream,
+      roomConnection,
+      keepAcquiredStream,
+    ],
   );
 
   const setVoiceIsolation = useCallback(
@@ -335,7 +379,7 @@ export function MediaControls({
         );
       } catch {}
 
-      if (!localStream) return;
+      if (!publishingAllowedRef.current || !localStream) return;
 
       const currentTrack = localStream.getAudioTracks()[0];
       const deviceId =
@@ -347,6 +391,7 @@ export function MediaControls({
           audio: audioConstraintsForDevice(deviceId, enabled),
           video: false,
         });
+        if (!keepAcquiredStream(newStream)) return;
         const newTrack = newStream.getAudioTracks()[0];
         if (!newTrack) throw new Error("No microphone track returned");
 
@@ -379,16 +424,18 @@ export function MediaControls({
       localStream,
       roomConnection,
       selectedMicrophone,
+      keepAcquiredStream,
     ],
   );
 
+  const participantId = roomConnection?.localParticipantId;
+  const sendStatus = roomConnection?.send;
   const publishParticipantMediaStatus = useCallback(
     ({ audioMuted, videoMuted }) => {
-      const participantId = roomConnection?.localParticipantId;
       if (!participantId) return;
 
       if (typeof audioMuted === "boolean") {
-        roomConnection.send(
+        sendStatus?.(
           audioMuted
             ? createParticipantAudioMutedMessage({
                 participantId,
@@ -402,14 +449,14 @@ export function MediaControls({
       }
 
       if (typeof videoMuted === "boolean") {
-        roomConnection.send(
+        sendStatus?.(
           videoMuted
             ? createParticipantVideoMutedMessage({ participantId })
             : createParticipantVideoUnmutedMessage({ participantId }),
         );
       }
     },
-    [roomConnection],
+    [participantId, sendStatus],
   );
 
   const publishScreenShareStatus = useCallback(
@@ -462,7 +509,7 @@ export function MediaControls({
   }, [isListeningOnly, screenStream, stopScreenShare]);
 
   const toggleAudio = useCallback(() => {
-    if (!localStream) return;
+    if (!publishingAllowedRef.current || !localStream) return;
 
     localStream.getAudioTracks().forEach((track) => {
       track.enabled = !track.enabled;
@@ -488,7 +535,7 @@ export function MediaControls({
   }, [isHost, localStream, publishParticipantMediaStatus, roomConnection]);
 
   const toggleVideo = useCallback(() => {
-    if (!localStream) return;
+    if (!publishingAllowedRef.current || !localStream) return;
 
     void (async () => {
       const currentTracks = localStream.getVideoTracks();
@@ -550,7 +597,7 @@ export function MediaControls({
     } else {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
+          video: PUBLISHER_VIDEO_CONSTRAINTS,
           audio: shareScreenAudio
             ? {
                 suppressLocalAudioPlayback: false,
@@ -561,6 +608,7 @@ export function MediaControls({
             : false,
         });
 
+        if (!keepAcquiredStream(stream)) return;
         const screenVideoTrack = stream.getVideoTracks()[0];
         if (!screenVideoTrack) {
           for (const track of stream.getTracks()) track.stop();
@@ -575,6 +623,7 @@ export function MediaControls({
         // synchronization effect.
         await prepareOutboundAudioMix(localStream, stream);
 
+        if (!keepAcquiredStream(stream)) return;
         activeScreenStreamRef.current = stream;
         screenVideoTrack.onended = () => {
           stopScreenShare(stream);
@@ -610,6 +659,7 @@ export function MediaControls({
     shareScreenAudio,
     setScreenStream,
     stopScreenShare,
+    keepAcquiredStream,
   ]);
 
   const setShareScreenAudioPreference = useCallback((includeAudio) => {

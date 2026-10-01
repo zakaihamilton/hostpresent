@@ -41,7 +41,12 @@ export function useMeetingViewModels({
   }, [isHost, videoParticipants, audioList, hostDisplayName, peerParticipants]);
 
   const galleryParticipants = useMemo(() => {
-    if (isHost) return videoParticipants;
+    if (isHost)
+      return roomConnection?.publisherIds
+        ? videoParticipants.filter((participant) =>
+            roomConnection.publisherIds.includes(participant.id),
+          )
+        : videoParticipants;
 
     const nameById = new Map(
       peerParticipants.map((participant) => [participant.id, participant.name]),
@@ -63,7 +68,12 @@ export function useMeetingViewModels({
     }
 
     for (const participant of videoParticipants) {
-      if (participant.id === localId) continue;
+      if (
+        participant.id === localId ||
+        (roomConnection?.publisherIds &&
+          !roomConnection.publisherIds.includes(participant.id))
+      )
+        continue;
       tiles.push({
         ...participant,
         name: nameById.get(participant.id) || participant.name,
@@ -81,6 +91,7 @@ export function useMeetingViewModels({
     isHost,
     peerParticipants,
     roomConnection?.localParticipantId,
+    roomConnection?.publisherIds,
     videoParticipants,
   ]);
 
@@ -128,12 +139,12 @@ export function useMeetingViewModels({
               ? "You are sharing your screen with audio"
               : "You are sharing your screen"
             : resolvedDisplayName,
-      isMuted: viewingHostStream
-        ? hostStreamPlaybackMuted
-        : focusedParticipant
-          ? focusedParticipant.isSelf || !focusedParticipant.stream
-          : screenStream
-            ? !isScreenAudioShared
+      isMuted: focusedIsSelf
+        ? true
+        : viewingHostStream
+          ? hostStreamPlaybackMuted
+          : focusedParticipant
+            ? focusedParticipant.isSelf || !focusedParticipant.stream
             : true,
       isAudioMuted: viewingHostStream
         ? hostAudioMuted

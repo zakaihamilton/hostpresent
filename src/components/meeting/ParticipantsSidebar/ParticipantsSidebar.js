@@ -47,6 +47,10 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   onMuteAllAudio,
   canMuteAllVideo,
   canMuteAllAudio,
+  publishingRequests = [],
+  publisherIds = [],
+  onApprovePublishing,
+  onRevokePublishing,
   flex,
 }) {
   const totalCount = isHost
@@ -101,6 +105,10 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   const renderItem = useCallback(
     (item) => (
       <ParticipantRow
+        publishingRequests={publishingRequests}
+        publisherIds={publisherIds}
+        onApprovePublishing={onApprovePublishing}
+        onRevokePublishing={onRevokePublishing}
         item={item}
         isHost={isHost}
         onMuteParticipantVideo={onMuteParticipantVideo}
@@ -110,6 +118,10 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
       />
     ),
     [
+      publishingRequests,
+      publisherIds,
+      onApprovePublishing,
+      onRevokePublishing,
       focusedParticipantId,
       isHost,
       onFocusParticipant,

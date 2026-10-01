@@ -24,9 +24,21 @@ test("the app document carries the production browser security policy", async ({
 
   const headers = response.headers();
   expect(headers["content-security-policy"]).toContain("default-src 'self'");
-  expect(headers["content-security-policy"]).toContain(
-    "connect-src 'self' https: wss: http://127.0.0.1:9000 ws://127.0.0.1:9000 http://localhost:9000 ws://localhost:9000",
-  );
+  const csp = headers["content-security-policy"];
+  const connectSrc = csp
+    .split("; ")
+    .find((part) => part.startsWith("connect-src "));
+  if (process.env.PLAYWRIGHT_SERVER_MODE === "production") {
+    expect(connectSrc).toBe("connect-src 'self' https: wss:");
+    expect(csp).not.toContain("'unsafe-eval'");
+  } else {
+    expect(connectSrc).toBe(
+      "connect-src 'self' https: wss: http://127.0.0.1:9000 ws://127.0.0.1:9000 http://localhost:9000 ws://localhost:9000",
+    );
+    expect(csp).toContain("'unsafe-eval'");
+  }
+  expect(csp).toMatch(/'nonce-[A-Za-z0-9+/=]+'/);
+  expect(csp).toContain("'strict-dynamic'");
   expect(headers["content-security-policy"]).toContain(
     "frame-ancestors 'none'",
   );

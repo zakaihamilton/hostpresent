@@ -9,6 +9,7 @@ import {
   parseSignalingMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
+import { isMediaControl } from "@/lib/webrtc/audienceProtocol";
 import { hostPeerId } from "@/lib/webrtc/peerClient";
 import { sendOnConnection } from "./sendOnConnection";
 
@@ -31,18 +32,19 @@ export function bindRoomConnection(
   const connectionPeerId = conn.peer || remoteId;
 
   const handleOpen = () => {
-    if (context.destroyedRef.current) return;
+    if (
+      context.destroyedRef.current ||
+      context.isCurrentConnection?.() === false
+    )
+      return;
     context.updateConnectedState(1);
+    context.onMediaOpen?.(connectionPeerId);
     if (context.isHost) {
       sendOnConnection(conn, context.createHostPresencePayload());
       context.onRemoteParticipantRef.current?.({
         id: remoteId,
         name: remoteName,
       });
-      context.ensureMediaCall(remoteId).catch((error) => {
-        console.warn("[peer] placeOutgoingMediaCall failed", error);
-      });
-      context.syncRelayForViewer(remoteId);
       return;
     }
 
@@ -56,8 +58,13 @@ export function bindRoomConnection(
   }
 
   conn.on("close", () => {
-    if (context.destroyedRef.current) return;
+    if (
+      context.destroyedRef.current ||
+      context.isCurrentConnection?.() === false
+    )
+      return;
     context.updateConnectedState(-1);
+    context.onMediaClose?.(connectionPeerId);
     if (context.isHost) {
       context.onRemoteParticipantRef.current?.({ id: remoteId, stream: null });
       return;
@@ -66,7 +73,11 @@ export function bindRoomConnection(
   });
 
   conn.on("data", (raw) => {
-    if (context.destroyedRef.current) return;
+    if (
+      context.destroyedRef.current ||
+      context.isCurrentConnection?.() === false
+    )
+      return;
     try {
       const payload = typeof raw === "string" ? raw : JSON.stringify(raw);
       if (
@@ -76,6 +87,16 @@ export function bindRoomConnection(
         return;
       }
       const message = parseSignalingMessage(payload);
+
+      if (isMediaControl(message)) {
+        if (
+          context.isHost ||
+          connectionPeerId === hostPeerId(context.roomIdRef.current)
+        ) {
+          context.onMediaControl?.(connectionPeerId, message);
+        }
+        return;
+      }
 
       if (isChatMessage(message)) {
         const authenticatedMessage = authenticateChatMessage(message, {
@@ -174,33 +195,6 @@ export function bindRoomConnection(
       ) {
         context.hostDisplayNameRef.current =
           resolvedMessage.displayName || "Host";
-      }
-      if (
-        context.isHost &&
-        resolvedMessage.type === SIGNALING_MESSAGE.MEDIA_RENEGOTIATE
-      ) {
-        const targetId = resolvedMessage.participantId || connectionPeerId;
-        if (targetId) {
-          const existingCall = context.mediaCallsRef.current.get(targetId);
-          if (existingCall) {
-            context.preservingParticipantMediaCallsRef.current.add(
-              existingCall,
-            );
-            existingCall.close();
-            if (context.mediaCallsRef.current.get(targetId) === existingCall) {
-              context.mediaCallsRef.current.delete(targetId);
-              context.onRemoteParticipantRef.current?.({
-                id: targetId,
-                stream: null,
-                preserveProfile: true,
-              });
-              context.syncRelayForSource(targetId, null);
-            }
-          }
-          context.ensureMediaCall(targetId).catch((error) => {
-            console.warn("[peer] renegotiation media call failed", error);
-          });
-        }
       }
       if (
         context.isHost &&

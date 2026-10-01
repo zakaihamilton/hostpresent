@@ -2,98 +2,23 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
+import { createPeerovoTest } from "peerovo/test";
+import {
+  approveSpeaker,
+  clearClientState,
+  createHostMeeting,
+  joinParticipant,
+  openParticipants,
+  participantsList,
+} from "./meetingHelpers";
 
 const runWebRtcE2e = process.env.RUN_WEBRTC_E2E === "1";
-const disableOpfs = process.env.PLAYWRIGHT_DISABLE_OPFS === "1";
 const execFileAsync = promisify(execFile);
 
 test.skip(
   !runWebRtcE2e,
   "Set RUN_WEBRTC_E2E=1 with a reachable PeerJS signaling server to run WebRTC E2E.",
 );
-
-async function clearClientState(page) {
-  await page.addInitScript(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
-  if (disableOpfs) {
-    await page.addInitScript(() => {
-      window.__HOSTPRESENT_ENABLE_SERVICE_WORKER__ = true;
-      Object.defineProperty(navigator.storage, "getDirectory", {
-        configurable: true,
-        value: undefined,
-      });
-    });
-  }
-}
-
-async function createHostMeeting(page) {
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Host Present" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Start meeting" }),
-  ).toBeEnabled();
-
-  const joinCodeBoxes = page.getByLabel(/Character \d/);
-  await expect
-    .poll(async () => {
-      const values = await joinCodeBoxes.evaluateAll((inputs) =>
-        inputs.map((input) => input.value).join(""),
-      );
-      return values.replace(/[^a-zA-Z0-9]/g, "");
-    })
-    .toHaveLength(10);
-  const joinCode = await joinCodeBoxes.evaluateAll((inputs) =>
-    inputs.map((input) => input.value).join(""),
-  );
-
-  await page.getByLabel("Your name").fill("Host One");
-  await page.getByRole("button", { name: "Start meeting" }).click();
-  await expect(
-    page.getByRole("button", { name: "Mute microphone" }),
-  ).toBeVisible();
-
-  return joinCode;
-}
-
-async function joinParticipant(page, joinCode, name) {
-  await page.addInitScript(
-    ({ displayName }) => {
-      localStorage.setItem("hostpresent.displayName", displayName);
-    },
-    { displayName: name },
-  );
-  await page.goto(`/#/j/${joinCode}`);
-  const nameField = page.getByLabel("Your name");
-  const canFillName = await nameField
-    .waitFor({ state: "visible", timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (canFillName) {
-    await nameField.fill(name);
-    await page.getByRole("button", { name: "Join meeting" }).click();
-  }
-  await expect(
-    page.getByRole("button", { name: "Mute microphone" }),
-  ).toBeVisible();
-}
-
-async function openParticipants(page) {
-  const show = page.getByRole("button", { name: "Show participants" });
-  if (await show.isVisible()) {
-    await show.click();
-  }
-  await expect(
-    page.getByRole("complementary").filter({ hasText: "Participants" }),
-  ).toBeVisible();
-}
-
-function participantsList(page) {
-  return page.getByLabel("Participants", { exact: true });
-}
 
 async function persistedRecordingBytes(page) {
   return page.evaluate(
@@ -188,13 +113,14 @@ async function closeParticipants(page) {
 test("host and two participants exchange roster, media, chat, and leave state", async ({
   browser,
 }) => {
-  const hostContext = await browser.newContext();
-  const participantOneContext = await browser.newContext();
-  const participantTwoContext = await browser.newContext();
-
-  const host = await hostContext.newPage();
-  const participantOne = await participantOneContext.newPage();
-  const participantTwo = await participantTwoContext.newPage();
+  const peerovo = createPeerovoTest(browser, {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",
+  });
+  const [hostClient, participantOneClient, participantTwoClient] =
+    await peerovo.clients(3);
+  const host = hostClient.page;
+  const participantOne = participantOneClient.page;
+  const participantTwo = participantTwoClient.page;
 
   await Promise.all([
     clearClientState(host),
@@ -205,6 +131,8 @@ test("host and two participants exchange roster, media, chat, and leave state", 
   const joinCode = await createHostMeeting(host);
   await joinParticipant(participantOne, joinCode, "Pat One");
   await joinParticipant(participantTwo, joinCode, "Pat Two");
+  await approveSpeaker(host, participantOne, "Pat One");
+  await approveSpeaker(host, participantTwo, "Pat Two");
 
   await openParticipants(host);
   await expect(participantsList(host).getByText("Pat One")).toBeVisible();
@@ -232,9 +160,11 @@ test("host and two participants exchange roster, media, chat, and leave state", 
   ).toBeVisible();
   await expect(host.getByText("Pat Two")).toBeHidden();
 
-  await participantTwoContext.close();
-  await participantOneContext.close();
-  await hostContext.close();
+  await peerovo.closeAll([
+    participantTwoClient,
+    participantOneClient,
+    hostClient,
+  ]);
 });
 
 test("host records locally and focuses participants with auto-focus fallback", async ({
@@ -258,6 +188,8 @@ test("host records locally and focuses participants with auto-focus fallback", a
     const joinCode = await createHostMeeting(host);
     await joinParticipant(participantOne, joinCode, "Pat One");
     await joinParticipant(participantTwo, joinCode, "Pat Two");
+    await approveSpeaker(host, participantOne, "Pat One");
+    await approveSpeaker(host, participantTwo, "Pat Two");
 
     await openParticipants(host);
     await expect(participantsList(host).getByText("Pat One")).toBeVisible();

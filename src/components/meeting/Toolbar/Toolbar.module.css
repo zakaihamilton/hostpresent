@@ -240,3 +240,10 @@
   min-height: 44px;
   overflow: visible;
 }
+
+.requestBtn {
+  width: auto;
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef } from "react";
+import { AUDIO_PLAYBACK_BLOCKED_EVENT } from "@/lib/webrtc/audioPlayback";
 
 export const VideoPlayer = memo(function VideoPlayer({
   stream,
@@ -15,9 +16,20 @@ export const VideoPlayer = memo(function VideoPlayer({
     const video = videoRef.current;
     if (!video) return undefined;
 
+    const play = () => {
+      void video.play().catch((error) => {
+        if (
+          error?.name === "NotAllowedError" &&
+          !video.muted &&
+          stream?.getAudioTracks().length
+        ) {
+          window.dispatchEvent(new Event(AUDIO_PLAYBACK_BLOCKED_EVENT));
+        }
+      });
+    };
     if (stream) {
       video.srcObject = stream;
-      void video.play().catch(() => {});
+      play();
     } else {
       video.pause();
       video.srcObject = null;
@@ -27,7 +39,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       if (!videoRef.current || !stream) return;
       videoRef.current.srcObject = null;
       videoRef.current.srcObject = stream;
-      void videoRef.current.play().catch(() => {});
+      play();
     };
 
     if (typeof stream?.addEventListener === "function") {

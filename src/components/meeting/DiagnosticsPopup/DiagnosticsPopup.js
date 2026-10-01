@@ -19,6 +19,7 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
   onReconnect,
   onSendDiagnosticReport,
   isTurnActive = false,
+  audienceState = {},
 }) {
   const [reportState, setReportState] = useState("idle");
   if (!isOpen) return null;
@@ -197,6 +198,24 @@ export const DiagnosticsPopup = memo(function DiagnosticsPopup({
             </div>
           </div>
 
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Browser forwarding</h3>
+            <p>
+              Protocol: {audienceState.mediaProtocol ?? "waiting"} · Publishers:{" "}
+              {audienceState.publisherIds?.length ?? 0}/4
+            </p>
+            <p>
+              Media links: {audienceState.mediaIncoming ?? 0} incoming,{" "}
+              {audienceState.mediaOutgoing ?? 0} outgoing · Direct fallback:{" "}
+              {audienceState.fallbackEdges ?? 0}
+            </p>
+            {isHost && (
+              <p>
+                Room media edges: {audienceState.mediaEdges ?? 0} · Host send
+                budget: 12 Mbps
+              </p>
+            )}
+          </div>
           {/* Media Routing & ICE Section */}
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Media Routing & ICE</h3>

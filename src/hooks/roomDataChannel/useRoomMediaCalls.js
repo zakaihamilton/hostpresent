@@ -214,54 +214,68 @@ export function useRoomMediaCalls({
   const syncQueueRef = useRef(Promise.resolve());
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Ref arguments are stable containers; read their current values when this callback runs.
-  const ensureMediaCall = useCallback(
+  const ensureMediaCallNow = useCallback(
     async (remoteId, streamOverrides = {}) => {
-      const next = syncQueueRef.current.then(async () => {
-        const peer = peerRef.current;
-        if (!peer) return;
+      const peer = peerRef.current;
+      if (!peer || destroyedRef.current) return;
 
-        const {
-          localStream: outboundLocalStream,
-          screenStream: outboundScreenStream,
-        } = resolveOutboundStreams(
-          streamOverrides,
-          localStreamRef,
-          screenStreamRef,
-        );
+      const {
+        localStream: outboundLocalStream,
+        screenStream: outboundScreenStream,
+      } = resolveOutboundStreams(
+        streamOverrides,
+        localStreamRef,
+        screenStreamRef,
+      );
 
-        const outbound = await buildOutboundMediaStream(
-          outboundLocalStream,
-          outboundScreenStream,
-        );
-        if (!outbound) return;
+      const outbound = await buildOutboundMediaStream(
+        outboundLocalStream,
+        outboundScreenStream,
+      );
+      if (
+        !outbound ||
+        destroyedRef.current ||
+        peerRef.current !== peer ||
+        !connectionsRef.current.has(remoteId)
+      )
+        return;
 
-        const existing = mediaCallsRef.current.get(remoteId);
-        if (existing) {
-          const peerConnection = existing.peerConnection;
-          if (peerConnection && peerConnection.connectionState !== "closed") {
-            await syncOutboundTracks(
-              existing,
-              outboundLocalStream,
-              outboundScreenStream,
-            );
-          }
-          return;
+      const existing = mediaCallsRef.current.get(remoteId);
+      if (existing) {
+        const peerConnection = existing.peerConnection;
+        if (peerConnection && peerConnection.connectionState !== "closed") {
+          await syncOutboundTracks(
+            existing,
+            outboundLocalStream,
+            outboundScreenStream,
+          );
         }
+        return;
+      }
 
-        const call = peer.call(remoteId, outbound);
-        if (!call) return;
-        bindMediaCall(call, remoteId);
-      });
+      const call = peer.call(remoteId, outbound);
+      if (!call) return;
+      bindMediaCall(call, remoteId);
+    },
+    [bindMediaCall],
+  );
+
+  const ensureMediaCall = useCallback(
+    (remoteId, streamOverrides = {}) => {
+      const next = syncQueueRef.current.then(() =>
+        ensureMediaCallNow(remoteId, streamOverrides),
+      );
       syncQueueRef.current = next.catch(() => {});
       return next;
     },
-    [bindMediaCall],
+    [ensureMediaCallNow],
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Ref arguments are stable containers; read their current values when this callback runs.
   const enqueueSync = useCallback(
     async (streamOverrides = {}) => {
       const next = syncQueueRef.current.then(async () => {
+        if (destroyedRef.current) return;
         const {
           localStream: outboundLocalStream,
           screenStream: outboundScreenStream,
@@ -285,7 +299,8 @@ export function useRoomMediaCalls({
           await Promise.all(tasks);
 
           for (const remoteId of connectionsRef.current.keys()) {
-            await ensureMediaCall(remoteId, streamOverrides);
+            // Already inside the queue: enqueueing here would wait on this task.
+            await ensureMediaCallNow(remoteId, streamOverrides);
           }
           return;
         }
@@ -326,7 +341,7 @@ export function useRoomMediaCalls({
       syncQueueRef.current = next.catch(() => {});
       return next;
     },
-    [isHost, ensureMediaCall, send],
+    [isHost, ensureMediaCallNow, send],
   );
 
   useEffect(() => {

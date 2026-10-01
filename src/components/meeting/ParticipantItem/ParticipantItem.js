@@ -103,6 +103,11 @@ export const ParticipantItem = memo(function ParticipantItem({
   onMuteVideo,
   onMuteAudio,
   onFocus,
+  publishingRequested = false,
+  publishingGranted = false,
+  approvalDisabled = false,
+  onApprovePublishing,
+  onRevokePublishing,
 }) {
   return (
     <div className={`${styles.item} ${isFocused ? styles.itemFocused : ""}`}>
@@ -132,6 +137,26 @@ export const ParticipantItem = memo(function ParticipantItem({
         </div>
       </div>
       <div className={styles.status}>
+        {publishingGranted && onRevokePublishing && (
+          <HostMediaAction
+            label={`Revoke publishing for ${name}`}
+            onAction={onRevokePublishing}
+          >
+            <MicOff />
+          </HostMediaAction>
+        )}
+        {publishingRequested && onApprovePublishing && (
+          <button
+            type="button"
+            className={styles.statusBtn}
+            aria-label={`Approve speaking for ${name}`}
+            title="Approve speaking"
+            disabled={approvalDisabled}
+            onClick={onApprovePublishing}
+          >
+            <Mic />
+          </button>
+        )}
         {hasVideo && (
           <Tooltip
             text={isScreenSharing ? "Screen Share" : "Video"}
