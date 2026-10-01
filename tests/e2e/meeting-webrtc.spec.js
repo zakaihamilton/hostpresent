@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
-import { createPeerovoTest } from "@peerovo/test";
+import { createPeerovoTest } from "peerovo/test";
 
 const runWebRtcE2e = process.env.RUN_WEBRTC_E2E === "1";
 const disableOpfs = process.env.PLAYWRIGHT_DISABLE_OPFS === "1";
