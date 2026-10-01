@@ -52,7 +52,7 @@
     "knip": "^6.32.2",
     "license-checker": "^25.0.1",
     "markdownlint-cli2": "^0.23.2",
-    "repnix": "^0.3.6",
+    "repnix": "^1.0.4",
     "peerovo": "github:zakaihamilton/peerovo#ba63510bf4bad3f968c6d7464db11c7faf7475df"
   }
 }
