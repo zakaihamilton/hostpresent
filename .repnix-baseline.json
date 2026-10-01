@@ -713,94 +713,94 @@
       "line": 22
     },
     {
-      "fingerprint": "2e2e377095728af34c6a77f4",
+      "fingerprint": "033a570a4091ca03a01130e4",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 26
+      "line": 28
     },
     {
-      "fingerprint": "626fb7b8797f26870545fbbd",
+      "fingerprint": "86c2d02c00eda4b422cbe5fa",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 71
+      "line": 73
     },
     {
-      "fingerprint": "455d39b44425c3bbd1bdc140",
+      "fingerprint": "d8dacbc749d2078abb49cea6",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 87
+      "line": 89
     },
     {
-      "fingerprint": "2ce2a4cf1ed0b94435dde6f2",
+      "fingerprint": "7aaf5aa1ac0394292c245dd3",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 101
+      "line": 103
     },
     {
-      "fingerprint": "07652e90c2d9e25c2f2d7b06",
+      "fingerprint": "f6002e9ff67197a46f883381",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 117
+      "line": 119
     },
     {
-      "fingerprint": "07652e90c2d9e25c2f2d7b06",
+      "fingerprint": "f6002e9ff67197a46f883381",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 117
+      "line": 119
     },
     {
-      "fingerprint": "a18fbec2f66ef8fe642ec9fb",
+      "fingerprint": "9b9ed3c34c15793614898fb5",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 118
+      "line": 120
     },
     {
-      "fingerprint": "c81a20cacd0155747a75aff4",
+      "fingerprint": "12cd14ca5a3d3dff170b13bc",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 142
+      "line": 144
     },
     {
-      "fingerprint": "631479d41e3cc96b225f3d44",
+      "fingerprint": "f4e5dfa511605be61be63567",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 153
+      "line": 155
     },
     {
-      "fingerprint": "b1f55cd4b48dd27d659b0447",
+      "fingerprint": "9a99c507d8a8ceeb4ca4816d",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
       "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 288
+      "line": 290
     },
     {
       "fingerprint": "af5b6bf358971276c58f77f7",
