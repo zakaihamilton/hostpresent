@@ -10,6 +10,7 @@ import {
   isValidJoinCode,
   normalizeJoinCode,
 } from "@/lib/room/joinCodeFormat";
+import { MAX_PARTICIPANT_CONNECTIONS } from "@/lib/room/peerLimits.mjs";
 import {
   loadDisplayName,
   normalizeDisplayNameInput,
@@ -257,6 +258,9 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
       />
 
       <div className={shared.actions}>
+        <p className={shared.helpText}>
+          Invite up to {MAX_PARTICIPANT_CONNECTIONS} participants.
+        </p>
         <button
           type="button"
           className={shared.button}

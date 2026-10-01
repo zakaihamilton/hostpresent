@@ -673,15 +673,20 @@ export function RemoteParticipants({
 
   useEffect(() => {
     if (isHost) return;
-    setPeerParticipants((prev) =>
-      prev.map((peer) => {
-        const videoEntry = videoParticipants.find((v) => v.id === peer.id);
+    setPeerParticipants((previous) => {
+      let changed = false;
+      const next = previous.map((peer) => {
+        const videoEntry = videoParticipants.find(
+          (entry) => entry.id === peer.id,
+        );
         if (videoEntry && videoEntry.isSpeaking !== peer.isSpeaking) {
+          changed = true;
           return { ...peer, isSpeaking: videoEntry.isSpeaking };
         }
         return peer;
-      }),
-    );
+      });
+      return changed ? next : previous;
+    });
   }, [isHost, videoParticipants]);
 
   useEffect(() => {

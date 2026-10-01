@@ -131,10 +131,8 @@ function MeetingViewInner({
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [participantMode, setParticipantMode] = useState(() =>
-    loadParticipantMode(),
+    isHost ? loadParticipantMode() : PARTICIPANT_MODE.LISTENING,
   );
-  const canPublishMedia =
-    isHost || participantMode !== PARTICIPANT_MODE.LISTENING;
   const [sessionTitle, setSessionTitle] = useState("");
   const [focusedParticipantId, setFocusedParticipantId] = useState("");
   const [meetingDisconnectReason, setMeetingDisconnectReason] = useState(null);
@@ -211,6 +209,15 @@ function MeetingViewInner({
   });
 
   roomConnectionRef.current = roomConnection;
+  const canPublishMedia = isHost || roomConnection.canPublish === true;
+  useEffect(() => {
+    if (!isHost)
+      setParticipantMode(
+        canPublishMedia
+          ? PARTICIPANT_MODE.AVAILABLE
+          : PARTICIPANT_MODE.LISTENING,
+      );
+  }, [canPublishMedia, isHost]);
 
   const sendDiagnosticReport = useCallback(() => {
     const hasTurn = Boolean(
@@ -274,6 +281,7 @@ function MeetingViewInner({
   } = MediaControls({
     isHost,
     participantMode,
+    publishingGranted: canPublishMedia,
     roomConnection,
     localStream,
     setLocalStream,
@@ -321,7 +329,9 @@ function MeetingViewInner({
 
   const effectiveFocusedId = useMeetingFocus({
     focusedParticipantId,
-    videoParticipants,
+    videoParticipants: videoParticipants.filter((participant) =>
+      roomConnection.publisherIds?.includes(participant.id),
+    ),
     isHost,
     localIsSpeaking,
     screenStream,
@@ -521,14 +531,15 @@ function MeetingViewInner({
   useEffect(() => {
     if (!isHost || !focusedParticipantId || focusedParticipantId === "host")
       return;
-    if (
-      !videoParticipants.some(
-        (participant) => participant.id === focusedParticipantId,
-      )
-    ) {
+    if (!roomConnection.publisherIds?.includes(focusedParticipantId)) {
       handleFocusParticipant(focusedParticipantId);
     }
-  }, [focusedParticipantId, handleFocusParticipant, isHost, videoParticipants]);
+  }, [
+    focusedParticipantId,
+    handleFocusParticipant,
+    isHost,
+    roomConnection.publisherIds,
+  ]);
 
   useEffect(() => {
     if (!isHost) return;
@@ -602,6 +613,7 @@ function MeetingViewInner({
         connectionProps={{
           isHost,
           hostPresent,
+          audienceState: roomConnection,
           connectionError: roomConnection?.connectionError,
           activeConnectionsCount: roomConnection?.activeConnectionsCount ?? 0,
           isWaitingForHost: isWaitingForHostMessage(
@@ -677,6 +689,10 @@ function MeetingViewInner({
           onFocusParticipant: handleFocusParticipant,
           onMuteParticipantVideo: muteParticipantVideo,
           onMuteParticipantAudio: muteParticipantAudio,
+          publishingRequests: roomConnection.publishingRequests,
+          publisherIds: roomConnection.publisherIds,
+          onApprovePublishing: roomConnection.approvePublishing,
+          onRevokePublishing: roomConnection.revokePublishing,
           onMuteAllVideo: muteAllVideo,
           onMuteAllAudio: muteAllAudio,
           canMuteAllVideo,
@@ -729,6 +745,7 @@ function MeetingViewInner({
           onReconnect: roomConnection?.reconnect,
           onSendDiagnosticReport: sendDiagnosticReport,
           isTurnActive: roomConnection?.isTurnActive,
+          audienceState: roomConnection,
         }}
         toolbarProps={{
           isAudioMuted,
@@ -744,9 +761,10 @@ function MeetingViewInner({
           displayName: displayNameInput,
           onDisplayNameChange: handleDisplayNameChange,
           participantMode,
-          onParticipantModeChange: handleDisplayNameChange
-            ? handleParticipantModeChange
-            : null,
+          onParticipantModeChange:
+            isHost && handleDisplayNameChange
+              ? handleParticipantModeChange
+              : null,
           availableMicrophones,
           selectedMicrophone,
           onMicrophoneChange: switchMicrophone,
@@ -774,6 +792,11 @@ function MeetingViewInner({
             ? 1 + videoParticipants.length + audioList.length
             : 2 + peerParticipants.length,
           mediaPublishingEnabled: canPublishMedia,
+          publishRequested: roomConnection.publishRequested,
+          onRequestPublishing: () =>
+            roomConnection.requestPublishing(
+              !canPublishMedia && !roomConnection.publishRequested,
+            ),
           allowScreenShare: canPublishMedia,
         }}
       />

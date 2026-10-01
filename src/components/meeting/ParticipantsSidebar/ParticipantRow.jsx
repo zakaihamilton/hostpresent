@@ -9,6 +9,10 @@ export const ParticipantRow = memo(function ParticipantRow({
   onMuteParticipantAudio,
   focusedParticipantId,
   onFocusParticipant,
+  publishingRequests = [],
+  publisherIds = [],
+  onApprovePublishing,
+  onRevokePublishing,
 }) {
   if (item.type === "section") {
     return <div className={styles.sectionLabel}>{item.label}</div>;
@@ -18,10 +22,23 @@ export const ParticipantRow = memo(function ParticipantRow({
   const isSelfItem = item.id === "self";
   const isRemotePeer = item.type === "peer" || item.type === "host-remote";
   const canMute = isHost && !isHostItem && !isSelfItem && !isRemotePeer;
-  const canFocus = isHost && item.hasVideo && !isRemotePeer;
+  const canFocus =
+    isHost &&
+    item.hasVideo &&
+    !isRemotePeer &&
+    (isHostItem || publisherIds.includes(item.id));
 
   return (
     <ParticipantItem
+      publishingRequested={isHost && publishingRequests.includes(item.id)}
+      publishingGranted={isHost && publisherIds.includes(item.id)}
+      approvalDisabled={publisherIds.length >= 4}
+      onApprovePublishing={
+        isHost ? () => onApprovePublishing?.(item.id) : undefined
+      }
+      onRevokePublishing={
+        isHost && !isHostItem ? () => onRevokePublishing?.(item.id) : undefined
+      }
       name={item.name}
       initial={item.initial}
       avatarColor={item.avatarColor}

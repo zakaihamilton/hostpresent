@@ -13,6 +13,14 @@ Open [Host Present](https://hostpresent.com), create a room, and invite particip
 
 Host Present is a role-aware meeting room built around a single presenter. Participants can join quickly, while the host controls the stage and the flow of the session.
 
+Attendees join listening-only and can request to speak. The host can approve
+three guest publishers at a time. Separate camera/screen feeds travel through
+host-assigned browser relay trees over Peerovo/PeerJS; no SFU is required.
+
+The application supports one host and 19 attendees by default. Complete the
+distributed 45-minute acceptance test before advertising that capacity. See
+[20-person room testing](docs/testing-meetings.md#20-person-capacity-validation).
+
 | Present clearly | Keep control | Stay connected |
 | --- | --- | --- |
 | Large presenter stage for camera or screen share | Mute one participant or everyone | WebRTC media and data channels |
@@ -90,7 +98,18 @@ PEEROVO_PROJECT_API_KEY=replace-with-a-32-character-project-key
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 ```
 
-For local WebRTC work, start the Peerovo service separately with its own local configuration. Add `http://127.0.0.1:3000` to the Host Present project's Peerovo `allowedOrigins`, and use the same project API key in both services. Then start Host Present:
+For local WebRTC work, start the Peerovo service separately with its own local configuration. Add `http://127.0.0.1:3000` to the Host Present project's Peerovo `allowedOrigins`, and use the same project API key in both services. Peerovo's current project settings are:
+
+```dotenv
+PEEROVO_PROJECT_HOSTPRESENT_API_KEY=the-same-server-only-project-key
+PEEROVO_PROJECT_HOSTPRESENT_ALLOWED_ORIGINS='["http://127.0.0.1:3000"]'
+PEEROVO_MAX_PEERS_PER_SESSION=30
+```
+
+`PEEROVO_PROJECTS_JSON` is obsolete. A missing project or mismatched project
+key causes HTTP 403 when HostPresent requests peer tickets. Configure these
+variables on the deployed Peerovo service as well as locally; do not log keys.
+The session default of 30 is sufficient for 20 people. Then start Host Present:
 
 ```bash
 npm run dev
@@ -117,7 +136,7 @@ secure generator. Never expose it through a `NEXT_PUBLIC_` variable.
 
 ## Production deployment
 
-Room and media state are not persisted on the server. A Peerovo restart does not end an active peer-to-peer meeting, but connection waiting states, participant removals, and session admission leases are not persisted.
+Room and media state are not persisted on the server. A Peerovo restart does not end an active peer-to-peer meeting, but connection waiting states and session admission leases are not persisted. Participant removal and bans are not implemented.
 
 The app document is rendered per request so its Content Security Policy can use a fresh script nonce. Peerovo keeps its live PeerJS registry and capacity leases in process memory, so run the Peerovo service as one replica unless its shared-state design is changed.
 
@@ -142,7 +161,7 @@ Treat a room code as a bearer credential and share it only with the intended mee
 | `npm run lint` | Run Biome checks. |
 | `npm run format` | Format files with Biome. |
 | `npm test` | Run the Jest unit and component suite. |
-| `npm run test:e2e:smoke` | Run the Chromium welcome-flow smoke test. |
+| `npm run test:e2e:smoke` | Run the Chromium welcome-flow and production security smoke tests after `npm run build`. |
 | `npm run test:e2e:webrtc` | Run the opt-in Chromium WebRTC flow with separate host and participant contexts. |
 
 For the full meeting test matrix, including browser permissions and manual device checks, see [docs/testing-meetings.md](docs/testing-meetings.md).

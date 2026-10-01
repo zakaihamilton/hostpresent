@@ -1,6 +1,7 @@
 import { MeetingJoinError } from "@/components/ui/MeetingJoinError";
 import { MeetingLoading } from "@/components/ui/MeetingLoading";
 import { ROOM_SESSION_STATUS } from "@/hooks/roomSession";
+import { MAX_PARTICIPANT_CONNECTIONS } from "@/lib/room/peerLimits.mjs";
 import {
   getSignalingConfigHint,
   getSignalingErrorHint,
@@ -65,7 +66,7 @@ export function getMeetingStatusScreen({
     return (
       <MeetingJoinError
         title="Meeting is full"
-        message="This meeting has reached the maximum capacity of 30 participants."
+        message={`This meeting has reached the maximum capacity of ${MAX_PARTICIPANT_CONNECTIONS + 1} people, including the host.`}
         onBack={handleDisconnectBack}
       />
     );

@@ -23,6 +23,15 @@ Peerovo applies connectivity-service rate limits.
 - Run `npm run lint`, `npm run test:unit -- --runInBand`, `npm run build`,
   and `npm run test:e2e:smoke` from the release commit.
 
+## Audience room capacity
+
+- Complete the [distributed acceptance test](testing-meetings.md#20-person-capacity-validation)
+  before advertising the 20-person capacity.
+- Verify Peerovo's current per-project variables, exact origins, matching API
+  key, and session capacity of at least 20. Its default session capacity is 30.
+- Archive the 45-minute results with TURN, constrained upload, ten-second
+  recovery, latency/CPU/upload measurements, and recording integrity.
+
 ## Verify Preview firewall enforcement
 
 Set `APP_URL` to the deployed Preview origin, then send one more request than

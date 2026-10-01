@@ -21,6 +21,7 @@
     "src/lib/**/*.js",
     "src/test/helpers.js",
     "public/sw.js",
+    "public/theme-init.js",
     "public/recording/ffmpeg/*.js"
   ]
 }

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import { PUBLISHER_VIDEO_CONSTRAINTS } from "@/lib/webrtc/audienceQuality";
 import { MediaControls } from "./MediaControls";
 
 function createTrack({
@@ -85,6 +86,7 @@ describe("MediaControls Hook", () => {
   it("loads default media states (unmuted)", () => {
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: { send: jest.fn() },
         streamListenerCleanupsRef: { current: [] },
@@ -102,6 +104,7 @@ describe("MediaControls Hook", () => {
   it("requests microphone capture with voice isolation constraints", async () => {
     renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: { send: jest.fn() },
         streamListenerCleanupsRef: { current: [] },
@@ -114,7 +117,7 @@ describe("MediaControls Hook", () => {
 
     await waitFor(() => {
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: true,
+        video: PUBLISHER_VIDEO_CONSTRAINTS,
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -134,6 +137,7 @@ describe("MediaControls Hook", () => {
     const { rerender } = renderHook(
       ({ participantMode }) =>
         MediaControls({
+          publishingGranted: true,
           isHost: false,
           participantMode,
           roomConnection,
@@ -151,7 +155,7 @@ describe("MediaControls Hook", () => {
 
     await waitFor(() => {
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: true,
+        video: PUBLISHER_VIDEO_CONSTRAINTS,
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -183,6 +187,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection,
         localStream,
@@ -233,6 +238,7 @@ describe("MediaControls Hook", () => {
     const { rerender } = renderHook(
       ({ localStream }) =>
         MediaControls({
+          publishingGranted: true,
           isHost: false,
           roomConnection: {
             send: jest.fn(),
@@ -265,6 +271,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: { send: jest.fn(), syncOutboundMedia: jest.fn() },
         streamListenerCleanupsRef: { current: [] },
@@ -286,6 +293,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: { send: jest.fn() },
         streamListenerCleanupsRef: { current: [] },
@@ -313,6 +321,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send: sendMock,
@@ -352,6 +361,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send: jest.fn(),
@@ -389,6 +399,7 @@ describe("MediaControls Hook", () => {
 
     const { unmount } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: { send: jest.fn() },
         localStream: null,
@@ -441,6 +452,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: true,
         roomConnection: { send: jest.fn(), syncOutboundMedia },
         localStream,
@@ -458,7 +470,10 @@ describe("MediaControls Hook", () => {
     await result.current.switchCamera("back-camera-id");
 
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({
-      video: { deviceId: { exact: "back-camera-id" } },
+      video: {
+        ...PUBLISHER_VIDEO_CONSTRAINTS,
+        deviceId: { exact: "back-camera-id" },
+      },
       audio: false,
     });
     expect(localStream.removeTrack).toHaveBeenCalledWith(oldVideoTrack);
@@ -505,6 +520,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send: jest.fn(),
@@ -557,6 +573,7 @@ describe("MediaControls Hook", () => {
       .mockResolvedValue(screenStream);
 
     const props = {
+      publishingGranted: true,
       isHost: false,
       roomConnection: {
         send,
@@ -585,7 +602,7 @@ describe("MediaControls Hook", () => {
     await result.current.toggleScreenShare();
 
     expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledWith({
-      video: true,
+      video: PUBLISHER_VIDEO_CONSTRAINTS,
       audio: {
         suppressLocalAudioPlayback: false,
         echoCancellation: false,
@@ -642,6 +659,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send,
@@ -688,6 +706,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: true,
         roomConnection: {
           send,
@@ -720,6 +739,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send: jest.fn(),
@@ -740,7 +760,7 @@ describe("MediaControls Hook", () => {
     await result.current.toggleScreenShare();
 
     expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledWith({
-      video: true,
+      video: PUBLISHER_VIDEO_CONSTRAINTS,
       audio: false,
     });
     expect(result.current.errorMsg).toBe("");
@@ -757,6 +777,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send: jest.fn(),
@@ -793,6 +814,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: false,
         roomConnection: {
           send,
@@ -836,6 +858,7 @@ describe("MediaControls Hook", () => {
 
     const { result } = renderHook(() =>
       MediaControls({
+        publishingGranted: true,
         isHost: true,
         roomConnection: {
           send,
@@ -858,4 +881,28 @@ describe("MediaControls Hook", () => {
     expect(result.current.errorMsg).toContain("[E041]");
     expect(send).not.toHaveBeenCalled();
   });
+});
+it("keeps the status publisher stable when the room connection object refreshes", () => {
+  navigator.mediaDevices.getUserMedia.mockClear();
+  const send = jest.fn();
+  const setLocalStream = jest.fn();
+  const setScreenStream = jest.fn();
+  const { result, rerender } = renderHook(
+    ({ roomConnection }) =>
+      MediaControls({
+        isHost: false,
+        roomConnection,
+        localStream: null,
+        screenStream: null,
+        setLocalStream,
+        setScreenStream,
+      }),
+    { initialProps: { roomConnection: { send, localParticipantId: "guest" } } },
+  );
+  const publish = result.current.publishParticipantMediaStatus;
+  rerender({
+    roomConnection: { send, localParticipantId: "guest", mediaIncoming: 4 },
+  });
+  expect(result.current.publishParticipantMediaStatus).toBe(publish);
+  expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
 });

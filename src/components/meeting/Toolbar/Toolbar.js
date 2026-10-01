@@ -51,6 +51,8 @@ export const Toolbar = memo(function Toolbar({
   participantCount = 0,
   allowScreenShare = true,
   mediaPublishingEnabled = true,
+  publishRequested = false,
+  onRequestPublishing,
 }) {
   const audioButtonLabel = mediaPublishingEnabled
     ? isAudioMuted
@@ -92,6 +94,19 @@ export const Toolbar = memo(function Toolbar({
 
         {/* Primary Controls: Mic, Camera, Screen Share, End/Leave (Center Zone) */}
         <div className={`${styles.controlGroup} ${styles.primaryGroup}`}>
+          {!isHost && onRequestPublishing && (
+            <button
+              type="button"
+              className={btnClass(styles.requestBtn)}
+              onClick={onRequestPublishing}
+            >
+              {mediaPublishingEnabled
+                ? "Stop publishing"
+                : publishRequested
+                  ? "Cancel request"
+                  : "Request to speak"}
+            </button>
+          )}
           <Tooltip text={audioButtonLabel}>
             <button
               type="button"

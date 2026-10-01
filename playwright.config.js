@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT || "3000";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${PORT}`;
+const productionServer = process.env.PLAYWRIGHT_SERVER_MODE === "production";
 const {
   FORCE_COLOR: _forceColor,
   NO_COLOR: _noColor,
@@ -72,7 +73,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
     ? undefined
     : {
-        command: `npm run dev -- -H 127.0.0.1 -p ${PORT}`,
+        command: `npm run ${productionServer ? "start" : "dev"} -- -H 127.0.0.1 -p ${PORT}`,
         url: baseURL,
         // Reusing an arbitrary process on the configured port can make local
         // tests exercise a different application. Opt in explicitly when a

@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MAX_PARTICIPANT_CONNECTIONS } from "@/lib/room/peerLimits.mjs";
 import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
 import { MeetingView } from "./MeetingView";
 
@@ -278,12 +279,12 @@ describe("MeetingView", () => {
     expect(onBack).not.toHaveBeenCalled();
   });
 
-  it("allows participants to screen share", async () => {
+  it("keeps participants listening until a host grants publishing", async () => {
     render(<MeetingView token="participant-token" onBack={() => {}} />);
 
     await screen.findByTestId("primary-view");
 
-    expect(latestToolbarProps.allowScreenShare).toBe(true);
+    expect(latestToolbarProps.allowScreenShare).toBe(false);
   });
 
   it.each([
@@ -295,7 +296,7 @@ describe("MeetingView", () => {
     [
       SIGNALING_MESSAGE.ROOM_FULL,
       "Meeting is full",
-      "This meeting has reached the maximum capacity of 30 participants.",
+      `This meeting has reached the maximum capacity of ${MAX_PARTICIPANT_CONNECTIONS + 1} people, including the host.`,
     ],
   ])("shows disconnect screen for %s", async (type, title, message) => {
     render(

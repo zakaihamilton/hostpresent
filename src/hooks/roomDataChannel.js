@@ -18,7 +18,11 @@ import {
   isSignalingMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import { destroyOutboundAudioMixer } from "@/lib/webrtc/outboundMedia";
+import { AudienceMediaController } from "@/lib/webrtc/AudienceMediaController";
+import {
+  buildOutboundMediaStream,
+  destroyOutboundAudioMixer,
+} from "@/lib/webrtc/outboundMedia";
 import {
   connectionRetryDelayMs,
   hostIdRetryDelayMs,
@@ -40,7 +44,6 @@ import { clearWindowTimer } from "@/lib/webrtc/roomConnectionLifecycle";
 import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
 import { bindRoomConnection } from "./roomDataChannel/bindRoomConnection";
 import { sendOnConnection } from "./roomDataChannel/sendOnConnection";
-import { useRoomMediaCalls } from "./roomDataChannel/useRoomMediaCalls";
 
 export { sendOnConnection } from "./roomDataChannel/sendOnConnection";
 
@@ -94,17 +97,15 @@ export function useRoomDataChannel({
   const [connectionError, setConnectionError] = useState(null);
   const [peerConfig, setPeerConfig] = useState(null);
   const [configReady, setConfigReady] = useState(false);
-  const [, setReconnectTrigger] = useState(0);
+  const [reconnectTrigger, setReconnectTrigger] = useState(0);
   const iceServers = useIceServers();
 
   const peerRef = useRef(null);
+  const audienceRef = useRef(null);
+  const [audienceState, setAudienceState] = useState({ canPublish: isHost });
   const peerConfigRef = useRef(null);
   const iceServersRef = useRef(null);
   const connectionsRef = useRef(new Map());
-  const mediaCallsRef = useRef(new Map());
-  const preservingParticipantMediaCallsRef = useRef(new WeakSet());
-  const inboundStreamsRef = useRef(new Map());
-  const relayCallsRef = useRef(new Map());
   const peerDeviceIdsRef = useRef(new Map());
   const participantDisplayNamesRef = useRef(new Map());
   const hostConnectionRef = useRef(null);
@@ -228,20 +229,11 @@ export function useRoomDataChannel({
     if (isHost || destroyedRef.current) return;
 
     clearConnectRetryTimer();
+    audienceRef.current?.connectionClose(hostPeerId(roomIdRef.current));
     hostConnectionRef.current?.close();
     hostConnectionRef.current = null;
     setHostPresent(false);
     onRemoteHostStreamRef.current?.(null);
-
-    const currentRoomId = roomIdRef.current;
-    if (currentRoomId) {
-      const hostId = hostPeerId(currentRoomId);
-      const hostCall = mediaCallsRef.current.get(hostId);
-      if (hostCall) {
-        hostCall.close();
-        mediaCallsRef.current.delete(hostId);
-      }
-    }
 
     if (openCountRef.current <= 0) {
       setConnectionError((previous) => {
@@ -338,6 +330,12 @@ export function useRoomDataChannel({
       }
 
       if (isHost) {
+        if (message.type === SIGNALING_MESSAGE.HOST_FOCUS_CHANGED)
+          audienceRef.current?.focus(
+            message.focusedId === "host"
+              ? hostPeerId(roomIdRef.current)
+              : message.focusedId,
+          );
         const targetId = message.participantId;
         if (
           targetId &&
@@ -373,30 +371,26 @@ export function useRoomDataChannel({
     send(createHostPresencePayload());
   }, [createHostPresencePayload, enabled, isHost, screenStream, send, token]);
 
-  const {
-    answerIncomingCall,
-    closeRelayCallsForSource,
-    closeRelayCallsForViewer,
-    enqueueSync,
-    ensureMediaCall,
-    syncRelayForSource,
-    syncRelayForViewer,
-  } = useRoomMediaCalls({
-    isHost,
-    peerRef,
-    destroyedRef,
-    mediaCallsRef,
-    preservingParticipantMediaCallsRef,
-    relayCallsRef,
-    inboundStreamsRef,
-    connectionsRef,
-    localStreamRef,
-    screenStreamRef,
-    onRemoteParticipantRef,
-    onRemoteHostStreamRef,
-    roomIdRef,
-    send,
-  });
+  const enqueueSync = useCallback((overrides = {}) => {
+    if (Object.hasOwn(overrides, "localStream"))
+      localStreamRef.current = overrides.localStream;
+    if (Object.hasOwn(overrides, "screenStream"))
+      screenStreamRef.current = overrides.screenStream;
+    return audienceRef.current?.sync() ?? Promise.resolve();
+  }, []);
+
+  const onMediaOpen = useCallback(
+    (id) => audienceRef.current?.connectionOpen(id),
+    [],
+  );
+  const onMediaClose = useCallback(
+    (id) => audienceRef.current?.connectionClose(id),
+    [],
+  );
+  const onMediaControl = useCallback(
+    (id, message) => audienceRef.current?.handleControl(id, message),
+    [],
+  );
 
   const bindConnection = useCallback(
     (conn, { remoteId, remoteName = "Guest" }) => {
@@ -405,12 +399,17 @@ export function useRoomDataChannel({
         { remoteId, remoteName },
         {
           isHost,
+          isCurrentConnection: () =>
+            isHost
+              ? connectionsRef.current.get(remoteId) === conn
+              : hostConnectionRef.current === conn,
           destroyedRef,
           updateConnectedState,
           createHostPresencePayload,
           onRemoteParticipantRef,
-          ensureMediaCall,
-          syncRelayForViewer,
+          onMediaOpen,
+          onMediaClose,
+          onMediaControl,
           sendParticipantProfileRef,
           scheduleReconnectToHost,
           roomIdRef,
@@ -421,9 +420,6 @@ export function useRoomDataChannel({
           notifyHandlers,
           onChatMessageRef,
           peerDeviceIdsRef,
-          preservingParticipantMediaCallsRef,
-          mediaCallsRef,
-          syncRelayForSource,
           setHostPresent,
           setConnectionError,
         },
@@ -431,12 +427,12 @@ export function useRoomDataChannel({
     },
     [
       createHostPresencePayload,
-      ensureMediaCall,
       isHost,
       notifyHandlers,
       scheduleReconnectToHost,
-      syncRelayForSource,
-      syncRelayForViewer,
+      onMediaOpen,
+      onMediaClose,
+      onMediaControl,
       updateConnectedState,
     ],
   );
@@ -620,6 +616,7 @@ export function useRoomDataChannel({
     iceServersRef.current = iceServers;
   }, [iceServers]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The manual reconnect counter intentionally restarts this lifecycle even when transport settings are unchanged.
   useEffect(() => {
     if (
       !configReady ||
@@ -638,24 +635,8 @@ export function useRoomDataChannel({
     destroyedRef.current = false;
 
     const teardownPeer = () => {
-      try {
-        for (const call of mediaCallsRef.current.values()) {
-          call.close();
-        }
-      } catch (e) {
-        console.warn("[peer] error closing media calls", e);
-      }
-      mediaCallsRef.current.clear();
-
-      try {
-        for (const call of relayCallsRef.current.values()) {
-          call.close();
-        }
-      } catch (e) {
-        console.warn("[peer] error closing relay calls", e);
-      }
-      relayCallsRef.current.clear();
-      inboundStreamsRef.current.clear();
+      audienceRef.current?.dispose();
+      audienceRef.current = null;
       peerDeviceIdsRef.current.clear();
       participantDisplayNamesRef.current.clear();
       hostDisplayNameRef.current = "";
@@ -708,6 +689,37 @@ export function useRoomDataChannel({
       };
       const peer = new Peer(id, options);
       peerRef.current = peer;
+      audienceRef.current = new AudienceMediaController({
+        isHost,
+        localId: id,
+        hostId: hostPeerId(roomId),
+        getPeer: () => peerRef.current,
+        getLocalStream: () =>
+          buildOutboundMediaStream(
+            localStreamRef.current,
+            screenStreamRef.current,
+          ),
+        sendControl: (target, message) =>
+          sendOnConnection(
+            isHost
+              ? connectionsRef.current.get(target)
+              : hostConnectionRef.current,
+            message,
+          ),
+        onStream: (sourceId, stream) => {
+          if (!isHost && sourceId === hostPeerId(roomId))
+            onRemoteHostStreamRef.current?.(stream);
+          else
+            onRemoteParticipantRef.current?.({
+              id: sourceId,
+              stream,
+              preserveProfile: true,
+            });
+        },
+        onState: setAudienceState,
+        rejectPeer: (target) =>
+          setTimeout(() => connectionsRef.current.get(target)?.close(), 500),
+      });
       return peer;
     };
 
@@ -723,14 +735,7 @@ export function useRoomDataChannel({
         setConnectionError(null);
         retryAttemptRef.current = 0;
 
-        for (const remoteId of connectionsRef.current.keys()) {
-          ensureMediaCall(remoteId).catch((error) => {
-            console.warn(
-              "[peer] resync host media after signaling open failed",
-              error,
-            );
-          });
-        }
+        void audienceRef.current?.sync();
       });
 
       peer.on("disconnected", () => {
@@ -739,6 +744,7 @@ export function useRoomDataChannel({
         console.warn(
           "[peer] host disconnected from signaling server, reconnecting...",
         );
+        audienceRef.current?.restartEpoch();
         peer.reconnect();
       });
 
@@ -774,28 +780,16 @@ export function useRoomDataChannel({
         connectionsRef.current.set(remoteId, conn);
         bindConnection(conn, { remoteId, remoteName: "Guest" });
         conn.on("close", () => {
+          if (connectionsRef.current.get(remoteId) !== conn) return;
           connectionsRef.current.delete(remoteId);
           peerDeviceIdsRef.current.delete(remoteId);
           participantDisplayNamesRef.current.delete(remoteId);
-          mediaCallsRef.current.get(remoteId)?.close();
-          mediaCallsRef.current.delete(remoteId);
-          closeRelayCallsForViewer(remoteId);
-          closeRelayCallsForSource(remoteId);
         });
       });
 
       peer.on("call", (call) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
-        const connection = connectionsRef.current.get(call.peer);
-        if (
-          !connection ||
-          connectionsRef.current.size > MAX_PARTICIPANT_CONNECTIONS ||
-          mediaCallsRef.current.has(call.peer)
-        ) {
-          call.close();
-          return;
-        }
-        answerIncomingCall(call, call.peer);
+        audienceRef.current?.handleCall(call);
       });
 
       peer.on("error", (error) => {
@@ -862,19 +856,7 @@ export function useRoomDataChannel({
 
       peer.on("call", (call) => {
         if (destroyedRef.current || peer !== peerRef.current) return;
-        if (call.peer !== hostPeerId(roomId)) {
-          call.close();
-          return;
-        }
-        const relayFrom =
-          typeof call.metadata?.relayFrom === "string"
-            ? call.metadata.relayFrom
-            : null;
-        if (relayFrom) {
-          answerIncomingCall(call, relayFrom, { receiveOnly: true });
-          return;
-        }
-        answerIncomingCall(call, hostPeerId(roomId));
+        audienceRef.current?.handleCall(call);
       });
 
       peer.on("open", (id) => {
@@ -939,26 +921,23 @@ export function useRoomDataChannel({
       teardownPeerRef.current();
     };
   }, [
-    answerIncomingCall,
     bindConnection,
     clearConnectRetryTimer,
     clearConnectTimeout,
     clearRetryTimer,
     configReady,
     enabled,
-    ensureMediaCall,
     iceServers,
     isHost,
     peerConfig,
     peerAuthToken,
     peerId,
+    reconnectTrigger,
     roomId,
     scheduleConnectTimeout,
     schedulePeerRetry,
     scheduleReconnectToHost,
     token,
-    closeRelayCallsForSource,
-    closeRelayCallsForViewer,
   ]);
 
   useEffect(() => {
@@ -1009,10 +988,10 @@ export function useRoomDataChannel({
           connectionsRef.current.values(),
           (conn) => conn.peerConnection,
         ),
-        ...Array.from(
-          mediaCallsRef.current.values(),
-          (call) => call.peerConnection,
-        ),
+        ...[
+          ...(audienceRef.current?.incoming.values() ?? []),
+          ...(audienceRef.current?.outgoing.values() ?? []),
+        ].map((record) => record.call.peerConnection),
       ];
       setIsTurnActive(await hasRelayCandidate(peerConnections));
     }, 3000);
@@ -1037,6 +1016,11 @@ export function useRoomDataChannel({
     subscribe,
     disconnect,
     syncOutboundMedia: enqueueSync,
+    ...audienceState,
+    requestPublishing: (request) =>
+      audienceRef.current?.requestPublishing(request),
+    approvePublishing: (id) => audienceRef.current?.approve(id),
+    revokePublishing: (id) => audienceRef.current?.revoke(id),
     isConnected,
     hostPresent,
     localParticipantId,
