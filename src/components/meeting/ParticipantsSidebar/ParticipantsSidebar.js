@@ -1,200 +1,13 @@
 import { memo, useCallback, useMemo } from "react";
-import { ParticipantItem } from "@/components/meeting/ParticipantItem";
-import { MicOff, VideoOff, X } from "@/components/ui/Icons";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { VirtualList } from "@/components/Widgets";
-import {
-  displayNameInitial,
-  PARTICIPANT_MODE,
-  participantModeLabel,
-  resolveDisplayName,
-} from "@/lib/settings/displayNameSettings";
+import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import { ParticipantRow } from "./ParticipantRow";
+import { ParticipantsHeader } from "./ParticipantsHeader";
 import styles from "./ParticipantsSidebar.module.css";
+import { buildParticipantItems } from "./participantItems";
 
 const PARTICIPANT_ITEM_HEIGHT = 52;
 const SECTION_LABEL_HEIGHT = 44;
-
-function getModeLabel(mode) {
-  return participantModeLabel(
-    mode === PARTICIPANT_MODE.LISTENING
-      ? PARTICIPANT_MODE.LISTENING
-      : PARTICIPANT_MODE.AVAILABLE,
-  );
-}
-
-function _isListening(modeLabel) {
-  return modeLabel === "Listening only";
-}
-
-function buildParticipantItems({
-  isHost,
-  isVideoMuted,
-  isAudioMuted,
-  hostIsAudioMuted,
-  hostIsVideoMuted,
-  hostIsSpeaking,
-  hostMode,
-  localDisplayName,
-  localParticipantMode,
-  localIsSpeaking,
-  localIsScreenSharing,
-  hostIsScreenSharing,
-  hostDisplayName,
-  peerParticipants,
-  videoParticipants,
-  audioList,
-  connectionStatus,
-}) {
-  const selfName = resolveDisplayName(localDisplayName);
-  const selfInitial = displayNameInitial(localDisplayName);
-  const selfModeLabel = getModeLabel(localParticipantMode);
-
-  if (!isHost) {
-    const items = [
-      {
-        type: "host-remote",
-        id: "host",
-        name: resolveDisplayName(hostDisplayName),
-        initial: displayNameInitial(hostDisplayName),
-        avatarColor: "#6366f1",
-        isVideoMuted: hostIsVideoMuted,
-        isAudioMuted: hostIsAudioMuted,
-        isSpeaking: hostIsSpeaking,
-        isScreenSharing: hostIsScreenSharing,
-        hasVideo: true,
-        modeLabel: getModeLabel(hostMode),
-      },
-      {
-        type: "self",
-        id: "self",
-        name: selfName,
-        initial: selfInitial,
-        avatarColor: "#3b82f6",
-        isVideoMuted,
-        isAudioMuted,
-        isSpeaking: localIsSpeaking,
-        isScreenSharing: localIsScreenSharing,
-        hasVideo: true,
-        modeLabel: selfModeLabel,
-        connectionStatus,
-      },
-    ];
-
-    for (const participant of peerParticipants) {
-      items.push({
-        type: "peer",
-        id: participant.id,
-        name: participant.name,
-        initial: displayNameInitial(participant.name),
-        avatarColor: participant.avatarColor,
-        isVideoMuted: participant.isVideoMuted ?? false,
-        isAudioMuted: participant.isAudioMuted ?? false,
-        isSpeaking: participant.isSpeaking ?? false,
-        hasVideo: false,
-        modeLabel: getModeLabel(participant.mode),
-      });
-    }
-
-    return items;
-  }
-
-  const items = [
-    {
-      type: "host",
-      id: "host",
-      name: selfName,
-      initial: selfInitial,
-      avatarColor: "#3b82f6",
-      isVideoMuted,
-      isAudioMuted,
-      isSpeaking: localIsSpeaking,
-      isScreenSharing: localIsScreenSharing,
-      hasVideo: true,
-      modeLabel: selfModeLabel,
-      connectionStatus,
-    },
-  ];
-
-  for (const participant of videoParticipants) {
-    items.push({
-      type: "video",
-      id: participant.id,
-      name: participant.name,
-      initial: displayNameInitial(participant.name),
-      avatarColor: participant.avatarColor,
-      isVideoMuted: participant.isVideoMuted,
-      isAudioMuted: participant.isAudioMuted,
-      isSpeaking: participant.isSpeaking,
-      isScreenSharing: participant.isScreenSharing,
-      hasVideo: true,
-      modeLabel: getModeLabel(participant.mode),
-    });
-  }
-
-  if (audioList.length > 0) {
-    items.push({
-      type: "section",
-      id: "audio-section",
-      label: "Audio Participants",
-    });
-
-    for (const participant of audioList) {
-      items.push({
-        type: "audio",
-        id: participant.id,
-        name: participant.name,
-        initial: participant.name.charAt(0),
-        avatarColor: "#475569",
-        isAudioMuted: participant.isMuted,
-        isSpeaking: participant.isSpeaking,
-        hasVideo: false,
-      });
-    }
-  }
-
-  return items;
-}
-
-const ParticipantRow = memo(function ParticipantRow({
-  item,
-  isHost,
-  onMuteParticipantVideo,
-  onMuteParticipantAudio,
-  focusedParticipantId,
-  onFocusParticipant,
-}) {
-  if (item.type === "section") {
-    return <div className={styles.sectionLabel}>{item.label}</div>;
-  }
-
-  const isHostItem = item.type === "host";
-  const isSelfItem = item.id === "self";
-  const isRemotePeer = item.type === "peer" || item.type === "host-remote";
-  const canMute = isHost && !isHostItem && !isSelfItem && !isRemotePeer;
-  const canFocus = isHost && item.hasVideo && !isRemotePeer;
-
-  return (
-    <ParticipantItem
-      name={item.name}
-      initial={item.initial}
-      avatarColor={item.avatarColor}
-      avatarFontSize={item.avatarFontSize}
-      isVideoMuted={item.isVideoMuted}
-      isAudioMuted={item.isAudioMuted}
-      isSpeaking={item.isSpeaking}
-      isFocused={focusedParticipantId === item.id}
-      isScreenSharing={item.isScreenSharing}
-      hasVideo={item.hasVideo}
-      modeLabel={item.modeLabel}
-      connectionStatus={item.connectionStatus}
-      onMuteVideo={canMute ? () => onMuteParticipantVideo(item.id) : undefined}
-      onMuteAudio={
-        canMute ? () => onMuteParticipantAudio(item.id, item.type) : undefined
-      }
-      onFocus={canFocus ? () => onFocusParticipant?.(item.id) : undefined}
-    />
-  );
-});
 
 function getParticipantItemSize(_index, item) {
   return item.type === "section"
@@ -311,59 +124,16 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
       aria-hidden={!visible}
     >
       <aside className={styles.sidebar}>
-        <div className={styles.header}>
-          <div className={styles.headerCopy}>
-            <div className={styles.headerTitle}>
-              <span>Participants</span>
-              <span className={styles.count}>{totalCount}</span>
-            </div>
-            <p className={styles.headerMeta}>
-              {remoteCount === 0
-                ? "Only you are in the room."
-                : `${remoteCount} ${remoteCount === 1 ? "guest" : "guests"} connected.`}
-            </p>
-          </div>
-          <div className={styles.headerActions}>
-            {hasRemoteParticipants
-              ? <div className={styles.bulkActions}>
-                  <Tooltip text="Turn off all cameras" placement="left">
-                    <button
-                      type="button"
-                      className={styles.bulkBtn}
-                      onClick={onMuteAllVideo}
-                      disabled={!canMuteAllVideo}
-                      aria-label="Turn off all cameras"
-                    >
-                      <VideoOff />
-                    </button>
-                  </Tooltip>
-                  <Tooltip text="Mute all participants" placement="left">
-                    <button
-                      type="button"
-                      className={styles.bulkBtn}
-                      onClick={onMuteAllAudio}
-                      disabled={!canMuteAllAudio}
-                      aria-label="Mute all participants"
-                    >
-                      <MicOff />
-                    </button>
-                  </Tooltip>
-                </div>
-              : null}
-            {onClose
-              ? <Tooltip text="Close participants" placement="left">
-                  <button
-                    type="button"
-                    className={styles.closeButton}
-                    onClick={onClose}
-                    aria-label="Close participants"
-                  >
-                    <X size={18} />
-                  </button>
-                </Tooltip>
-              : null}
-          </div>
-        </div>
+        <ParticipantsHeader
+          totalCount={totalCount}
+          remoteCount={remoteCount}
+          hasRemoteParticipants={hasRemoteParticipants}
+          onMuteAllVideo={onMuteAllVideo}
+          canMuteAllVideo={canMuteAllVideo}
+          onMuteAllAudio={onMuteAllAudio}
+          canMuteAllAudio={canMuteAllAudio}
+          onClose={onClose}
+        />
 
         <VirtualList
           className={styles.list}

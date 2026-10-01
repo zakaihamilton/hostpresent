@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DisplayNameField } from "@/components/ui/DisplayNameField";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
 import { useRoomSession, useRoomSettings } from "@/hooks/roomSession";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -24,9 +23,9 @@ import {
   removeHostRoomByToken,
   updateRoomTitle,
 } from "@/lib/settings/roomSettings";
-import { JoinCodeBoxes } from "./JoinCodeBoxes";
+import { HostRoomSharing } from "./HostRoomSharing";
+import { HostSessionDetails } from "./HostSessionDetails";
 import { RecentRoomsTrigger } from "./RecentRoomsTrigger";
-import hs from "./WelcomeHostPanel.module.css";
 import shared from "./WelcomeShared.module.css";
 
 export function WelcomeHostPanel({ legacyToken, navigate }) {
@@ -240,109 +239,21 @@ export function WelcomeHostPanel({ legacyToken, navigate }) {
         </p>
       </div>
 
-      {/* Hidden tabs kept for accessibility/test suite compatibility */}
-      <div
-        className={shared.visuallyHidden}
-        role="tablist"
-        aria-label="Sharing options"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeShareTab === "link"}
-          className={`${shared.shareTab} ${activeShareTab === "link" ? shared.shareTabActive : ""}`}
-          onClick={() => setActiveShareTab("link")}
-        >
-          Invite link
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeShareTab === "code"}
-          className={`${shared.shareTab} ${activeShareTab === "code" ? shared.shareTabActive : ""}`}
-          onClick={() => setActiveShareTab("code")}
-        >
-          Room code
-        </button>
-      </div>
+      <HostRoomSharing
+        activeShareTab={activeShareTab}
+        setActiveShareTab={setActiveShareTab}
+        inviteLink={inviteLink}
+        formattedJoinCode={formattedJoinCode}
+        copyMessage={copyMessage}
+        handleCopyLink={handleCopyLink}
+        handleCopyJoinCode={handleCopyJoinCode}
+      />
 
-      <div className={hs.shareSection}>
-        <div className={shared.directActionsGrid}>
-          <div className={shared.directActionSection}>
-            <label className={shared.label} htmlFor="invite-link">
-              Invite link
-            </label>
-            <div className={shared.directActionRow}>
-              <input
-                id="invite-link"
-                className={shared.linkInput}
-                readOnly
-                value={inviteLink}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-              <button
-                type="button"
-                className={`${shared.button} ${shared.buttonCopyInline}`}
-                onClick={handleCopyLink}
-                disabled={!inviteLink}
-              >
-                {activeShareTab === "link" && copyMessage
-                  ? copyMessage
-                  : "Copy invite link"}
-              </button>
-            </div>
-          </div>
-
-          <div className={shared.directActionSection}>
-            <label className={shared.label} htmlFor="join-code-box-0">
-              Room code
-            </label>
-            <div className={shared.directActionRow}>
-              <JoinCodeBoxes
-                value={formattedJoinCode}
-                readOnly
-                className={shared.joinCodeBoxes}
-              />
-              <button
-                type="button"
-                className={`${shared.button} ${shared.buttonCopyInline}`}
-                onClick={handleCopyJoinCode}
-                disabled={!formattedJoinCode}
-              >
-                {activeShareTab === "code" && copyMessage
-                  ? copyMessage
-                  : "Copy room code"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={hs.titleField}>
-        <label className={shared.label} htmlFor="session-title">
-          Session title
-        </label>
-        <input
-          id="session-title"
-          className={hs.titleInput}
-          value={sessionTitle}
-          onChange={(e) => handleSessionTitleChange(e.target.value)}
-          placeholder="e.g. Weekly Standup"
-          maxLength={100}
-          autoComplete="off"
-          spellCheck={false}
-        />
-        <p className={shared.helpText}>
-          This also becomes the default recording file name.
-        </p>
-      </div>
-
-      <DisplayNameField
-        id="host-display-name"
-        label="Your name"
-        value={displayName}
-        onChange={handleDisplayNameChange}
-        placeholder="How should participants see you?"
+      <HostSessionDetails
+        sessionTitle={sessionTitle}
+        handleSessionTitleChange={handleSessionTitleChange}
+        displayName={displayName}
+        handleDisplayNameChange={handleDisplayNameChange}
       />
 
       <div className={shared.actions}>
