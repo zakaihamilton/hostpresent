@@ -13,22 +13,22 @@
     "test:unit": "jest",
     "test:automated": "npm run test:unit -- --runInBand && npm run build && npm run test:e2e:smoke",
     "test:e2e": "env -u FORCE_COLOR -u NO_COLOR playwright test",
-    "test:e2e:smoke": "env -u FORCE_COLOR -u NO_COLOR playwright test tests/e2e/welcome-smoke.spec.js --project=chromium",
+    "test:e2e:smoke": "env -u FORCE_COLOR -u NO_COLOR PLAYWRIGHT_SERVER_MODE=production playwright test tests/e2e/welcome-smoke.spec.js --project=chromium",
     "test:e2e:webrtc": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/meeting-webrtc.spec.js --project=chromium",
     "test:watch": "jest --watch",
     "health": "repnix check",
     "health:dead-code": "knip",
     "health:duplication": "jscpd src",
-    "health:coverage": "c8 --all --reporter=text yarn test",
+    "health:coverage": "c8 --all --reporter=text npm run test:unit -- --runInBand",
     "health:architecture": "depcruise --output-type json --config -- src",
     "health:licenses": "license-checker --json",
-    "health:documentation": "markdownlint-cli2 \"**/*.md\" \"#node_modules\""
+    "health:documentation": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+    "test:e2e:audience": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/audience-rooms.spec.js --project=chromium"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@next/env": "16.3.6",
     "mediabunny": "^1.50.8",
     "next": "16.3.6",
     "peerjs": "^1.5.5",
@@ -52,6 +52,7 @@
     "knip": "^6.32.2",
     "license-checker": "^25.0.1",
     "markdownlint-cli2": "^0.23.2",
-    "repnix": "^1.0.4"
+    "repnix": "^1.0.4",
+    "peerovo": "github:zakaihamilton/peerovo#ba63510bf4bad3f968c6d7464db11c7faf7475df"
   }
 }
