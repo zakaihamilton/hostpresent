@@ -57,8 +57,9 @@ Start HostPresent in a second terminal with npm run dev, then run:
 RUN_WEBRTC_E2E=1 npm run test:e2e:webrtc
 ~~~
 
-The E2E spec launches separate browser contexts for the host and two
-participants with fake camera/microphone permissions. It creates a host room,
+The E2E spec uses `@peerovo/test` to launch isolated browser clients for the host and two
+participants with fake camera/microphone permissions. Each client has a separate
+Playwright browser context, so browser storage and session state cannot leak between roles. It creates a host room,
 joins two participants by code, checks roster propagation, sends a chat message,
 toggles participant camera state, and verifies participant leave state.
 
