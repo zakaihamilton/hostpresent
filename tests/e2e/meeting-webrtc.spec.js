@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
+import { createPeerovoTest } from "@peerovo/test";
 
 const runWebRtcE2e = process.env.RUN_WEBRTC_E2E === "1";
 const disableOpfs = process.env.PLAYWRIGHT_DISABLE_OPFS === "1";
@@ -188,13 +189,12 @@ async function closeParticipants(page) {
 test("host and two participants exchange roster, media, chat, and leave state", async ({
   browser,
 }) => {
-  const hostContext = await browser.newContext();
-  const participantOneContext = await browser.newContext();
-  const participantTwoContext = await browser.newContext();
-
-  const host = await hostContext.newPage();
-  const participantOne = await participantOneContext.newPage();
-  const participantTwo = await participantTwoContext.newPage();
+  const peerovo = createPeerovoTest(browser, { baseURL: "http://127.0.0.1:3000" });
+  const [hostClient, participantOneClient, participantTwoClient] =
+    await peerovo.clients(3);
+  const host = hostClient.page;
+  const participantOne = participantOneClient.page;
+  const participantTwo = participantTwoClient.page;
 
   await Promise.all([
     clearClientState(host),
@@ -232,9 +232,11 @@ test("host and two participants exchange roster, media, chat, and leave state", 
   ).toBeVisible();
   await expect(host.getByText("Pat Two")).toBeHidden();
 
-  await participantTwoContext.close();
-  await participantOneContext.close();
-  await hostContext.close();
+  await peerovo.closeAll([
+    participantTwoClient,
+    participantOneClient,
+    hostClient,
+  ]);
 });
 
 test("host records locally and focuses participants with auto-focus fallback", async ({
