@@ -257,6 +257,7 @@ function renderRecording({
 
   return {
     ...view,
+    props,
     setIsRecording,
     setIsRecordingPaused,
     resetRecordingTimer,
@@ -565,7 +566,7 @@ describe("Recording", () => {
     const cameraTrack = createTrack({ kind: "video", id: "camera" });
     const localStream = createStream([cameraTrack]);
 
-    const { result, rerender } = renderRecording({
+    const { result, rerender, props } = renderRecording({
       localStream,
       screenStream: null,
       isRecording: true,
@@ -584,20 +585,7 @@ describe("Recording", () => {
     const screenStream = createStream([screenTrack]);
 
     act(() => {
-      rerender({
-        isHost: true,
-        roomConnection: { send: jest.fn() },
-        localStream,
-        screenStream,
-        videoParticipants: [],
-        focusedParticipantId: "host",
-        resetRecordingTimer: jest.fn(),
-        isRecording: true,
-        setIsRecording: jest.fn(),
-        isRecordingPaused: false,
-        setIsRecordingPaused: jest.fn(),
-        sessionName: "Test Session",
-      });
+      rerender({ ...props, screenStream });
     });
 
     expect(recorderInstances).toHaveLength(2);
@@ -612,7 +600,7 @@ describe("Recording", () => {
     const localStream = createStream([cameraTrack]);
     const screenStream = createStream([screenTrack]);
 
-    const { result, rerender } = renderRecording({
+    const { result, rerender, props } = renderRecording({
       localStream,
       screenStream,
       isRecording: true,
@@ -627,20 +615,7 @@ describe("Recording", () => {
     );
 
     act(() => {
-      rerender({
-        isHost: true,
-        roomConnection: { send: jest.fn() },
-        localStream,
-        screenStream: null,
-        videoParticipants: [],
-        focusedParticipantId: "host",
-        resetRecordingTimer: jest.fn(),
-        isRecording: true,
-        setIsRecording: jest.fn(),
-        isRecordingPaused: false,
-        setIsRecordingPaused: jest.fn(),
-        sessionName: "Test Session",
-      });
+      rerender({ ...props, screenStream: null });
     });
 
     expect(recorderInstances).toHaveLength(2);
