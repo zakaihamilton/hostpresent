@@ -212,6 +212,12 @@ export async function rebuildRecordingCapture({ media, storage, callbacks }) {
             })),
             { sessionId: session.id, directory: exportDirectoryRef.current },
           );
+          await updateRecordingSession({ status: "exported" });
+          if (!data.files.some((file) => file.storage === "indexeddb")) {
+            await clearSavedRecording();
+          }
+          recordingSessionRef.current = null;
+          updateDownloadProgress("complete", 100, videoName);
         } catch (error) {
           await updateRecordingSession({ status: "interrupted" });
           updateDownloadProgress(
@@ -221,17 +227,10 @@ export async function rebuildRecordingCapture({ media, storage, callbacks }) {
               ? error.message
               : "Could not deliver recording files.",
           );
+        } finally {
+          releaseWorker();
           resolveCaptureSaveCompletion();
-          return;
         }
-        await updateRecordingSession({ status: "exported" });
-        updateDownloadProgress("complete", 100, videoName);
-        if (!data.files.some((file) => file.storage === "indexeddb")) {
-          clearSavedRecording().catch(() => {});
-        }
-        recordingSessionRef.current = null;
-        releaseWorker();
-        resolveCaptureSaveCompletion();
       }
     };
     worker.onerror = (event) => {

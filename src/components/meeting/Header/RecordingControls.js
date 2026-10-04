@@ -7,6 +7,7 @@ export function RecordingControls({
   showRecording,
   isRecording,
   isRecordingPaused,
+  isRecordingBusy = false,
   recordingDurationSeconds,
   onStartRecording,
   onPauseRecording,
@@ -26,6 +27,7 @@ export function RecordingControls({
                   type="button"
                   className={styles.recordStartBtn}
                   onClick={onStartRecording}
+                  disabled={isRecordingBusy}
                   aria-label="Start recording"
                 >
                   <span className={styles.recordIndicatorDot} />
@@ -50,6 +52,7 @@ export function RecordingControls({
                           type="button"
                           className={styles.recordingActionBtn}
                           onClick={onResumeRecording}
+                          disabled={isRecordingBusy}
                           aria-label="Resume recording"
                         >
                           <Play size={12} />
@@ -60,6 +63,7 @@ export function RecordingControls({
                           type="button"
                           className={styles.recordingActionBtn}
                           onClick={onPauseRecording}
+                          disabled={isRecordingBusy}
                           aria-label="Pause recording"
                         >
                           <Pause size={12} />
@@ -70,6 +74,7 @@ export function RecordingControls({
                       type="button"
                       className={`${styles.recordingActionBtn} ${styles.recordingActionBtnStop}`}
                       onClick={onStopRecording}
+                      disabled={isRecordingBusy}
                       aria-label="Stop and save recording"
                     >
                       <Stop size={12} />

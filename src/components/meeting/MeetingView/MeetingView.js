@@ -255,6 +255,7 @@ function MeetingViewInner({
   const {
     isAudioMuted,
     isVideoMuted,
+    localTrackRevision,
     errorMsg,
     setErrorMsg,
     shareScreenAudio,
@@ -343,6 +344,7 @@ function MeetingViewInner({
 
   const {
     downloadState,
+    isRecordingBusy,
     savedRecording,
     canResumeSavedRecording,
     dismissDownloadBanner,
@@ -355,6 +357,7 @@ function MeetingViewInner({
     stopRecording,
     stopRecordingAsync,
   } = Recording({
+    localTrackRevision,
     isHost,
     roomConnection,
     localStream,
@@ -598,6 +601,7 @@ function MeetingViewInner({
           isRecording,
           isRecordingPaused,
           recordingDurationSeconds: recordingSeconds,
+          isRecordingBusy,
           onShowInviteLink:
             isHost && inviteLink && !inviteBarVisible
               ? handleShowInviteBar
@@ -720,6 +724,7 @@ function MeetingViewInner({
               : null,
         }}
         recording={{
+          busy: isRecordingBusy,
           canResume: canResumeSavedRecording,
           onResume: resumeSavedRecording,
           onDownload: downloadSavedRecording,

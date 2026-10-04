@@ -221,6 +221,7 @@ describe("MediaControls Hook", () => {
     expect(oldAudioTrack.stop).toHaveBeenCalledTimes(1);
     expect(localStream.getAudioTracks()).toEqual([replacementAudioTrack]);
     expect(result.current.isVoiceIsolationEnabled).toBe(false);
+    expect(result.current.localTrackRevision).toBe(1);
     expect(window.localStorage.getItem("hostpresent.voiceIsolation")).toBe(
       "false",
     );
@@ -432,6 +433,7 @@ describe("MediaControls Hook", () => {
     });
     const newVideoStream = createStream([newVideoTrack]);
     const syncOutboundMedia = jest.fn();
+    const setLocalStream = jest.fn();
 
     navigator.mediaDevices.getUserMedia
       .mockResolvedValueOnce(localStream)
@@ -456,7 +458,7 @@ describe("MediaControls Hook", () => {
         isHost: true,
         roomConnection: { send: jest.fn(), syncOutboundMedia },
         localStream,
-        setLocalStream: jest.fn(),
+        setLocalStream,
         screenStream: null,
         setScreenStream: jest.fn(),
       }),
@@ -467,7 +469,10 @@ describe("MediaControls Hook", () => {
     });
 
     navigator.mediaDevices.getUserMedia.mockResolvedValueOnce(newVideoStream);
-    await result.current.switchCamera("back-camera-id");
+    await act(async () => {
+      await result.current.switchCamera("back-camera-id");
+    });
+    expect(result.current.localTrackRevision).toBe(1);
 
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({
       video: {
@@ -500,6 +505,7 @@ describe("MediaControls Hook", () => {
     });
     const newAudioStream = createStream([newAudioTrack]);
     const syncOutboundMedia = jest.fn();
+    const setLocalStream = jest.fn();
 
     navigator.mediaDevices.getUserMedia
       .mockResolvedValueOnce(localStream)
@@ -528,7 +534,7 @@ describe("MediaControls Hook", () => {
           syncOutboundMedia,
         },
         localStream,
-        setLocalStream: jest.fn(),
+        setLocalStream,
         screenStream: null,
         setScreenStream: jest.fn(),
       }),
@@ -539,7 +545,10 @@ describe("MediaControls Hook", () => {
     });
 
     navigator.mediaDevices.getUserMedia.mockResolvedValueOnce(newAudioStream);
-    await result.current.switchMicrophone("external-mic-id");
+    await act(async () => {
+      await result.current.switchMicrophone("external-mic-id");
+    });
+    expect(result.current.localTrackRevision).toBe(1);
 
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({
       audio: {
@@ -657,21 +666,11 @@ describe("MediaControls Hook", () => {
       .fn()
       .mockResolvedValue(screenStream);
 
-    const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: {
-          send,
-          localParticipantId: "p1",
-          syncOutboundMedia,
-        },
-        localStream: createStream([]),
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream,
-      }),
-    );
+    const { result } = renderScreenShareControls({
+      send,
+      syncOutboundMedia,
+      setScreenStream,
+    });
 
     await result.current.toggleScreenShare();
 
@@ -704,21 +703,11 @@ describe("MediaControls Hook", () => {
       .fn()
       .mockResolvedValue(screenStream);
 
-    const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: true,
-        roomConnection: {
-          send,
-          localParticipantId: "host",
-          syncOutboundMedia: jest.fn(),
-        },
-        localStream: createStream([]),
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream,
-      }),
-    );
+    const { result } = renderScreenShareControls({
+      isHost: true,
+      send,
+      setScreenStream,
+    });
 
     await result.current.toggleScreenShare();
 
@@ -729,29 +718,7 @@ describe("MediaControls Hook", () => {
   });
 
   it("requests screen sharing without audio when screen audio is disabled", async () => {
-    const screenStream = createStream([
-      createTrack({ kind: "video", id: "screen-track" }),
-    ]);
-
-    navigator.mediaDevices.getDisplayMedia = jest
-      .fn()
-      .mockResolvedValue(screenStream);
-
-    const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: {
-          send: jest.fn(),
-          localParticipantId: "p1",
-          syncOutboundMedia: jest.fn(),
-        },
-        localStream: createStream([]),
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
-    );
+    const { result } = renderVideoOnlyScreenShare();
 
     act(() => {
       result.current.setShareScreenAudioPreference(false);
@@ -767,29 +734,7 @@ describe("MediaControls Hook", () => {
   });
 
   it("reports a warning when requested screen audio is missing", async () => {
-    const screenStream = createStream([
-      createTrack({ kind: "video", id: "screen-track" }),
-    ]);
-
-    navigator.mediaDevices.getDisplayMedia = jest
-      .fn()
-      .mockResolvedValue(screenStream);
-
-    const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: {
-          send: jest.fn(),
-          localParticipantId: "p1",
-          syncOutboundMedia: jest.fn(),
-        },
-        localStream: createStream([]),
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
-    );
+    const { result } = renderVideoOnlyScreenShare();
 
     await result.current.toggleScreenShare();
 
@@ -812,21 +757,11 @@ describe("MediaControls Hook", () => {
     const syncOutboundMedia = jest.fn();
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-    const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: {
-          send,
-          localParticipantId: "p1",
-          syncOutboundMedia,
-        },
-        localStream: createStream([]),
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream,
-      }),
-    );
+    const { result } = renderScreenShareControls({
+      send,
+      syncOutboundMedia,
+      setScreenStream,
+    });
 
     await result.current.toggleScreenShare();
 
@@ -856,21 +791,12 @@ describe("MediaControls Hook", () => {
       .fn()
       .mockResolvedValue(audioOnlyScreenStream);
 
-    const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: true,
-        roomConnection: {
-          send,
-          localParticipantId: "host",
-          syncOutboundMedia: jest.fn(),
-        },
-        localStream: createStream([]),
-        setLocalStream,
-        screenStream: null,
-        setScreenStream,
-      }),
-    );
+    const { result } = renderScreenShareControls({
+      isHost: true,
+      send,
+      setScreenStream,
+      setLocalStream,
+    });
 
     await act(async () => {
       await result.current.toggleScreenShare();
@@ -906,3 +832,33 @@ it("keeps the status publisher stable when the room connection object refreshes"
   expect(result.current.publishParticipantMediaStatus).toBe(publish);
   expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
 });
+
+function renderScreenShareControls({
+  isHost = false,
+  send = jest.fn(),
+  syncOutboundMedia = jest.fn(),
+  setScreenStream = jest.fn(),
+  setLocalStream = jest.fn(),
+} = {}) {
+  const props = {
+    publishingGranted: true,
+    isHost,
+    roomConnection: {
+      send,
+      syncOutboundMedia,
+      localParticipantId: isHost ? "host" : "p1",
+    },
+    localStream: createStream([]),
+    screenStream: null,
+    setLocalStream,
+    setScreenStream,
+  };
+  return renderHook(() => MediaControls(props));
+}
+
+function renderVideoOnlyScreenShare() {
+  navigator.mediaDevices.getDisplayMedia.mockResolvedValue(
+    createStream([createTrack({ kind: "video" })]),
+  );
+  return renderScreenShareControls();
+}

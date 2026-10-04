@@ -208,4 +208,10 @@ describe("Header", () => {
 
     expect(onSessionTitleChange).toHaveBeenCalledWith("");
   });
+  it("disables starting another recording while saving", () => {
+    render(<Header showRecording isRecording={false} isRecordingBusy />);
+    expect(
+      screen.getByRole("button", { name: "Start recording" }),
+    ).toBeDisabled();
+  });
 });

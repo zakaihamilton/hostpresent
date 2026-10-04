@@ -69,6 +69,7 @@ export function MediaControls({
       return false;
     }
   });
+  const [localTrackRevision, setLocalTrackRevision] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [shareScreenAudio, setShareScreenAudio] = useState(true);
   const [availableCameras, setAvailableCameras] = useState([]);
@@ -274,6 +275,7 @@ export function MediaControls({
           videoTrack.stop();
         }
         localStream.addTrack(newTrack);
+        setLocalTrackRevision((revision) => revision + 1);
         newTrack.enabled = !wasMuted;
         setSelectedCamera(deviceId);
         void roomConnection.syncOutboundMedia?.();
@@ -316,6 +318,7 @@ export function MediaControls({
       track.stop();
     }
     localStream.addTrack(newTrack);
+    setLocalTrackRevision((revision) => revision + 1);
     return newTrack;
   }, [localStream, selectedCamera, keepAcquiredStream]);
 
@@ -347,6 +350,7 @@ export function MediaControls({
           audioTrack.stop();
         }
         localStream.addTrack(newTrack);
+        setLocalTrackRevision((revision) => revision + 1);
         newTrack.enabled = !wasMuted;
         setSelectedMicrophone(deviceId);
         void roomConnection.syncOutboundMedia?.();
@@ -400,6 +404,7 @@ export function MediaControls({
           currentTrack.stop();
         }
         localStream.addTrack(newTrack);
+        setLocalTrackRevision((revision) => revision + 1);
         newTrack.enabled = !isAudioMuted;
         void roomConnection.syncOutboundMedia?.();
       } catch (err) {
@@ -671,6 +676,7 @@ export function MediaControls({
   }, []);
 
   return {
+    localTrackRevision,
     localStream,
     setLocalStream,
     screenStream,
