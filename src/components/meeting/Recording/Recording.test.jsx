@@ -13,6 +13,9 @@ HTMLCanvasElement.prototype.captureStream = jest.fn(() => ({
       kind: "video",
       readyState: "live",
       enabled: true,
+      clone() {
+        return this;
+      },
     },
   ],
 }));
@@ -25,6 +28,9 @@ const mockAudioDestination = {
         kind: "audio",
         readyState: "live",
         enabled: true,
+        clone() {
+          return this;
+        },
       },
     ],
   },
@@ -54,12 +60,26 @@ import {
   getRecordingStoragePreflight,
   loadSavedRecording,
 } from "@/components/meeting/Recording/recordingStorage";
+import { finalizePersistedRecording } from "./controllers/finalizePersistedRecording";
 import {
   CanvasVideoRenderer,
   getRecordingMediaSignature,
   Recording,
   RecordingAudioMixer,
 } from "./Recording";
+import {
+  createWebCodecsRecordingWorker,
+  supportsWebCodecsRecording,
+} from "./webCodecsRecording";
+
+jest.mock("./controllers/finalizePersistedRecording", () => ({
+  finalizePersistedRecording: jest.fn().mockResolvedValue(true),
+}));
+jest.mock("./webCodecsRecording", () => ({
+  supportsWebCodecsRecording: jest.fn(() => false),
+  supportsWebCodecsRecordingCodecs: jest.fn().mockResolvedValue(true),
+  createWebCodecsRecordingWorker: jest.fn(),
+}));
 
 jest.spyOn(CanvasVideoRenderer.prototype, "setTrack");
 jest.spyOn(RecordingAudioMixer.prototype, "updateTracks");
@@ -68,6 +88,8 @@ jest.mock("@/components/meeting/Recording/recordingStorage", () => ({
   closeActiveRecordingSegment: jest.fn().mockResolvedValue(undefined),
   clearSavedRecording: jest.fn().mockResolvedValue(undefined),
   createRecordingSession: jest.fn().mockResolvedValue({
+    id: "session-1",
+    sessionName: "Test Session",
     tracks: {
       video: { stream: "video", chunkCount: 0 },
       audio: { stream: "audio", chunkCount: 0 },
@@ -82,6 +104,7 @@ jest.mock("@/components/meeting/Recording/recordingStorage", () => ({
 }));
 
 jest.mock("@/components/meeting/Recording/recordingExport", () => ({
+  deliverRecordingExports: jest.fn().mockResolvedValue(undefined),
   chooseRecordingDirectory: jest.fn().mockResolvedValue({}),
   hasDirectFileExport: jest.fn(() => true),
 }));
@@ -111,11 +134,12 @@ function createTrack({
   };
 }
 
-function createStream(tracks = []) {
+function createStream(tracks = [], emitTrackEvents = true) {
   const streamTracks = [...tracks];
   const listeners = new Map();
 
   const emit = (type) => {
+    if (!emitTrackEvents) return;
     for (const handler of listeners.get(type) ?? []) {
       handler();
     }
@@ -291,6 +315,8 @@ describe("Recording", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    supportsWebCodecsRecording.mockReturnValue(false);
+    finalizePersistedRecording.mockResolvedValue(true);
     jest.useFakeTimers();
     Object.defineProperty(window, "showDirectoryPicker", {
       configurable: true,
@@ -307,6 +333,155 @@ describe("Recording", () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it("serializes initialization and releases the lock after failure", async () => {
+    let rejectPreflight;
+    getRecordingStoragePreflight.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectPreflight = reject;
+      }),
+    );
+    const { result } = renderRecording();
+    let starting;
+    act(() => {
+      starting = result.current.startRecording();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.isRecordingBusy).toBe(true);
+    expect(result.current.startRecording()).toBe(starting);
+    expect(clearSavedRecording).not.toHaveBeenCalled();
+    await act(async () => {
+      rejectPreflight(new Error("Storage unavailable"));
+      await starting;
+    });
+    expect(result.current.isRecordingBusy).toBe(false);
+    await act(async () => {
+      await result.current.startRecording();
+    });
+    expect(createRecordingSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks new starts and discards until export finishes", async () => {
+    let finishExport;
+    finalizePersistedRecording.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishExport = resolve;
+      }),
+    );
+    const { result } = renderRecording();
+    await act(async () => {
+      await result.current.startRecording();
+    });
+    let saving;
+    act(() => {
+      saving = result.current.stopRecordingAsync();
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.isRecordingBusy).toBe(true);
+    expect(result.current.startRecording()).toBe(saving);
+    expect(result.current.discardSavedRecording()).toBe(saving);
+    expect(result.current.stopRecordingAsync()).toBe(saving);
+    expect(clearSavedRecording).toHaveBeenCalledTimes(1);
+    expect(createRecordingSession).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finishExport(true);
+      await saving;
+    });
+    expect(result.current.isRecordingBusy).toBe(false);
+    await act(async () => {
+      await result.current.startRecording();
+    });
+    expect(createRecordingSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("recreates video and audio capture after stopping a WebCodecs recording", async () => {
+    supportsWebCodecsRecording.mockReturnValue(true);
+    const worker = { postMessage: jest.fn(), terminate: jest.fn() };
+    createWebCodecsRecordingWorker.mockReturnValue(worker);
+    const originalProcessor = global.MediaStreamTrackProcessor;
+    global.MediaStreamTrackProcessor = class {
+      readable = {};
+    };
+    const startSpy = jest.spyOn(CanvasVideoRenderer.prototype, "start");
+    const closeSpy = jest.spyOn(MockAudioContext.prototype, "close");
+    const { result } = renderRecording();
+    try {
+      await act(async () => {
+        await result.current.startRecording();
+      });
+      let saving;
+      act(() => {
+        result.current.stopRecording();
+        saving = result.current.stopRecordingAsync();
+      });
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await worker.onmessage({
+          data: { type: "complete", capture: true, files: [] },
+        });
+        await worker.onmessage({ data: { type: "complete", files: [] } });
+        await saving;
+      });
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await result.current.startRecording();
+      });
+      expect(startSpy).toHaveBeenCalledTimes(2);
+      expect(recorderInstances).toHaveLength(4);
+    } finally {
+      global.MediaStreamTrackProcessor = originalProcessor;
+      startSpy.mockRestore();
+      closeSpy.mockRestore();
+    }
+  });
+
+  it("updates local recording tracks after an in-place device replacement", async () => {
+    const camera = createTrack({ kind: "video", id: "old-camera" });
+    const mic = createTrack({ kind: "audio", id: "old-mic" });
+    const stream = createStream([camera, mic], false);
+    const props = {
+      isHost: true,
+      localStream: stream,
+      screenStream: null,
+      videoParticipants: [],
+      focusedParticipantId: "host",
+      isRecording: true,
+      setIsRecording: jest.fn(),
+      setIsRecordingPaused: jest.fn(),
+      resetRecordingTimer: jest.fn(),
+      roomConnection: { send: jest.fn() },
+    };
+    const { result, rerender } = renderHook((next) => Recording(next), {
+      initialProps: props,
+    });
+    await act(async () => {
+      await result.current.startRecording();
+    });
+    const replacementCamera = createTrack({ kind: "video", id: "new-camera" });
+    const replacementMic = createTrack({ kind: "audio", id: "new-mic" });
+    // Scripted MediaStream mutations do not emit browser track events.
+    act(() => {
+      stream.removeTrack(camera);
+      stream.removeTrack(mic);
+      stream.addTrack(replacementCamera);
+      stream.addTrack(replacementMic);
+      rerender({ ...props, localTrackRevision: 1 });
+    });
+    expect(CanvasVideoRenderer.prototype.setTrack).toHaveBeenLastCalledWith(
+      replacementCamera,
+    );
+    expect(RecordingAudioMixer.prototype.updateTracks).toHaveBeenLastCalledWith(
+      [replacementMic],
+    );
   });
 
   it("clears a recovered session before creating the next manifest", async () => {
@@ -485,7 +660,7 @@ describe("Recording", () => {
       },
     ];
 
-    const { result, rerender } = renderRecording({
+    const { result } = renderRecording({
       localStream: createStream([]),
       screenStream: null,
       videoParticipants,
@@ -506,20 +681,6 @@ describe("Recording", () => {
     act(() => {
       remoteStream.removeTrack(cameraTrack);
       remoteStream.addTrack(screenTrack);
-      rerender({
-        isHost: true,
-        roomConnection: { send: jest.fn() },
-        localStream: createStream([]),
-        screenStream: null,
-        videoParticipants,
-        focusedParticipantId: "p1",
-        resetRecordingTimer: jest.fn(),
-        isRecording: true,
-        setIsRecording: jest.fn(),
-        isRecordingPaused: false,
-        setIsRecordingPaused: jest.fn(),
-        sessionName: "Test Session",
-      });
     });
 
     expect(recorderInstances).toHaveLength(2);

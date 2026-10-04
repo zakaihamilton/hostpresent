@@ -2,6 +2,7 @@ import styles from "../MeetingView.module.css";
 
 export function SavedRecordingBanner({
   canResume,
+  busy = false,
   onDiscard,
   onDownload,
   onResume,
@@ -14,7 +15,7 @@ export function SavedRecordingBanner({
           type="button"
           className={styles.savedRecordingDownload}
           onClick={onResume}
-          disabled={!canResume}
+          disabled={busy || !canResume}
         >
           Resume
         </button>
@@ -22,6 +23,7 @@ export function SavedRecordingBanner({
           type="button"
           className={styles.savedRecordingDownload}
           onClick={onDownload}
+          disabled={busy}
         >
           Download
         </button>
@@ -29,6 +31,7 @@ export function SavedRecordingBanner({
           type="button"
           className={styles.savedRecordingDiscard}
           onClick={onDiscard}
+          disabled={busy}
         >
           Discard
         </button>

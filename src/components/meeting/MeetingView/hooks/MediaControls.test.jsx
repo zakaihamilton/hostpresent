@@ -221,6 +221,7 @@ describe("MediaControls Hook", () => {
     expect(oldAudioTrack.stop).toHaveBeenCalledTimes(1);
     expect(localStream.getAudioTracks()).toEqual([replacementAudioTrack]);
     expect(result.current.isVoiceIsolationEnabled).toBe(false);
+    expect(result.current.localTrackRevision).toBe(1);
     expect(window.localStorage.getItem("hostpresent.voiceIsolation")).toBe(
       "false",
     );
@@ -432,6 +433,7 @@ describe("MediaControls Hook", () => {
     });
     const newVideoStream = createStream([newVideoTrack]);
     const syncOutboundMedia = jest.fn();
+    const setLocalStream = jest.fn();
 
     navigator.mediaDevices.getUserMedia
       .mockResolvedValueOnce(localStream)
@@ -456,7 +458,7 @@ describe("MediaControls Hook", () => {
         isHost: true,
         roomConnection: { send: jest.fn(), syncOutboundMedia },
         localStream,
-        setLocalStream: jest.fn(),
+        setLocalStream,
         screenStream: null,
         setScreenStream: jest.fn(),
       }),
@@ -467,7 +469,10 @@ describe("MediaControls Hook", () => {
     });
 
     navigator.mediaDevices.getUserMedia.mockResolvedValueOnce(newVideoStream);
-    await result.current.switchCamera("back-camera-id");
+    await act(async () => {
+      await result.current.switchCamera("back-camera-id");
+    });
+    expect(result.current.localTrackRevision).toBe(1);
 
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({
       video: {
@@ -500,6 +505,7 @@ describe("MediaControls Hook", () => {
     });
     const newAudioStream = createStream([newAudioTrack]);
     const syncOutboundMedia = jest.fn();
+    const setLocalStream = jest.fn();
 
     navigator.mediaDevices.getUserMedia
       .mockResolvedValueOnce(localStream)
@@ -528,7 +534,7 @@ describe("MediaControls Hook", () => {
           syncOutboundMedia,
         },
         localStream,
-        setLocalStream: jest.fn(),
+        setLocalStream,
         screenStream: null,
         setScreenStream: jest.fn(),
       }),
@@ -539,7 +545,10 @@ describe("MediaControls Hook", () => {
     });
 
     navigator.mediaDevices.getUserMedia.mockResolvedValueOnce(newAudioStream);
-    await result.current.switchMicrophone("external-mic-id");
+    await act(async () => {
+      await result.current.switchMicrophone("external-mic-id");
+    });
+    expect(result.current.localTrackRevision).toBe(1);
 
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenLastCalledWith({
       audio: {

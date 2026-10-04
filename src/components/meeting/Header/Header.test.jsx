@@ -8,6 +8,12 @@ jest.mock("@/lib/clipboard", () => ({
 }));
 
 describe("Header", () => {
+  it("disables starting another recording while saving", () => {
+    render(<Header showRecording isRecording={false} isRecordingBusy />);
+    expect(
+      screen.getByRole("button", { name: "Start recording" }),
+    ).toBeDisabled();
+  });
   beforeEach(() => {
     copyTextToClipboard.mockReset();
     copyTextToClipboard.mockResolvedValue(true);

@@ -88,7 +88,7 @@ export async function finalizePersistedRecording({
         // started. Keep that source until the next recording/discard so the
         // service worker cannot race with a manifest cleanup.
         if (!data.files.some((file) => file.storage === "indexeddb")) {
-          clearSavedRecording().catch(() => {});
+          await clearSavedRecording();
         }
         recordingSessionRef.current = null;
         finish(true);
