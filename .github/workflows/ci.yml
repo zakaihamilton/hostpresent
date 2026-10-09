@@ -46,3 +46,10 @@ jobs:
       - run: npm run health:visual
         env:
           RUN_VISUAL_REGRESSION: "1"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
