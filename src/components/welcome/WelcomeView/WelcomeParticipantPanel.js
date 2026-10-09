@@ -241,6 +241,7 @@ export function WelcomeParticipantPanel({
                   setRoomIdInput(value);
                   setResolveError("");
                 }}
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- Opening the join panel should focus the first code digit.
                 autoFocus
                 className={shared.joinCodeBoxes}
               />

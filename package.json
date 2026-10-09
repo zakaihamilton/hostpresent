@@ -2,12 +2,11 @@
   "name": "hostpresent",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@11.12.1",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check",
+    "lint": "biome check && eslint .",
     "format": "biome format --write",
     "test": "jest",
     "test:unit": "jest",
@@ -23,7 +22,11 @@
     "health:architecture": "depcruise --output-type json --config -- src",
     "health:licenses": "license-checker --json",
     "health:documentation": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
-    "test:e2e:audience": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/audience-rooms.spec.js --project=chromium"
+    "test:e2e:audience": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/audience-rooms.spec.js --project=chromium",
+    "health:a11y": "playwright test tests/e2e/guardrails.spec.ts --project=chromium",
+    "health:visual": "if [ \"$RUN_VISUAL_REGRESSION\" = \"1\" ] || [ \"$(uname)\" = \"Darwin\" ]; then playwright test tests/e2e/guardrails.spec.ts --project=chromium; else echo \"Visual regression runs in the macOS guardrail job.\"; fi",
+    "health:interactions": "jest --runInBand",
+    "health:styles": "stylelint --formatter json \"**/*.{css,pcss,postcss}\""
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
@@ -36,6 +39,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@biomejs/biome": "2.2.0",
     "@playwright/test": "^1.51.1",
     "@testing-library/dom": "^10.4.1",
@@ -45,14 +49,19 @@
     "babel-plugin-react-compiler": "1.0.0",
     "c8": "^12.0.0",
     "dependency-cruiser": "^18.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "jscpd": "^5.0.14",
-    "jsdom": "^29.1.1",
+    "jsdom": "^26.1.0",
     "knip": "^6.32.2",
     "license-checker": "^25.0.1",
     "markdownlint-cli2": "^0.23.2",
-    "repnix": "^1.0.4",
-    "peerovo": "github:zakaihamilton/peerovo#ba63510bf4bad3f968c6d7464db11c7faf7475df"
-  }
+    "peerovo": "github:zakaihamilton/peerovo#ba63510bf4bad3f968c6d7464db11c7faf7475df",
+    "repnix": "^1.1.0",
+    "stylelint": "^17.11.1",
+    "stylelint-config-standard": "^40.0.0"
+  },
+  "packageManager": "npm@11.12.1"
 }

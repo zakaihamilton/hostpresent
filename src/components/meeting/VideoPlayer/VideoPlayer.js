@@ -65,6 +65,7 @@ export const VideoPlayer = memo(function VideoPlayer({
   }, [audioOutputDeviceId]);
 
   return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption -- This is a muted live camera preview; captions are provided with the participant audio stream.
     <video
       ref={videoRef}
       className={className}

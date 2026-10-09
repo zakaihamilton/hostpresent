@@ -35,7 +35,7 @@ export function WelcomeView({
         <ThemeToggle className={styles.themeToggle} />
       </header>
 
-      <div className={styles.container}>
+      <main className={styles.container}>
         <div className={styles.brandRowHeader}>
           <Logo size={44} className={styles.brandLogo} />
           <h1 className={styles.brandName}>Host Present</h1>
@@ -89,7 +89,7 @@ export function WelcomeView({
                 />}
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Global Viewport Footer */}
       <footer className={styles.footer}>
