@@ -48,7 +48,8 @@ test("home page matches the reviewed desktop and mobile layouts", async ({
     ).toBeVisible();
     await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
       // Match the reviewed layout regardless of macOS scrollbar preferences.
-      style:\n        "html { scrollbar-gutter: auto !important; scrollbar-width: none !important; } ::-webkit-scrollbar { display: none !important; }",
+      style:
+        "html { scrollbar-gutter: auto !important; scrollbar-width: none !important; } ::-webkit-scrollbar { display: none !important; }",
       fullPage: true,
       animations: "disabled",
       caret: "hide",
