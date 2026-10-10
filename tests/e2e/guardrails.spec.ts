@@ -1,6 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+// Service-worker fetches bypass page routes after the first navigation.
+// Keep mocked visual state consistent across both viewport visits.
+test.use({ serviceWorkers: "block" });
+
 const sizes = [
   { name: "desktop-1280x800", width: 1280, height: 800 },
   { name: "mobile-390x844", width: 390, height: 844 },
