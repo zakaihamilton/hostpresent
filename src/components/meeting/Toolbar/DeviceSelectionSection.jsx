@@ -33,9 +33,12 @@ export function DeviceSelectionSection({
           {devices.map((device, index) => (
             <label
               key={device.deviceId}
+              htmlFor={`device-${device.deviceId}`}
               className={`${styles.menuOption} ${selectedDevice === device.deviceId ? styles.menuOptionSelected : ""}`}
             >
               <input
+                id={`device-${device.deviceId}`}
+                aria-label={device.label || `${fallbackLabel} ${index + 1}`}
                 type="radio"
                 name={name}
                 checked={selectedDevice === device.deviceId}

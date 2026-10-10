@@ -11,7 +11,7 @@ html[data-theme="light"] {
   --primary: #4f46e5;
   --primary-hover: #4338ca;
   --primary-gradient: #4f46e5;
-  --danger: #ef4444;
+  --danger: #b91c1c;
   --danger-hover: #dc2626;
   --warning: #f59e0b;
   --success: #10b981;
@@ -46,6 +46,7 @@ html[data-theme="dark"] {
   --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6);
   --glow-color-1: rgba(99, 102, 241, 0.25);
   --glow-color-2: rgba(59, 130, 246, 0.2);
+  --danger: #f87171;
 }
 
 @media (prefers-color-scheme: dark) {

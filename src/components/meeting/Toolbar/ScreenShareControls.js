@@ -206,9 +206,12 @@ export function ScreenShareControls({
               <fieldset className={styles.menuFieldset}>
                 <legend className={styles.menuLegend}>Audio</legend>
                 <label
+                  htmlFor="screen-share-video-only"
                   className={`${styles.menuOption} ${!shareScreenAudio ? styles.menuOptionSelected : ""}`}
                 >
                   <input
+                    id="screen-share-video-only"
+                    aria-label="Video only"
                     type="radio"
                     name="screenShareMode"
                     checked={!shareScreenAudio}
@@ -223,9 +226,12 @@ export function ScreenShareControls({
                   </span>
                 </label>
                 <label
+                  htmlFor="screen-share-with-audio"
                   className={`${styles.menuOption} ${shareScreenAudio ? styles.menuOptionSelected : ""}`}
                 >
                   <input
+                    id="screen-share-with-audio"
+                    aria-label="With audio"
                     type="radio"
                     name="screenShareMode"
                     checked={shareScreenAudio}

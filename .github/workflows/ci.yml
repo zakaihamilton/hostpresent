@@ -14,8 +14,9 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - name: Repository health
-        run: npm run health
+        run: npm run health -- --details
       - run: npx playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run lint
@@ -30,3 +31,25 @@ jobs:
           PEEROVO_PROJECT_ID: ${{ vars.PEEROVO_E2E_PROJECT_ID }}
           PEEROVO_PROJECT_API_KEY: ${{ secrets.PEEROVO_E2E_PROJECT_API_KEY }}
           ROOM_TOKEN_SECRET: ci-room-token-secret-with-at-least-32-bytes
+
+  visual-regression:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run health:visual
+        env:
+          RUN_VISUAL_REGRESSION: "1"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
