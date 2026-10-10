@@ -29,6 +29,7 @@ html[data-theme="light"] {
 }
 
 html[data-theme="dark"] {
+  --danger: #f87171;
   color-scheme: dark;
   --bg-main: #0b0f17;
   --bg-panel: #121824;
@@ -46,10 +47,6 @@ html[data-theme="dark"] {
   --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6);
   --glow-color-1: rgba(99, 102, 241, 0.25);
   --glow-color-2: rgba(59, 130, 246, 0.2);
-}
-
-html[data-theme="dark"] {
-  --danger: #f87171;
 }
 
 @media (prefers-color-scheme: dark) {

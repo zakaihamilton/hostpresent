@@ -11,7 +11,7 @@ test("home page has no WCAG A/AA violations", async ({ page }) => {
   await expect(page.locator("main").first()).toBeVisible();
   await page.evaluate(() => {
     document
-      .getAnimations({ subtree: true })
+      .getAnimations()
       .filter((animation) =>
         Number.isFinite(animation.effect?.getComputedTiming().endTime),
       )
@@ -28,10 +28,24 @@ test("home page has no WCAG A/AA violations", async ({ page }) => {
 test("home page matches the reviewed desktop and mobile layouts", async ({
   page,
 }) => {
+  // Keep the reviewed unsigned-room state independent of server secrets and
+  // random room codes. Smoke tests separately cover real room creation.
+  await page.route("**/api/rooms/config", (route) =>
+    route.fulfill({ json: { roomSigningConfigured: false } }),
+  );
+  await page.route("**/api/rooms", (route) =>
+    route.fulfill({ status: 503, json: { error: "Room signing unavailable" } }),
+  );
   for (const size of sizes) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto("/");
     await expect(page.locator("main").first()).toBeVisible();
+    await expect(
+      page.getByText("[E081] Room signing is not configured."),
+    ).toBeVisible();
+    await expect(
+      page.getByText("[E020] Failed to create room", { exact: true }),
+    ).toBeVisible();
     await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
       fullPage: true,
       animations: "disabled",

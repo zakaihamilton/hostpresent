@@ -24,7 +24,7 @@
     "health:documentation": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "test:e2e:audience": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/audience-rooms.spec.js --project=chromium",
     "health:a11y": "playwright test tests/e2e/guardrails.spec.ts --project=chromium --grep=WCAG",
-    "health:visual": "if [ \"$RUN_VISUAL_REGRESSION\" = \"1\" ] || [ \"$(uname)\" = \"Darwin\" ]; then playwright test tests/e2e/guardrails.spec.ts --project=chromium; else echo \"Visual regression runs in the macOS guardrail job.\"; fi",
+    "health:visual": "if [ \"$RUN_VISUAL_REGRESSION\" = \"1\" ] || [ \"$(uname)\" = \"Darwin\" ]; then npm run build && PLAYWRIGHT_SERVER_MODE=production playwright test tests/e2e/guardrails.spec.ts --project=chromium; else echo \"Visual regression runs in the macOS guardrail job.\"; fi",
     "health:interactions": "jest --runInBand",
     "health:styles": "stylelint --formatter json \"**/*.{css,pcss,postcss}\""
   },
