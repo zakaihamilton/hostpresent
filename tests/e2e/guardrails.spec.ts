@@ -46,10 +46,12 @@ test("home page matches the reviewed desktop and mobile layouts", async ({
     await expect(
       page.getByText("[E020] Failed to create room", { exact: true }),
     ).toBeVisible();
-    await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
-      // Match the reviewed layout regardless of macOS scrollbar preferences.
-      style:
+    // Match the reviewed layout regardless of macOS scrollbar preferences.
+    await page.addStyleTag({
+      content:
         "html { scrollbar-gutter: auto !important; scrollbar-width: none !important; } ::-webkit-scrollbar { display: none !important; }",
+    });
+    await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
       fullPage: true,
       animations: "disabled",
       caret: "hide",
