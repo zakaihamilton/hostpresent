@@ -13,6 +13,8 @@
       "!.next",
       "!dist",
       "!build",
+      "!public/sw.js",
+      "!public/theme-init.js",
       "!public/recording/ffmpeg"
     ]
   },

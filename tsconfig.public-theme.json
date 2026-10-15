@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "esnext",
+    "moduleDetection": "legacy",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmitOnError": true,
+    "outDir": "./public",
+    "rootDir": "./src/public-scripts"
+  },
+  "include": ["src/public-scripts/theme-init.ts"]
+}
