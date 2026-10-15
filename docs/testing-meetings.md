@@ -9,7 +9,7 @@ device picker behavior that fake media cannot prove.
 Run the fast suite with:
 
 ~~~bash
-npm test
+pnpm test
 ~~~
 
 The media hook tests cover camera switching, microphone switching, screen-share
@@ -21,7 +21,7 @@ participants sidebar tests cover roster rendering and media status changes.
 Install browser dependencies once:
 
 ~~~bash
-npx playwright install chromium
+pnpm exec playwright install chromium
 ~~~
 
 Start Peerovo from its repository with a local .env. Configure the
@@ -42,7 +42,7 @@ TURN_DOMAIN=127.0.0.1
 TURN_SECRET_KEY=local-turn-secret-with-at-least-32-bytes
 ~~~
 
-Start Peerovo with npm run dev. In HostPresent's .env.local, use the same
+Start Peerovo with pnpm run dev. In HostPresent's .env.local, use the same
 project API key. Generate `ROOM_TOKEN_SECRET` with `openssl rand -base64 32`:
 
 ~~~dotenv
@@ -53,10 +53,10 @@ PEEROVO_PROJECT_API_KEY=the-same-local-project-key
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 ~~~
 
-Start HostPresent in a second terminal with npm run dev, then run:
+Start HostPresent in a second terminal with pnpm run dev, then run:
 
 ~~~bash
-RUN_WEBRTC_E2E=1 npm run test:e2e:webrtc
+RUN_WEBRTC_E2E=1 pnpm run test:e2e:webrtc
 ~~~
 
 The E2E spec uses `@peerovo/test` to launch isolated browser clients for the host and two
@@ -104,7 +104,7 @@ permit at least 20 peers and the project must have enough aggregate capacity.
 Run the audience browser checks on a correctly configured test deployment:
 
 ~~~bash
-RUN_WEBRTC_E2E=1 RUN_AUDIENCE_CAPACITY_E2E=1 npm run test:e2e:audience
+RUN_WEBRTC_E2E=1 RUN_AUDIENCE_CAPACITY_E2E=1 pnpm run test:e2e:audience
 ~~~
 
 The audience checks cover listeners without capture, speaker approval and

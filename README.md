@@ -73,7 +73,7 @@ Peerovo
 ### Requirements
 
 - Node.js **24.22.0** (Node 24 LTS; see `.nvmrc`)
-- npm
+- pnpm 10.33.0
 - A Peerovo service configured for Host Present, reachable from the app server and browser
 - A modern browser with camera, microphone, and screen-sharing support
 
@@ -82,7 +82,7 @@ Peerovo
 ```bash
 git clone https://github.com/zakaihamilton/hostpresent.git
 cd hostpresent
-npm install
+pnpm install
 ```
 
 Create `.env.local` with a generated room secret and the server-only Peerovo
@@ -112,7 +112,7 @@ variables on the deployed Peerovo service as well as locally; do not log keys.
 The session default of 30 is sufficient for 20 people. Then start Host Present:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The welcome screen can load without Peerovo, but a real meeting requires a reachable Peerovo service and its project credentials. The room-signing secret remains private to Host Present.
@@ -155,14 +155,14 @@ Treat a room code as a bearer credential and share it only with the intended mee
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the Next.js development server. |
-| `npm run build` | Create a production build. |
-| `npm run start` | Run the production server locally. |
-| `npm run lint` | Run Biome checks. |
-| `npm run format` | Format files with Biome. |
-| `npm test` | Run the Jest unit and component suite. |
-| `npm run test:e2e:smoke` | Run the Chromium welcome-flow and production security smoke tests after `npm run build`. |
-| `npm run test:e2e:webrtc` | Run the opt-in Chromium WebRTC flow with separate host and participant contexts. |
+| `pnpm run dev` | Start the Next.js development server. |
+| `pnpm run build` | Create a production build. |
+| `pnpm run start` | Run the production server locally. |
+| `pnpm run lint` | Run Biome checks. |
+| `pnpm run format` | Format files with Biome. |
+| `pnpm test` | Run the Jest unit and component suite. |
+| `pnpm run test:e2e:smoke` | Run the Chromium welcome-flow and production security smoke tests after `pnpm run build`. |
+| `pnpm run test:e2e:webrtc` | Run the opt-in Chromium WebRTC flow with separate host and participant contexts. |
 
 For the full meeting test matrix, including browser permissions and manual device checks, see [docs/testing-meetings.md](docs/testing-meetings.md).
 

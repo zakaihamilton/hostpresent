@@ -32,8 +32,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# CI uses npm ci and requires the lockfile to be committed.
-!/package-lock.json
+# CI uses pnpm install --frozen-lockfile and requires the lockfile to be committed.
+!/pnpm-lock.yaml
 
 # env files (can opt-in for committing if needed)
 .env*

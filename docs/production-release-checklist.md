@@ -20,8 +20,8 @@ Peerovo applies connectivity-service rate limits.
 - Confirm Peerovo's proxy redacts the PeerJS WebSocket `token` query parameter.
 - Confirm coturn's REST secret is configured only in Peerovo and matches the
   coturn server.
-- Run `npm run lint`, `npm run test:unit -- --runInBand`, `npm run build`,
-  and `npm run test:e2e:smoke` from the release commit.
+- Run `pnpm run lint`, `pnpm run test:unit -- --runInBand`, `pnpm run build`,
+  and `pnpm run test:e2e:smoke` from the release commit.
 
 ## Audience room capacity
 
