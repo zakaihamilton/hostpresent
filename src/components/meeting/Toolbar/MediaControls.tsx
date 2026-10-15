@@ -1,0 +1,382 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import {
+  ChevronDown,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+} from "@/components/ui/Icons";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { DeviceSelectionSection } from "./DeviceSelectionSection";
+import styles from "./MediaControls.module.css";
+import { MicrophoneTest } from "./MicrophoneTest";
+
+const MENU_GAP = 8;
+const VIEWPORT_PADDING = 8;
+const MIC_TEST_DURATION_MS = 2200;
+const MIC_TEST_FRAME_MS = 120;
+const MIC_SIGNAL_THRESHOLD = 0.04;
+
+function btnClass(...classes) {
+  return [styles.btn, ...classes.filter(Boolean)].join(" ");
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function computeMenuPosition(anchorRect, menuRect) {
+  const width = menuRect.width;
+  let left = anchorRect.right - width;
+  left = clamp(
+    left,
+    VIEWPORT_PADDING,
+    window.innerWidth - width - VIEWPORT_PADDING,
+  );
+
+  let top = anchorRect.top - MENU_GAP - menuRect.height;
+  if (top < VIEWPORT_PADDING) {
+    top = anchorRect.bottom + MENU_GAP;
+  }
+  top = clamp(
+    top,
+    VIEWPORT_PADDING,
+    window.innerHeight - menuRect.height - VIEWPORT_PADDING,
+  );
+
+  return { top, left };
+}
+
+export function MediaControls({
+  isAudioMuted,
+  isVideoMuted,
+  onToggleAudio,
+  onToggleVideo,
+  availableMicrophones = [],
+  selectedMicrophone = "",
+  onMicrophoneChange,
+  availableSpeakers = [],
+  selectedSpeaker = "",
+  onSpeakerChange,
+  availableCameras = [],
+  selectedCamera = "",
+  onCameraChange,
+}: {
+  isAudioMuted?: any;
+  isVideoMuted?: any;
+  onToggleAudio?: any;
+  onToggleVideo?: any;
+  availableMicrophones?: any;
+  selectedMicrophone?: any;
+  onMicrophoneChange?: any;
+  availableSpeakers?: any;
+  selectedSpeaker?: any;
+  onSpeakerChange?: any;
+  availableCameras?: any;
+  selectedCamera?: any;
+  onCameraChange?: any;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
+  const [menuPositioned, setMenuPositioned] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [micTestState, setMicTestState] = useState("idle");
+  const [micTestLevel, setMicTestLevel] = useState(0);
+  const clusterRef = useRef(null);
+  const menuAnchorRef = useRef(null);
+  const menuRef = useRef(null);
+  const micTestCleanupRef = useRef(null);
+  const menuId = useId();
+  const headingId = `${menuId}-heading`;
+  const microphoneSectionId = `${menuId}-microphone`;
+  const outputSectionId = `${menuId}-output`;
+  const videoSectionId = `${menuId}-video`;
+
+  const updateMenuPosition = useCallback(() => {
+    const anchor = menuAnchorRef.current;
+    const menu = menuRef.current;
+    if (!anchor || !menu) return;
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const nextCoords = computeMenuPosition(anchorRect, menuRect);
+    setMenuCoords((prev) =>
+      prev.top === nextCoords.top && prev.left === nextCoords.left
+        ? prev
+        : nextCoords,
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!menuOpen) {
+      setMenuPositioned(false);
+      return;
+    }
+
+    updateMenuPosition();
+    setMenuPositioned(true);
+
+    const handleReposition = () => updateMenuPosition();
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+
+    return () => {
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [menuOpen, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handlePointerDown = (event) => {
+      if (
+        clusterRef.current?.contains(event.target) ||
+        menuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setMenuOpen(false);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  useEffect(
+    () => () => {
+      micTestCleanupRef.current?.();
+    },
+    [],
+  );
+
+  const stopMicTest = () => {
+    micTestCleanupRef.current?.();
+    micTestCleanupRef.current = null;
+  };
+
+  const handleTestMicrophone = async () => {
+    stopMicTest();
+    setMicTestState("testing");
+    setMicTestLevel(0);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedMicrophone
+          ? { deviceId: { exact: selectedMicrophone } }
+          : true,
+        video: false,
+      });
+      const AudioContextConstructor =
+        window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextConstructor) {
+        throw new Error("AudioContext is not available");
+      }
+
+      const context = new AudioContextConstructor();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      const source = context.createMediaStreamSource(stream);
+      source.connect(analyser);
+      const samples = new Uint8Array(analyser.fftSize);
+      let peakLevel = 0;
+
+      const sample = () => {
+        analyser.getByteTimeDomainData(samples);
+        let sum = 0;
+        for (const value of samples) {
+          const normalized = (value - 128) / 128;
+          sum += normalized * normalized;
+        }
+        const level = Math.min(1, Math.sqrt(sum / samples.length) * 3);
+        peakLevel = Math.max(peakLevel, level);
+        setMicTestLevel(level);
+      };
+
+      const intervalId = window.setInterval(sample, MIC_TEST_FRAME_MS);
+      const timeoutId = window.setTimeout(() => {
+        stopMicTest();
+        setMicTestLevel(peakLevel);
+        setMicTestState(
+          peakLevel >= MIC_SIGNAL_THRESHOLD ? "detected" : "quiet",
+        );
+      }, MIC_TEST_DURATION_MS);
+
+      micTestCleanupRef.current = () => {
+        window.clearInterval(intervalId);
+        window.clearTimeout(timeoutId);
+        source.disconnect();
+        void context.close?.();
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      };
+    } catch {
+      stopMicTest();
+      setMicTestLevel(0);
+      setMicTestState("error");
+    }
+  };
+
+  const micTestStatus =
+    micTestState === "testing"
+      ? "Testing..."
+      : micTestState === "detected"
+        ? "Microphone is working"
+        : micTestState === "quiet"
+          ? "No input detected"
+          : micTestState === "error"
+            ? "Could not test microphone"
+            : "Speak after starting the test";
+
+  return (
+    <div className={styles.cluster}>
+      <Tooltip text={isAudioMuted ? "Unmute Microphone" : "Mute Microphone"}>
+        <button
+          type="button"
+          className={btnClass(
+            styles.audioBtn,
+            isAudioMuted && styles.btnDanger,
+          )}
+          onClick={onToggleAudio}
+          aria-label={isAudioMuted ? "Unmute microphone" : "Mute microphone"}
+        >
+          {isAudioMuted ? <MicOff /> : <Mic />}
+        </button>
+      </Tooltip>
+
+      <div className={styles.videoCluster} ref={clusterRef}>
+        <Tooltip text={isVideoMuted ? "Turn Camera On" : "Turn Camera Off"}>
+          <button
+            type="button"
+            className={btnClass(
+              styles.videoBtn,
+              isVideoMuted && styles.btnDanger,
+            )}
+            onClick={onToggleVideo}
+            aria-label={isVideoMuted ? "Turn camera on" : "Turn camera off"}
+          >
+            {isVideoMuted ? <VideoOff /> : <Video />}
+          </button>
+        </Tooltip>
+
+        <div className={styles.menuWrap} ref={menuAnchorRef}>
+          <Tooltip text="Audio & video settings" forceHidden={menuOpen}>
+            <button
+              type="button"
+              className={btnClass(
+                styles.menuBtn,
+                menuOpen && styles.menuBtnOpen,
+              )}
+              aria-expanded={menuOpen}
+              aria-haspopup="dialog"
+              aria-controls={menuId}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <ChevronDown />
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+
+      {mounted && menuOpen
+        ? createPortal(
+            <div
+              ref={menuRef}
+              id={menuId}
+              role="dialog"
+              aria-labelledby={headingId}
+              className={styles.menu}
+              style={{
+                top: menuCoords.top,
+                left: menuCoords.left,
+                visibility: menuPositioned ? "visible" : "hidden",
+              }}
+            >
+              <header className={styles.menuHeader}>
+                <p id={headingId} className={styles.menuHeading}>
+                  Audio & video
+                </p>
+                <p className={styles.menuSubheading}>
+                  Choose the devices for this meeting.
+                </p>
+              </header>
+
+              <div className={styles.menuContent}>
+                <DeviceSelectionSection
+                  id={microphoneSectionId}
+                  title="Microphone"
+                  legend="Microphone"
+                  name="microphone"
+                  devices={availableMicrophones}
+                  selectedDevice={selectedMicrophone}
+                  onChange={onMicrophoneChange}
+                  fallbackLabel="Microphone"
+                  unavailableLabel="Unavailable"
+                  emptyMessage="No microphones detected"
+                >
+                  <MicrophoneTest
+                    handleTestMicrophone={handleTestMicrophone}
+                    availableMicrophones={availableMicrophones}
+                    micTestState={micTestState}
+                    micTestStatus={micTestStatus}
+                    micTestLevel={micTestLevel}
+                  />
+                </DeviceSelectionSection>
+                <DeviceSelectionSection
+                  id={outputSectionId}
+                  title="Audio output"
+                  legend="Audio output"
+                  name="speaker"
+                  devices={availableSpeakers}
+                  selectedDevice={selectedSpeaker}
+                  onChange={onSpeakerChange}
+                  fallbackLabel="Speaker"
+                  unavailableLabel="Browser limited"
+                  emptyMessage="Output selection is not available in this browser"
+                />
+                <DeviceSelectionSection
+                  id={videoSectionId}
+                  title="Video"
+                  legend="Camera"
+                  name="camera"
+                  devices={availableCameras}
+                  selectedDevice={selectedCamera}
+                  onChange={onCameraChange}
+                  fallbackLabel="Camera"
+                  unavailableLabel="Unavailable"
+                  emptyMessage="No cameras detected"
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}

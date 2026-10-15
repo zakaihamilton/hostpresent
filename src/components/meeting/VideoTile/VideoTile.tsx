@@ -1,0 +1,138 @@
+import { memo } from "react";
+import { VideoPlayer } from "@/components/meeting/VideoPlayer";
+import { Focus } from "@/components/ui/Icons";
+import { Tooltip } from "@/components/ui/Tooltip";
+import styles from "./VideoTile.module.css";
+
+export const VideoTile = memo(function VideoTile({
+  stream,
+  name,
+  initial,
+  avatarColor = "#475569",
+  overlayIcon,
+  isMuted = true,
+  isSpeaking = false,
+  isFocused = false,
+  isManualFocused = false,
+  isVideoOff = false,
+  videoOffIcon = null,
+  mediaBadgeIcon = null,
+  mediaBadgeLabel = "",
+  onFocus,
+  audioOutputDeviceId = "",
+  connectionStatus = null,
+  compactOverlay = false,
+  isMirrored = false,
+}: {
+  stream?: any;
+  name?: any;
+  initial?: any;
+  avatarColor?: any;
+  overlayIcon?: any;
+  isMuted?: any;
+  isSpeaking?: any;
+  isFocused?: any;
+  isManualFocused?: any;
+  isVideoOff?: any;
+  videoOffIcon?: any;
+  mediaBadgeIcon?: any;
+  mediaBadgeLabel?: any;
+  onFocus?: any;
+  audioOutputDeviceId?: any;
+  connectionStatus?: any;
+  compactOverlay?: any;
+  isMirrored?: any;
+}) {
+  const showVideo = Boolean(stream) && !isVideoOff;
+  const Wrapper = (onFocus ? "button" : "div") as React.ElementType;
+  const wrapperProps = onFocus
+    ? {
+        type: "button",
+        onClick: onFocus,
+        "aria-label": `Focus ${name}`,
+      }
+    : {};
+
+  const tile = (
+    <Wrapper
+      className={`${styles.tile} ${compactOverlay ? styles.tileCompact : ""} ${isFocused ? styles.focused : ""} ${onFocus ? styles.tileButton : ""}`}
+      {...wrapperProps}
+    >
+      {stream ? (
+        <VideoPlayer
+          stream={stream}
+          isMuted={isMuted}
+          audioOutputDeviceId={audioOutputDeviceId}
+          className={`${showVideo ? "" : styles.audioOnlyVideo} ${isMirrored ? styles.mirroredVideo : ""}`}
+        />
+      ) : null}
+      {!showVideo && (
+        <div
+          className={styles.placeholder}
+          style={{ background: avatarColor }}
+          aria-hidden
+        >
+          {initial ?? name.charAt(0)}
+        </div>
+      )}
+      {isVideoOff && videoOffIcon && (
+        <div className={styles.videoOffOverlay} aria-hidden>
+          {videoOffIcon}
+        </div>
+      )}
+      {mediaBadgeIcon ? (
+        <div
+          className={styles.mediaBadge}
+          role="img"
+          aria-label={mediaBadgeLabel}
+        >
+          {mediaBadgeIcon}
+          <span>{mediaBadgeLabel}</span>
+        </div>
+      ) : null}
+      <div className={styles.overlay}>
+        {connectionStatus && (
+          <span
+            className={`${styles.connectionDot} ${styles[`connectionDot_${connectionStatus}`]}`}
+            title={`Connection status: ${connectionStatus}`}
+          />
+        )}
+        {isFocused && (
+          <span
+            className={`${styles.focusBadge} ${isManualFocused ? styles.focusBadgeManual : styles.focusBadgeAuto}`}
+            title={
+              isManualFocused
+                ? "Focused (Pinned)"
+                : "Auto-Focused (Active Speaker)"
+            }
+          >
+            <Focus size={10} />
+          </span>
+        )}
+        {overlayIcon ? (
+          <span
+            className={`${styles.overlayIcon} ${isSpeaking ? styles.overlayIconSpeaking : ""}`}
+          >
+            {overlayIcon}
+          </span>
+        ) : null}
+        <span className={styles.name}>{name}</span>
+      </div>
+    </Wrapper>
+  );
+
+  if (onFocus) {
+    const tooltipText = isFocused
+      ? isManualFocused
+        ? "Focused (Pinned)"
+        : "Auto-Focused (Active Speaker)"
+      : `Focus on ${name}`;
+    return (
+      <Tooltip text={tooltipText} placement="top">
+        {tile}
+      </Tooltip>
+    );
+  }
+
+  return tile;
+});

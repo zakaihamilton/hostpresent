@@ -1,0 +1,76 @@
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "Cache-Control": "no-store",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "no-referrer",
+};
+
+const MAX_TOKEN_LENGTH = 2048;
+const DEFAULT_MAX_BODY_BYTES = 16_384;
+
+export function applySecurityHeaders(response) {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    response.headers.set(name, value);
+  }
+  return response;
+}
+
+export function validateTokenParam(token) {
+  if (!token || typeof token !== "string") {
+    return { ok: false, error: "[E061] Token required" };
+  }
+
+  if (token.length > MAX_TOKEN_LENGTH) {
+    return { ok: false, error: "[E062] Token too long" };
+  }
+
+  return { ok: true };
+}
+
+export function validateJsonPost(
+  request,
+  { maxBodyBytes = DEFAULT_MAX_BODY_BYTES }: { maxBodyBytes?: any } = {},
+) {
+  const rawContentLength = request.headers.get("content-length");
+  const contentLength =
+    rawContentLength === null ? null : Number(rawContentLength);
+  if (
+    contentLength !== null &&
+    (!Number.isFinite(contentLength) || contentLength < 0)
+  ) {
+    return { ok: false, status: 400, error: "[E060] Invalid Content-Length" };
+  }
+
+  if (
+    (contentLength === 0 || contentLength === null) &&
+    !request.headers.get("content-type")
+  ) {
+    return { ok: true };
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return {
+      ok: false,
+      status: 415,
+      error: "[E063] Content-Type must be application/json",
+    };
+  }
+
+  if (contentLength !== null && contentLength > maxBodyBytes) {
+    return { ok: false, status: 413, error: "[E064] Request body too large" };
+  }
+
+  return { ok: true };
+}
+
+export function guardPostRequest(request, options = undefined) {
+  const validation = validateJsonPost(request, options);
+  if (!validation.ok) {
+    return applySecurityHeaders(
+      Response.json({ error: validation.error }, { status: validation.status }),
+    );
+  }
+
+  return null;
+}

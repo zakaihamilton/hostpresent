@@ -1,0 +1,114 @@
+import { memo } from "react";
+import { VideoTile } from "@/components/meeting/VideoTile";
+import {
+  Mic,
+  MicOff,
+  ScreenShare,
+  Video,
+  VideoOff,
+} from "@/components/ui/Icons";
+import { hasPlayableRemoteAudio } from "@/lib/webrtc/remoteParticipantMedia";
+import styles from "./VideoGallery.module.css";
+
+export const VideoGallery = memo(function VideoGallery({
+  visible,
+  screenStream,
+  localStream,
+  participants,
+  isAudioMuted,
+  isVideoMuted = false,
+  isScreenSharing = false,
+  localDisplayName = "You",
+  localIsSpeaking = false,
+  audioOutputDeviceId = "",
+  focusedParticipantId = "host",
+  manualFocusedId = "",
+  allowFocus = false,
+  onFocusParticipant,
+  connectionStatus = null,
+}: {
+  visible?: any;
+  screenStream?: any;
+  localStream?: any;
+  participants?: any;
+  isAudioMuted?: any;
+  isVideoMuted?: any;
+  isScreenSharing?: any;
+  localDisplayName?: any;
+  localIsSpeaking?: any;
+  audioOutputDeviceId?: any;
+  focusedParticipantId?: any;
+  manualFocusedId?: any;
+  allowFocus?: any;
+  onFocusParticipant?: any;
+  connectionStatus?: any;
+}) {
+  const remoteSlots = Math.max(0, 4 - (localStream ? 1 : 0));
+  const renderedParticipants = participants.slice(0, remoteSlots);
+
+  return (
+    <div
+      className={`${styles.wrapper} ${visible ? "" : styles.wrapperHidden}`}
+      aria-hidden={!visible}
+    >
+      <div className={styles.galleryInner}>
+        <div className={styles.gallery}>
+          {localStream && (
+            <VideoTile
+              compactOverlay
+              stream={screenStream || localStream}
+              name={localDisplayName}
+              overlayIcon={isAudioMuted ? <MicOff /> : <Mic />}
+              isMuted
+              isMirrored={!screenStream}
+              isFocused={focusedParticipantId === "host"}
+              isManualFocused={manualFocusedId === "host"}
+              isSpeaking={localIsSpeaking}
+              isVideoOff={isVideoMuted && !isScreenSharing}
+              videoOffIcon={<VideoOff />}
+              mediaBadgeIcon={isScreenSharing ? <ScreenShare /> : <Video />}
+              mediaBadgeLabel={isScreenSharing ? "Screen" : "Video"}
+              onFocus={
+                allowFocus ? () => onFocusParticipant?.("host") : undefined
+              }
+              connectionStatus={connectionStatus}
+            />
+          )}
+          {renderedParticipants.map((participant) => (
+            <VideoTile
+              key={participant.id}
+              compactOverlay
+              stream={participant.stream}
+              name={participant.name}
+              initial={participant.name.charAt(0)}
+              avatarColor={participant.avatarColor}
+              overlayIcon={participant.isAudioMuted ? <MicOff /> : <Mic />}
+              isMuted={
+                participant.isSelf ||
+                participant.id === focusedParticipantId ||
+                !hasPlayableRemoteAudio(participant.stream)
+              }
+              isSpeaking={participant.isSpeaking}
+              isVideoOff={
+                participant.isVideoMuted && !participant.isScreenSharing
+              }
+              videoOffIcon={<VideoOff />}
+              isFocused={focusedParticipantId === participant.id}
+              isManualFocused={manualFocusedId === participant.id}
+              mediaBadgeIcon={
+                participant.isScreenSharing ? <ScreenShare /> : <Video />
+              }
+              mediaBadgeLabel={participant.isScreenSharing ? "Screen" : "Video"}
+              onFocus={
+                allowFocus
+                  ? () => onFocusParticipant?.(participant.id)
+                  : undefined
+              }
+              audioOutputDeviceId={audioOutputDeviceId}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
