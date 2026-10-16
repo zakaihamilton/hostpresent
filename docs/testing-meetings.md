@@ -93,7 +93,7 @@ allow the exact CI app origin, [http://127.0.0.1:3000](http://127.0.0.1:3000).
 | Recovery | Guest camera/mic granted after PeerJS already connected | Outbound media sync/renegotiate runs so host sees guest video without mute toggle |
 | Recovery | Guest joins while host PeerJS peer is still reconnecting | Host banner shows connection error; guest waits until host peer is live |
 | Join before host | Guest resolves join code before host clicks Start meeting | Guest enters the meeting and sees the waiting/retry state until the host opens the room |
-| Capacity | Sixth guest tries to join | Guest sees Meeting is full after receiving room_full; the five connected guests remain in the room |
+| Capacity | 21st person tries to join after the host and 19 attendees are connected | Guest sees Meeting is full after receiving `room_full`; the 20 people already connected remain in the room |
 
 ## 20-person capacity validation
 
@@ -146,5 +146,6 @@ keeps separate feeds and can concentrate upload/CPU work on the host.
 
 Require passing lint, unit tests, a production build, smoke tests, Peerovo-backed
 meeting tests, and this distributed test before raising the advertised limit.
-Participant removal and bans are not implemented; revoking publishing removes
-media rights while retaining room membership and chat.
+Hosts can mute participants or revoke publishing, but cannot remove or ban
+them. Revoking publishing removes media rights while retaining room membership
+and chat.

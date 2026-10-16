@@ -9,11 +9,13 @@ import {
   useRoomDataChannel,
   useSessionTimers,
 } from "@/hooks";
+import type { RoomSessionStatus } from "@/hooks/roomSession";
 import { useRoomSession } from "@/hooks/roomSession";
 import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
 import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode, isValidJoinCode } from "@/lib/room/joinCodeFormat";
+import type { RoomRole, RoomState } from "@/lib/room/roomTypes";
 import {
   loadDisplayName,
   loadParticipantMode,
@@ -37,9 +39,6 @@ import {
   isSignalingConfigError,
   isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
-import { MeetingControls } from "./components/MeetingControls";
-import { MeetingHeaderArea } from "./components/MeetingHeaderArea";
-import { MeetingWorkspace } from "./components/MeetingWorkspace";
 import { MediaControls } from "./hooks/MediaControls";
 import {
   attachSpeakingDetector,
@@ -50,22 +49,28 @@ import { useMeetingFocus } from "./hooks/useMeetingFocus";
 import { useMeetingInvite } from "./hooks/useMeetingInvite";
 import { useMeetingLayoutState } from "./hooks/useMeetingLayoutState";
 import { useMeetingViewModels } from "./hooks/useMeetingViewModels";
-import styles from "./MeetingView.module.css";
+import { MeetingViewScreen } from "./MeetingViewScreen";
 import { getMeetingStatusScreen } from "./meetingStatusScreen";
+
+interface MeetingViewProps {
+  token?: string;
+  role?: RoomRole;
+  joinCode?: string | null;
+  onBack: () => void;
+}
 
 export function MeetingView({
   token,
-  ...props
-}: {
-  [key: string]: any;
-  token?: any;
-}) {
+  role,
+  joinCode,
+  onBack,
+}: MeetingViewProps) {
   const {
     status: sessionStatus,
     roomState,
     error: sessionError,
   } = useRoomSession({
-    role: props.role,
+    role,
     token,
     enabled: Boolean(token),
   });
@@ -78,7 +83,9 @@ export function MeetingView({
     >
       <MeetingViewInner
         token={token}
-        {...props}
+        role={role}
+        joinCode={joinCode}
+        onBack={onBack}
         sessionStatus={sessionStatus}
         roomState={roomState}
         sessionError={sessionError}
@@ -96,13 +103,13 @@ function MeetingViewInner({
   roomState,
   sessionError,
 }: {
-  role?: any;
-  token?: any;
-  joinCode?: any;
-  onBack?: any;
-  sessionStatus?: any;
-  roomState?: any;
-  sessionError?: any;
+  role?: RoomRole;
+  token?: string;
+  joinCode?: string | null;
+  onBack: () => void;
+  sessionStatus: RoomSessionStatus;
+  roomState: RoomState | null;
+  sessionError: string;
 }) {
   const isHost = role === "host";
   const roomConnectionRef = useRef(null);
@@ -604,11 +611,11 @@ function MeetingViewInner({
   if (statusScreen) return statusScreen;
 
   return (
-    <div className={styles.app}>
-      <MeetingHeaderArea
-        isRecording={isRecording}
-        isRecordingPaused={isRecordingPaused}
-        headerProps={{
+    <MeetingViewScreen
+      headerProps={{
+        isRecording,
+        isRecordingPaused,
+        headerProps: {
           meetingDurationSeconds: meetingSeconds,
           roomId: formattedRoomId || null,
           sessionTitle: sessionTitle || null,
@@ -627,8 +634,8 @@ function MeetingViewInner({
           onPauseRecording: pauseRecording,
           onResumeRecording: resumeRecording,
           onStopRecording: stopRecording,
-        }}
-        connectionProps={{
+        },
+        connectionProps: {
           isHost,
           hostPresent,
           audienceState: roomConnection,
@@ -638,27 +645,26 @@ function MeetingViewInner({
             roomConnection?.connectionError,
           ),
           isFatalConnectionError: fatalConnectionError,
-        }}
-        inviteProps={{
+        },
+        inviteProps: {
           visible: Boolean(isHost && inviteLink && inviteBarVisible),
           inviteLink,
           inviteCopyMessage,
           onCopyInviteLink: handleCopyInviteLink,
           onDismiss: handleDismissInviteBar,
           roomId: formattedRoomId,
-        }}
-      />
-
-      <MeetingWorkspace
-        chatPanelProps={{
+        },
+      }}
+      workspaceProps={{
+        chatPanelProps: {
           messages: chatMessages,
           participants: chatParticipants,
           onSendMessage: handleSendChatMessage,
           sessionName: sessionTitle,
-        }}
-        downloadState={downloadState}
-        errorMessage={errorMsg}
-        galleryProps={{
+        },
+        downloadState,
+        errorMessage: errorMsg,
+        galleryProps: {
           visible: isGalleryVisible,
           screenStream,
           localStream,
@@ -673,19 +679,19 @@ function MeetingViewInner({
           allowFocus: isHost,
           onFocusParticipant: handleFocusParticipant,
           connectionStatus: roomConnection?.status,
-        }}
-        isChatVisible={isChatVisible}
-        isMobile={isMobile}
-        isPipVisible={isPipVisible}
-        isSidebarVisible={isSidebarVisible}
-        localStream={localStream}
-        onCloseChat={layout.closeChat}
-        onClosePanels={layout.closePanels}
-        onCloseSidebar={layout.closeSidebar}
-        onDismissDownload={dismissDownloadBanner}
-        onDismissError={handleDismissError}
-        onShowDiagnostics={() => setIsDiagnosticsOpen(true)}
-        participantSidebarProps={{
+        },
+        isChatVisible,
+        isMobile,
+        isPipVisible,
+        isSidebarVisible,
+        localStream,
+        onCloseChat: layout.closeChat,
+        onClosePanels: layout.closePanels,
+        onCloseSidebar: layout.closeSidebar,
+        onDismissDownload: dismissDownloadBanner,
+        onDismissError: handleDismissError,
+        onShowDiagnostics: () => setIsDiagnosticsOpen(true),
+        participantSidebarProps: {
           audioList,
           videoParticipants,
           peerParticipants,
@@ -715,14 +721,14 @@ function MeetingViewInner({
           onMuteAllAudio: muteAllAudio,
           canMuteAllVideo,
           canMuteAllAudio,
-        }}
-        pipProps={{
+        },
+        pipProps: {
           stream: localStream,
           isVideoMuted,
           name: resolvedDisplayName,
           initial: resolvedDisplayName?.charAt(0),
-        }}
-        primaryViewProps={{
+        },
+        primaryViewProps: {
           ...primaryViewProps,
           isScreenSharing: Boolean(screenStream),
           onStopScreenShare: screenStream ? toggleScreenShare : null,
@@ -736,21 +742,20 @@ function MeetingViewInner({
               effectiveFocusedId === roomConnection?.localParticipantId)
               ? roomConnection?.status
               : null,
-        }}
-        recording={{
+        },
+        recording: {
           busy: isRecordingBusy,
           canResume: canResumeSavedRecording,
           onResume: resumeSavedRecording,
           onDownload: downloadSavedRecording,
           onDiscard: discardSavedRecording,
-        }}
-        savedRecording={savedRecording}
-        videoParticipants={galleryParticipants}
-      />
-
-      <MeetingControls
-        confirmDialogProps={dialogProps}
-        diagnosticsProps={{
+        },
+        savedRecording,
+        videoParticipants: galleryParticipants,
+      }}
+      controlsProps={{
+        confirmDialogProps: dialogProps,
+        diagnosticsProps: {
           isOpen: isDiagnosticsOpen,
           onClose: () => setIsDiagnosticsOpen(false),
           role,
@@ -765,8 +770,8 @@ function MeetingViewInner({
           onSendDiagnosticReport: sendDiagnosticReport,
           isTurnActive: roomConnection?.isTurnActive,
           audienceState: roomConnection,
-        }}
-        toolbarProps={{
+        },
+        toolbarProps: {
           isAudioMuted,
           isVideoMuted,
           screenStream,
@@ -817,8 +822,8 @@ function MeetingViewInner({
               !canPublishMedia && !roomConnection.publishRequested,
             ),
           allowScreenShare: canPublishMedia,
-        }}
-      />
-    </div>
+        },
+      }}
+    />
   );
 }

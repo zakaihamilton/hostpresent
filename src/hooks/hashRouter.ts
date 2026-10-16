@@ -24,7 +24,15 @@ export const APP_VIEW = {
 export const APP_ROLE = {
   HOST: "host",
   PARTICIPANT: "participant",
-};
+} as const;
+
+interface HashRouteState {
+  view: string;
+  role: string;
+  token: string | null;
+  joinCode: string | null;
+  ready: boolean;
+}
 
 function isLegacyToken(value) {
   return typeof value === "string" && value.includes(".");
@@ -293,7 +301,7 @@ function writeStoredWelcomeTab(role) {
 }
 
 export function useHashRouter() {
-  const [route, setRoute] = useState(() => ({
+  const [route, setRoute] = useState<HashRouteState>(() => ({
     view: APP_VIEW.WELCOME,
     role: DEFAULT_ROLE,
     token: null,

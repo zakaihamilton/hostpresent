@@ -23,7 +23,60 @@ export const SIGNALING_MESSAGE = {
   CHAT_PRIVATE_MESSAGE: "chat_private_message",
   ROOM_FULL: "room_full",
   MEDIA_RENEGOTIATE: "media_renegotiate",
-};
+} as const;
+
+type SignalingMessageType =
+  (typeof SIGNALING_MESSAGE)[keyof typeof SIGNALING_MESSAGE];
+export type ParticipantMode = "available" | "listening";
+export type ParticipantType = "audio" | "video";
+
+interface RoomEnvelope {
+  roomId?: string;
+  token?: string;
+}
+
+export interface SignalingMessage {
+  type: SignalingMessageType;
+  timestamp?: number;
+  participantId?: string;
+  participantType?: ParticipantType;
+  senderId?: string;
+  senderName?: string;
+  recipientId?: string;
+  text?: string;
+  displayName?: string;
+  deviceId?: string;
+  mode?: ParticipantMode;
+  sessionTitle?: string;
+  focusedId?: string;
+  active?: boolean;
+  paused?: boolean;
+  present?: boolean;
+  audioMuted?: boolean;
+  videoMuted?: boolean;
+  isAudioMuted?: boolean;
+  isVideoMuted?: boolean;
+  screenSharing?: boolean;
+  relayedByHost?: boolean;
+  [field: string]: unknown;
+}
+
+export type ChatMessage =
+  | (SignalingMessage & {
+      type: typeof SIGNALING_MESSAGE.CHAT_MESSAGE;
+      senderId?: string;
+      senderName?: string;
+      text: string;
+      timestamp: number;
+    })
+  | (SignalingMessage & {
+      type: typeof SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE;
+      senderId?: string;
+      senderName?: string;
+      recipientId?: string;
+      text: string;
+      timestamp: number;
+    });
 
 export const CHAT_MESSAGE_MAX_LENGTH = 500;
 const MAX_CHAT_RECIPIENT_ID_LENGTH = 128;
@@ -44,13 +97,13 @@ export function createHostPresentMessage({
   sessionTitle = "",
   screenSharing = false,
 }: {
-  displayName?: any;
-  audioMuted?: any;
-  videoMuted?: any;
-  mode?: any;
-  sessionTitle?: any;
-  screenSharing?: any;
-} = {}) {
+  displayName?: string;
+  audioMuted?: boolean;
+  videoMuted?: boolean;
+  mode?: ParticipantMode;
+  sessionTitle?: string;
+  screenSharing?: boolean;
+} = {}): SignalingMessage {
   return {
     type: SIGNALING_MESSAGE.HOST_PRESENT,
     displayName: typeof displayName === "string" ? displayName.trim() : "",
@@ -66,7 +119,7 @@ export function createHostPresentMessage({
 export function createHostFocusChangedMessage({
   focusedId = "host",
 }: {
-  focusedId?: any;
+  focusedId?: string;
 } = {}) {
   const id = typeof focusedId === "string" ? focusedId : "host";
   return {
@@ -108,8 +161,8 @@ export function createHostMuteAudioMessage({
   participantId,
   participantType,
 }: {
-  participantId?: any;
-  participantType?: any;
+  participantId?: string;
+  participantType?: ParticipantType;
 }) {
   return {
     type: SIGNALING_MESSAGE.HOST_MUTE_AUDIO,
@@ -122,7 +175,7 @@ export function createHostMuteAudioMessage({
 export function createHostMuteVideoMessage({
   participantId,
 }: {
-  participantId?: any;
+  participantId?: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.HOST_MUTE_VIDEO,
@@ -149,8 +202,8 @@ export function createRecordingStateMessage({
   active,
   paused = false,
 }: {
-  active?: any;
-  paused?: any;
+  active?: boolean;
+  paused?: boolean;
 }) {
   return {
     type: SIGNALING_MESSAGE.RECORDING_STATE,
@@ -171,8 +224,8 @@ export function createParticipantAudioMutedMessage({
   participantId,
   participantType,
 }: {
-  participantId?: any;
-  participantType?: any;
+  participantId?: string;
+  participantType?: ParticipantType;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
@@ -185,7 +238,7 @@ export function createParticipantAudioMutedMessage({
 export function createParticipantVideoMutedMessage({
   participantId,
 }: {
-  participantId?: any;
+  participantId?: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
@@ -198,8 +251,8 @@ export function createParticipantAudioUnmutedMessage({
   participantId,
   participantType,
 }: {
-  participantId?: any;
-  participantType?: any;
+  participantId?: string;
+  participantType?: ParticipantType;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
@@ -212,7 +265,7 @@ export function createParticipantAudioUnmutedMessage({
 export function createParticipantVideoUnmutedMessage({
   participantId,
 }: {
-  participantId?: any;
+  participantId?: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED,
@@ -227,10 +280,10 @@ export function createParticipantProfileMessage({
   mode,
   deviceId = "",
 }: {
-  participantId?: any;
-  displayName?: any;
-  mode?: any;
-  deviceId?: any;
+  participantId?: string;
+  displayName?: string;
+  mode?: ParticipantMode;
+  deviceId?: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE,
@@ -252,13 +305,13 @@ export function createParticipantProfileBroadcastMessage({
   isAudioMuted = false,
   isVideoMuted = false,
 }: {
-  participantId?: any;
-  displayName?: any;
-  mode?: any;
-  present?: any;
-  screenSharing?: any;
-  isAudioMuted?: any;
-  isVideoMuted?: any;
+  participantId?: string;
+  displayName?: string;
+  mode?: ParticipantMode;
+  present?: boolean;
+  screenSharing?: boolean;
+  isAudioMuted?: boolean;
+  isVideoMuted?: boolean;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST,
@@ -277,7 +330,7 @@ export function createParticipantProfileBroadcastMessage({
 export function createParticipantScreenShareStartedMessage({
   participantId,
 }: {
-  participantId?: any;
+  participantId: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED,
@@ -289,7 +342,7 @@ export function createParticipantScreenShareStartedMessage({
 export function createParticipantScreenShareStoppedMessage({
   participantId,
 }: {
-  participantId?: any;
+  participantId: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
@@ -301,7 +354,7 @@ export function createParticipantScreenShareStoppedMessage({
 export function createMediaRenegotiateMessage({
   participantId,
 }: {
-  participantId?: any;
+  participantId?: string;
 } = {}) {
   return {
     type: SIGNALING_MESSAGE.MEDIA_RENEGOTIATE,
@@ -310,19 +363,21 @@ export function createMediaRenegotiateMessage({
   };
 }
 
-export function parseSignalingMessage(raw) {
+export function parseSignalingMessage(raw: unknown): unknown {
   if (typeof raw === "string") {
     return JSON.parse(raw);
   }
   return raw;
 }
 
-export function isSignalingMessage(message) {
+export function isSignalingMessage(
+  message: unknown,
+): message is SignalingMessage {
+  if (!message || typeof message !== "object") return false;
+  const type = (message as { type?: unknown }).type;
   return (
-    message &&
-    typeof message === "object" &&
-    typeof message.type === "string" &&
-    Object.values(SIGNALING_MESSAGE).includes(message.type)
+    typeof type === "string" &&
+    Object.values(SIGNALING_MESSAGE).includes(type as SignalingMessageType)
   );
 }
 
@@ -331,9 +386,9 @@ export function createChatMessage({
   senderName,
   text,
 }: {
-  senderId?: any;
-  senderName?: any;
-  text?: any;
+  senderId?: string;
+  senderName?: string;
+  text?: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.CHAT_MESSAGE,
@@ -354,10 +409,10 @@ export function createChatPrivateMessage({
   recipientId,
   text,
 }: {
-  senderId?: any;
-  senderName?: any;
-  recipientId?: any;
-  text?: any;
+  senderId?: string;
+  senderName?: string;
+  recipientId?: string;
+  text?: string;
 }) {
   return {
     type: SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE,
@@ -373,27 +428,28 @@ export function createChatPrivateMessage({
   };
 }
 
-export function isChatMessage(message) {
+export function isChatMessage(message: unknown): message is ChatMessage {
+  if (!message || typeof message !== "object") return false;
+  const candidate = message as Record<string, unknown>;
   if (
-    !message ||
-    typeof message !== "object" ||
-    (message.type !== SIGNALING_MESSAGE.CHAT_MESSAGE &&
-      message.type !== SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE) ||
-    typeof message.text !== "string" ||
-    !message.text.trim() ||
-    message.text.length > CHAT_MESSAGE_MAX_LENGTH ||
-    !Number.isSafeInteger(message.timestamp) ||
-    message.timestamp < 0 ||
-    message.timestamp > MAX_DATE_TIMESTAMP
+    (candidate.type !== SIGNALING_MESSAGE.CHAT_MESSAGE &&
+      candidate.type !== SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE) ||
+    typeof candidate.text !== "string" ||
+    !candidate.text.trim() ||
+    candidate.text.length > CHAT_MESSAGE_MAX_LENGTH ||
+    typeof candidate.timestamp !== "number" ||
+    !Number.isSafeInteger(candidate.timestamp) ||
+    candidate.timestamp < 0 ||
+    candidate.timestamp > MAX_DATE_TIMESTAMP
   ) {
     return false;
   }
 
-  if (message.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE) {
+  if (candidate.type === SIGNALING_MESSAGE.CHAT_PRIVATE_MESSAGE) {
     return (
-      typeof message.recipientId === "string" &&
-      Boolean(message.recipientId.trim()) &&
-      message.recipientId.length <= MAX_CHAT_RECIPIENT_ID_LENGTH
+      typeof candidate.recipientId === "string" &&
+      Boolean(candidate.recipientId.trim()) &&
+      candidate.recipientId.length <= MAX_CHAT_RECIPIENT_ID_LENGTH
     );
   }
 
@@ -401,8 +457,8 @@ export function isChatMessage(message) {
 }
 
 export function withRoomEnvelope(
-  message,
-  { roomId, token }: { roomId?: any; token?: any },
+  message: SignalingMessage,
+  { roomId, token }: RoomEnvelope,
 ) {
   return {
     ...message,

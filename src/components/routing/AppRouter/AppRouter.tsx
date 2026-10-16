@@ -86,7 +86,7 @@ export function AppRouter() {
 
     return (
       <MeetingView
-        role={role}
+        role={role === APP_ROLE.HOST ? APP_ROLE.HOST : APP_ROLE.PARTICIPANT}
         token={sessionToken}
         joinCode={joinCode}
         onBack={() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { fetchIceServers } from "@/lib/webrtc/signalingConfig";
 import { IceConfigProvider } from "./IceConfigContext";
 import styles from "./PeerStreamConnection.module.css";
@@ -12,14 +12,14 @@ export function PeerStreamConnection({
   iceConfigUrl,
   sessionError,
 }: {
-  children?: any;
-  onError?: any;
-  peerAuthToken?: any;
-  iceConfigUrl?: any;
-  sessionError?: any;
+  children?: ReactNode;
+  onError?: (error: Error) => void;
+  peerAuthToken?: string;
+  iceConfigUrl?: string;
+  sessionError?: string | null;
 }) {
-  const [iceServers, setIceServers] = useState(null);
-  const [configError, setConfigError] = useState(null);
+  const [iceServers, setIceServers] = useState<RTCIceServer[] | null>(null);
+  const [configError, setConfigError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,8 +33,10 @@ export function PeerStreamConnection({
       })
       .catch((error) => {
         if (cancelled) return;
-        setConfigError(error);
-        onError?.(error);
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
+        setConfigError(normalizedError);
+        onError?.(normalizedError);
       });
 
     return () => {

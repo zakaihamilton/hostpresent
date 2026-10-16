@@ -12,10 +12,20 @@ import {
   createMp4CombinedEncodedMuxer,
   createMp4EncodedMuxer,
   createMp4SampleMuxer,
-  createMp4TrackMuxer,
 } from "../mediaMuxer";
+import {
+  encodeAudioTrack,
+  encodeVideoTrack,
+  type RecordingCaptureRuntime,
+  type RecordingTrackReader,
+} from "./encodeRecordingTracks";
 import { hasCompleteDirectSegmentExport } from "./exportSelection";
 import { createFfmpegBridge } from "./ffmpegBridge";
+import {
+  parseRecordingWorkerCommand,
+  type RecordingExportFile,
+  type RecordingWorkerResponse,
+} from "./recordingWorkerProtocol";
 import { getSafeSampleDuration, needsAudioSampleTrim } from "./sampleTiming";
 
 let cancelled = false;
@@ -24,7 +34,7 @@ let paused = false;
 let resumePaused: (() => void) | null = null;
 let pauseStartedAt = 0;
 let timestampOffset = 0;
-const readers = new Set<ReadableStreamDefaultReader>();
+const readers = new Set<RecordingTrackReader>();
 const DB_NAME = "HPRecording";
 const STORE_NAME = "data";
 const MANIFEST_KEY = "manifest";
@@ -33,8 +43,8 @@ let ffmpegBridge = null;
 let activeSessionId = null;
 let activeExportOutputs = [];
 
-function post(type, payload = {}) {
-  self.postMessage({ type, ...payload });
+function post(message: RecordingWorkerResponse): void {
+  self.postMessage(message);
 }
 
 async function getFfmpeg() {
@@ -186,6 +196,15 @@ async function waitForResume() {
     resumePaused = resolve;
   });
 }
+
+const captureRuntime: RecordingCaptureRuntime = {
+  readers,
+  isCancelled: () => cancelled,
+  isStopping: () => stopping,
+  waitForResume,
+  timestampOffset: () => timestampOffset,
+  post,
+};
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -656,7 +675,8 @@ async function exportPersistedNativeTrack({
       });
       timeline = result.timeline;
       samples += result.samples;
-      post("progress", {
+      post({
+        type: "progress",
         phase: "encoding",
         stream,
         completed: index + 1,
@@ -765,7 +785,8 @@ async function exportPersistedTrack({
           input.dispose();
         }
       }
-      post("progress", {
+      post({
+        type: "progress",
         phase: useFfmpegFallback ? "transcoding" : "encoding",
         stream,
         completed: index + 1,
@@ -843,7 +864,8 @@ async function exportPersistedSegments({
       });
       timeline = result.timeline;
       samples += result.samples;
-      post("progress", {
+      post({
+        type: "progress",
         phase: "remuxing",
         stream,
         completed: index + 1,
@@ -919,7 +941,7 @@ async function exportPersistedRecording(sessionId) {
   }
   activeExportOutputs = [videoOutput, audioOutput, recordingOutput];
   await updateExportCheckpoint(sessionId, "remuxing");
-  post("progress", { phase: "remuxing" });
+  post({ type: "progress", phase: "remuxing" });
   // A completed WebCodecs segment is already a timestamped MP4. Prefer it to
   // the mirrored MediaRecorder fragments, which exist only for crash recovery
   // and can have browser-specific container timing.
@@ -947,126 +969,37 @@ async function exportPersistedRecording(sessionId) {
   });
   await updateExportCheckpoint(sessionId, "recording-export");
   await updateExportCheckpoint(sessionId, "validating");
-  post("progress", { phase: "validating" });
+  post({ type: "progress", phase: "validating" });
   await Promise.all([
     validateMp4(videoOutput, "video"),
     validateMp4(audioOutput, "audio"),
     validateMp4(recordingOutput, "recording"),
   ]);
   await updateExportCheckpoint(sessionId, "writing");
-  post("progress", { phase: "writing" });
-  const files = [
+  post({ type: "progress", phase: "writing" });
+  const storage: "opfs" | "indexeddb" = isOpfs ? "opfs" : "indexeddb";
+  const files: RecordingExportFile[] = [
     {
       stream: "video",
       path: isOpfs ? "exports/final-recording.mp4" : "final-recording.mp4",
-      storage: manifest.storage,
+      storage,
       chunks: recordingOutput.getChunks(),
     },
     {
       stream: "audio",
       path: isOpfs ? "exports/final-audio.m4a" : "final-audio.m4a",
-      storage: manifest.storage,
+      storage,
       chunks: audioOutput.getChunks(),
     },
   ];
   await updateExportCheckpoint(sessionId, "complete", { files });
-  post("complete", {
-    files,
-  });
+  post({ type: "complete", files });
   activeExportOutputs = [];
 }
 
-async function encodeVideo({
-  readable,
-  writable,
-  width,
-  height,
-}: {
-  readable?: any;
-  writable?: any;
-  width?: any;
-  height?: any;
-}) {
-  const reader = readable.getReader();
-  readers.add(reader);
-  const muxer = await createMp4TrackMuxer({ writable, stream: "video" });
-  let writes = Promise.resolve();
-  let frames = 0;
-  const encoder = new VideoEncoder({
-    output: (chunk, meta) => {
-      writes = writes.then(() => muxer.add(chunk, meta));
-    },
-    error: (error) => post("failed", { capture: true, error: error.message }),
-  });
-  encoder.configure({
-    codec: "avc1.42E01F",
-    width,
-    height,
-    bitrate: 2_500_000,
-  });
-
-  while (!cancelled && !stopping) {
-    await waitForResume();
-    const { value: frame, done } = await reader.read();
-    if (done) break;
-    const adjusted = new VideoFrame(frame, {
-      timestamp: Math.max(0, frame.timestamp - timestampOffset),
-    });
-    encoder.encode(adjusted, { keyFrame: frames % 150 === 0 });
-    adjusted.close();
-    frame.close();
-    frames += 1;
-    if (frames % 30 === 0) post("progress", { phase: "encoding", frames });
-  }
-  await encoder.flush();
-  await writes;
-  await muxer.finalize();
-  readers.delete(reader);
-}
-
-async function encodeAudio({
-  readable,
-  writable,
-  sampleRate = 48_000,
-  channels = 2,
-}: {
-  readable?: any;
-  writable?: any;
-  sampleRate?: any;
-  channels?: any;
-}) {
-  const reader = readable.getReader();
-  readers.add(reader);
-  const muxer = await createMp4TrackMuxer({ writable, stream: "audio" });
-  let writes = Promise.resolve();
-  const encodedOffsets = [];
-  const encoder = new AudioEncoder({
-    output: (chunk, meta) => {
-      const offset = encodedOffsets.shift() ?? timestampOffset;
-      writes = writes.then(() => muxer.add(chunk, meta, offset));
-    },
-    error: (error) => post("failed", { capture: true, error: error.message }),
-  });
-  encoder.configure({
-    codec: "mp4a.40.2",
-    sampleRate,
-    numberOfChannels: channels,
-  });
-  while (!cancelled && !stopping) {
-    await waitForResume();
-    const { value: audioData, done } = await reader.read();
-    if (done) break;
-    encodedOffsets.push(timestampOffset);
-    encoder.encode(audioData);
-    audioData.close();
-  }
-  await encoder.flush();
-  await writes;
-  await muxer.finalize();
-  readers.delete(reader);
-}
-
-self.onmessage = async ({ data }: { data?: any }) => {
+self.onmessage = async ({ data: rawData }: MessageEvent<unknown>) => {
+  const data = parseRecordingWorkerCommand(rawData);
+  if (!data) return;
   if (data.type === "cancel") {
     cancelled = true;
     paused = false;
@@ -1093,7 +1026,7 @@ self.onmessage = async ({ data }: { data?: any }) => {
   if (data.type === "pause") {
     paused = true;
     pauseStartedAt = performance.now();
-    post("paused");
+    post({ type: "paused" });
     return;
   }
   if (data.type === "resume") {
@@ -1104,7 +1037,7 @@ self.onmessage = async ({ data }: { data?: any }) => {
       paused = false;
       resumePaused?.();
       resumePaused = null;
-      post("resumed");
+      post({ type: "resumed" });
     }
     return;
   }
@@ -1120,13 +1053,14 @@ self.onmessage = async ({ data }: { data?: any }) => {
           removeCancelledExportOutputs(data.sessionId),
           updateExportCheckpoint(data.sessionId, "cancelled"),
         ]);
-        post("cancelled");
+        post({ type: "cancelled" });
         return;
       }
       await updateExportCheckpoint(data.sessionId, "failed", {
         error: error instanceof Error ? error.message : String(error),
       }).catch(() => {});
-      post("failed", {
+      post({
+        type: "failed",
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -1164,40 +1098,55 @@ self.onmessage = async ({ data }: { data?: any }) => {
     });
     const videoOutput = createOpfsOutput(videoHandle);
     const audioOutput = createOpfsOutput(audioHandle);
-    post("progress", { phase: "initializing" });
+    post({ type: "progress", phase: "initializing" });
     await Promise.all([
-      encodeVideo({
+      encodeVideoTrack({
         readable: data.videoReadable,
         writable: await videoHandle.createWritable(),
         width: data.width,
         height: data.height,
+        runtime: captureRuntime,
       }),
-      encodeAudio({
+      encodeAudioTrack({
         readable: data.audioReadable,
         writable: await audioHandle.createWritable(),
         sampleRate: data.sampleRate,
         channels: data.channels,
+        runtime: captureRuntime,
       }),
     ]);
-    post("progress", { phase: "validating" });
+    post({ type: "progress", phase: "validating" });
     await Promise.all([
       validateMp4(videoOutput, "video"),
       validateMp4(audioOutput, "audio"),
     ]);
-    post("progress", { phase: "writing" });
-    post(cancelled && !stopping ? "cancelled" : "complete", {
-      capture: true,
-      files: [
-        { stream: "video", path: `exports/${videoFilename}` },
-        { stream: "audio", path: `exports/${audioFilename}` },
-      ],
-    });
+    post({ type: "progress", phase: "writing" });
+    if (cancelled && !stopping) {
+      post({
+        type: "cancelled",
+        capture: true,
+        files: [
+          { stream: "video", path: `exports/${videoFilename}` },
+          { stream: "audio", path: `exports/${audioFilename}` },
+        ],
+      });
+    } else {
+      post({
+        type: "complete",
+        capture: true,
+        files: [
+          { stream: "video", path: `exports/${videoFilename}` },
+          { stream: "audio", path: `exports/${audioFilename}` },
+        ],
+      });
+    }
   } catch (error) {
     if (cancelled) {
-      post("cancelled");
+      post({ type: "cancelled" });
       return;
     }
-    post("failed", {
+    post({
+      type: "failed",
       capture: true,
       error: error instanceof Error ? error.message : String(error),
     });

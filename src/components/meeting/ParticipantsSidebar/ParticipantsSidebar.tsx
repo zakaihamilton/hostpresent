@@ -9,13 +9,63 @@ import { buildParticipantItems } from "./participantItems";
 const PARTICIPANT_ITEM_HEIGHT = 52;
 const SECTION_LABEL_HEIGHT = 44;
 
-function getParticipantItemSize(_index, item) {
+interface SidebarParticipant {
+  id: string;
+  name: string;
+  avatarColor?: string;
+  isAudioMuted?: boolean;
+  isVideoMuted?: boolean;
+  isSpeaking?: boolean;
+  isScreenSharing?: boolean;
+  isMuted?: boolean;
+  mode?: string;
+}
+
+interface ParticipantsSidebarProps {
+  visible?: boolean;
+  audioList: SidebarParticipant[];
+  videoParticipants: SidebarParticipant[];
+  peerParticipants?: SidebarParticipant[];
+  hostDisplayName?: string;
+  hostIsAudioMuted?: boolean;
+  hostIsVideoMuted?: boolean;
+  hostIsSpeaking?: boolean;
+  hostMode?: string;
+  isVideoMuted?: boolean;
+  isAudioMuted?: boolean;
+  isHost?: boolean;
+  localDisplayName?: string;
+  localParticipantMode?: string;
+  localIsSpeaking?: boolean;
+  localIsScreenSharing?: boolean;
+  hostIsScreenSharing?: boolean;
+  focusedParticipantId?: string;
+  connectionStatus?: string | null;
+  onClose?: () => void;
+  onFocusParticipant?: (id: string) => void;
+  onMuteParticipantVideo?: (id: string) => void;
+  onMuteParticipantAudio?: (id: string, type: string) => void;
+  onMuteAllVideo?: () => void;
+  onMuteAllAudio?: () => void;
+  canMuteAllVideo?: boolean;
+  canMuteAllAudio?: boolean;
+  publishingRequests?: string[];
+  publisherIds?: string[];
+  onApprovePublishing?: (id: string) => void;
+  onRevokePublishing?: (id: string) => void;
+  flex?: boolean;
+}
+
+function getParticipantItemSize(
+  _index: number,
+  item: { type: string },
+): number {
   return item.type === "section"
     ? SECTION_LABEL_HEIGHT
     : PARTICIPANT_ITEM_HEIGHT;
 }
 
-function getParticipantItemKey(item) {
+function getParticipantItemKey(item: { id: string }): string {
   return item.id;
 }
 
@@ -52,40 +102,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   onApprovePublishing,
   onRevokePublishing,
   flex,
-}: {
-  visible?: any;
-  audioList?: any;
-  videoParticipants?: any;
-  peerParticipants?: any;
-  hostDisplayName?: any;
-  hostIsAudioMuted?: any;
-  hostIsVideoMuted?: any;
-  hostIsSpeaking?: any;
-  hostMode?: any;
-  isVideoMuted?: any;
-  isAudioMuted?: any;
-  isHost?: any;
-  localDisplayName?: any;
-  localParticipantMode?: any;
-  localIsSpeaking?: any;
-  localIsScreenSharing?: any;
-  hostIsScreenSharing?: any;
-  focusedParticipantId?: any;
-  connectionStatus?: any;
-  onClose?: any;
-  onFocusParticipant?: any;
-  onMuteParticipantVideo?: any;
-  onMuteParticipantAudio?: any;
-  onMuteAllVideo?: any;
-  onMuteAllAudio?: any;
-  canMuteAllVideo?: any;
-  canMuteAllAudio?: any;
-  publishingRequests?: any;
-  publisherIds?: any;
-  onApprovePublishing?: any;
-  onRevokePublishing?: any;
-  flex?: any;
-}) {
+}: ParticipantsSidebarProps) {
   const totalCount = isHost
     ? 1 + videoParticipants.length + audioList.length
     : 2 + peerParticipants.length;
@@ -136,7 +153,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
   );
 
   const renderItem = useCallback(
-    (item) => (
+    (item: ReturnType<typeof buildParticipantItems>[number]) => (
       <ParticipantRow
         publishingRequests={publishingRequests}
         publisherIds={publisherIds}
@@ -173,6 +190,7 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
           totalCount={totalCount}
           remoteCount={remoteCount}
           hasRemoteParticipants={hasRemoteParticipants}
+          isHost={isHost}
           onMuteAllVideo={onMuteAllVideo}
           canMuteAllVideo={canMuteAllVideo}
           onMuteAllAudio={onMuteAllAudio}

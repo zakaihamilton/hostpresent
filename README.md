@@ -33,7 +33,7 @@ distributed 45-minute acceptance test before advertising that capacity. See
 - **Presenter-first layout** — Keep the host feed prominent while showing an optional participant gallery.
 - **Screen sharing** — Share a screen, window, or browser tab, with support for system or tab audio when the browser provides it.
 - **Local recording** — Record in the browser, pause and resume, then save the meeting locally when finished.
-- **Host controls** — Mute individual participants or the whole room and manage who publishes video.
+- **Host controls** — Mute individual participants or the whole room and manage who publishes video. Hosts cannot remove or ban participants; revoking publishing leaves them in the room with chat access.
 - **Participant modes** — Let participants join as **Available** or **Listening only**.
 - **Chat** — Send room messages or private messages and save the conversation locally.
 - **Recent rooms** — Reopen rooms from local storage without a server-side meeting database.

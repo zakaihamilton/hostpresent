@@ -1,3 +1,4 @@
+import type { DataConnection } from "peerjs";
 import {
   authenticateChatMessage,
   canReceiveSignalingMessage,
@@ -12,10 +13,11 @@ import {
 import { isMediaControl } from "@/lib/webrtc/audienceProtocol";
 import { hostPeerId } from "@/lib/webrtc/peerClient";
 import { sendOnConnection } from "./sendOnConnection";
+import type { RoomConnectionContext } from "./types";
 
 const MAX_DATA_CHANNEL_MESSAGE_CHARS = 16_384;
 
-const PARTICIPANT_STATUS_RELAY_TYPES = new Set([
+const PARTICIPANT_STATUS_RELAY_TYPES = new Set<string>([
   SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
   SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
   SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
@@ -25,11 +27,14 @@ const PARTICIPANT_STATUS_RELAY_TYPES = new Set([
 ]);
 
 export function bindRoomConnection(
-  conn,
-  { remoteId, remoteName = "Guest" }: { remoteId?: any; remoteName?: any },
-  context,
+  conn: DataConnection,
+  {
+    remoteId,
+    remoteName = "Guest",
+  }: { remoteId?: string; remoteName?: string },
+  context: RoomConnectionContext,
 ) {
-  const connectionPeerId = conn.peer || remoteId;
+  const connectionPeerId = conn.peer || remoteId || "";
 
   const handleOpen = () => {
     if (

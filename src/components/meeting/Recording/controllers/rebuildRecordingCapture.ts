@@ -20,6 +20,7 @@ import {
   supportsWebCodecsRecording,
   supportsWebCodecsRecordingCodecs,
 } from "../webCodecsRecording";
+import { isRecordingWorkerResponse } from "../worker/recordingWorkerProtocol";
 
 export async function rebuildRecordingCapture({
   media,
@@ -155,7 +156,8 @@ export async function rebuildRecordingCapture({
       updateDownloadProgress("warning", 0, message);
       resolveCaptureSaveCompletion();
     };
-    worker.onmessage = async ({ data }: { data?: any }) => {
+    worker.onmessage = async ({ data }: MessageEvent<unknown>) => {
+      if (!isRecordingWorkerResponse(data)) return;
       if (data.type === "progress") {
         if (
           isRecordingRef.current &&

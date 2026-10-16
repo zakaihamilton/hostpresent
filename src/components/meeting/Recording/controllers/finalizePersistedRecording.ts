@@ -6,6 +6,7 @@ import {
   updateRecordingSession,
 } from "../recordingStorage";
 import { createWebCodecsRecordingWorker } from "../webCodecsRecording";
+import { isRecordingWorkerResponse } from "../worker/recordingWorkerProtocol";
 
 /**
  * Finalizes the durable fragment store. This controller deliberately has no
@@ -66,14 +67,15 @@ export async function finalizePersistedRecording({
       );
       finish(false);
     };
-    worker.onmessage = async ({ data }: { data?: any }) => {
+    worker.onmessage = async ({ data }: MessageEvent<unknown>) => {
+      if (!isRecordingWorkerResponse(data)) return;
       if (data.type === "progress") {
         updateProgress(data.phase, 50, videoFilename);
         return;
       }
       if (data.type === "failed" || data.type === "cancelled") {
         await fail(
-          data.error,
+          data.type === "failed" ? data.error : undefined,
           data.type === "failed" ? "warning" : "cancelled",
         );
         return;
