@@ -2,25 +2,29 @@ import { MicOff, VideoOff, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import styles from "./ParticipantsSidebar.module.css";
 
+interface ParticipantsHeaderProps {
+  totalCount: number;
+  remoteCount: number;
+  hasRemoteParticipants: boolean;
+  isHost: boolean;
+  onMuteAllVideo?: () => void;
+  canMuteAllVideo?: boolean;
+  onMuteAllAudio?: () => void;
+  canMuteAllAudio?: boolean;
+  onClose?: () => void;
+}
+
 export function ParticipantsHeader({
   totalCount,
   remoteCount,
   hasRemoteParticipants,
+  isHost,
   onMuteAllVideo,
   canMuteAllVideo,
   onMuteAllAudio,
   canMuteAllAudio,
   onClose,
-}: {
-  totalCount?: any;
-  remoteCount?: any;
-  hasRemoteParticipants?: any;
-  onMuteAllVideo?: any;
-  canMuteAllVideo?: any;
-  onMuteAllAudio?: any;
-  canMuteAllAudio?: any;
-  onClose?: any;
-}) {
+}: ParticipantsHeaderProps) {
   return (
     <div className={styles.header}>
       <div className={styles.headerCopy}>
@@ -33,6 +37,12 @@ export function ParticipantsHeader({
             ? "Only you are in the room."
             : `${remoteCount} ${remoteCount === 1 ? "guest" : "guests"} connected.`}
         </p>
+        {isHost ? (
+          <p className={styles.moderationNote}>
+            You can mute participants or revoke publishing; removal and bans
+            aren’t available.
+          </p>
+        ) : null}
       </div>
       <div className={styles.headerActions}>
         {hasRemoteParticipants ? (

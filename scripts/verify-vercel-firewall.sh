@@ -8,6 +8,21 @@ if [[ -z "${APP_URL:-}" ]]; then
 fi
 
 app_url="${APP_URL%/}"
+cookie_jar=""
+
+if [[ -n "${VERCEL_SHARE_URL:-}" ]]; then
+  cookie_jar="$(mktemp)"
+  trap 'rm -f "$cookie_jar"' EXIT
+  curl \
+    --silent \
+    --show-error \
+    --fail \
+    --location \
+    --cookie-jar "$cookie_jar" \
+    --cookie "$cookie_jar" \
+    --output /dev/null \
+    "$VERCEL_SHARE_URL"
+fi
 
 verify_limit() {
   local label="$1"
@@ -17,8 +32,18 @@ verify_limit() {
   local status_file
   status_file="$(mktemp)"
   local attempt
+  local -a curl_args=(
+    --silent
+    --show-error
+    --output /dev/null
+    --write-out '%{http_code}\n'
+  )
+  if [[ -n "$cookie_jar" ]]; then
+    curl_args+=(--cookie "$cookie_jar")
+  fi
+
   for ((attempt = 1; attempt <= requests; attempt += 1)); do
-    curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' "$@" >>"$status_file" &
+    curl "${curl_args[@]}" "$@" >>"$status_file" &
   done
   wait
 

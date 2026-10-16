@@ -20,8 +20,10 @@ Peerovo applies connectivity-service rate limits.
 - Confirm Peerovo's proxy redacts the PeerJS WebSocket `token` query parameter.
 - Confirm coturn's REST secret is configured only in Peerovo and matches the
   coturn server.
-- Run `pnpm run lint`, `pnpm run test:unit -- --runInBand`, `pnpm run build`,
-  and `pnpm run test:e2e:smoke` from the release commit.
+- Run `pnpm run typecheck`, `pnpm run lint`, and `pnpm run test:automated`
+  from the release commit. The automated script runs unit tests, a production
+  build, and smoke tests.
+- Run `pnpm run test:e2e:webrtc` against a dedicated Peerovo test deployment.
 
 ## Audience room capacity
 
@@ -43,9 +45,20 @@ change a real meeting.
 APP_URL="$APP_URL" ./scripts/verify-vercel-firewall.sh
 ```
 
+For a Preview protected by Vercel Authentication, create a temporary access
+link in Vercel and pass it as `VERCEL_SHARE_URL`. The verifier exchanges that
+link for a short-lived cookie, then sends the same checks to `APP_URL`:
+
+```bash
+APP_URL="$APP_URL" VERCEL_SHARE_URL="$VERCEL_SHARE_URL" ./scripts/verify-vercel-firewall.sh
+```
+
+Keep the temporary link private and out of release records.
+
 If the script fails, correct the matching Vercel Firewall rule before
-promotion. Also verify Peerovo's ticket, ICE, and signaling limits against its
-test deployment without using production credentials.
+promotion; any missing `429` is a release blocker. Also verify Peerovo's
+ticket, ICE, and signaling limits against its test deployment without using
+production credentials.
 
 ## After production promotion
 

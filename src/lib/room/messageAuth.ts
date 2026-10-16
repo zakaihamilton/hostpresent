@@ -1,7 +1,37 @@
 import { ROOM_ROLE } from "@/lib/room/roles";
-import { isChatMessage, SIGNALING_MESSAGE } from "@/lib/signaling/messages";
+import {
+  type ChatMessage,
+  isChatMessage,
+  SIGNALING_MESSAGE,
+  type SignalingMessage,
+} from "@/lib/signaling/messages";
 
-const HOST_COMMAND_TYPES = new Set([
+type HostCommandType =
+  | typeof SIGNALING_MESSAGE.HOST_PRESENT
+  | typeof SIGNALING_MESSAGE.HOST_AUDIO_MUTED
+  | typeof SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED
+  | typeof SIGNALING_MESSAGE.HOST_VIDEO_MUTED
+  | typeof SIGNALING_MESSAGE.HOST_VIDEO_UNMUTED
+  | typeof SIGNALING_MESSAGE.HOST_MUTE_AUDIO
+  | typeof SIGNALING_MESSAGE.HOST_MUTE_VIDEO
+  | typeof SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO
+  | typeof SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO
+  | typeof SIGNALING_MESSAGE.HOST_FOCUS_CHANGED
+  | typeof SIGNALING_MESSAGE.RECORDING_STATE
+  | typeof SIGNALING_MESSAGE.MEETING_ENDED
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST
+  | typeof SIGNALING_MESSAGE.ROOM_FULL;
+type ParticipantStatusType =
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_PROFILE
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED
+  | typeof SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED
+  | typeof SIGNALING_MESSAGE.MEDIA_RENEGOTIATE;
+
+const HOST_COMMAND_TYPES = new Set<string>([
   SIGNALING_MESSAGE.HOST_PRESENT,
   SIGNALING_MESSAGE.HOST_AUDIO_MUTED,
   SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED,
@@ -18,14 +48,14 @@ const HOST_COMMAND_TYPES = new Set([
   SIGNALING_MESSAGE.ROOM_FULL,
 ]);
 
-const HOST_MEDIA_BROADCAST_TYPES = new Set([
+const HOST_MEDIA_BROADCAST_TYPES = new Set<string>([
   SIGNALING_MESSAGE.HOST_AUDIO_MUTED,
   SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED,
   SIGNALING_MESSAGE.HOST_VIDEO_MUTED,
   SIGNALING_MESSAGE.HOST_VIDEO_UNMUTED,
 ]);
 
-const PARTICIPANT_STATUS_TYPES = new Set([
+const PARTICIPANT_STATUS_TYPES = new Set<string>([
   SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
   SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
   SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
@@ -36,12 +66,12 @@ const PARTICIPANT_STATUS_TYPES = new Set([
   SIGNALING_MESSAGE.MEDIA_RENEGOTIATE,
 ]);
 
-const HOST_MUTE_ALL_TYPES = new Set([
+const HOST_MUTE_ALL_TYPES = new Set<string>([
   SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO,
   SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO,
 ]);
 
-const PARTICIPANT_STATUS_BROADCAST_TYPES = new Set([
+const PARTICIPANT_STATUS_BROADCAST_TYPES = new Set<string>([
   SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED,
   SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED,
   SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED,
@@ -50,17 +80,33 @@ const PARTICIPANT_STATUS_BROADCAST_TYPES = new Set([
   SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED,
 ]);
 
-export function isHostCommandMessage(message) {
-  return HOST_COMMAND_TYPES.has(message?.type);
+export function isHostCommandMessage(
+  message: unknown,
+): message is SignalingMessage & { type: HostCommandType } {
+  return (
+    Boolean(message) &&
+    typeof message === "object" &&
+    "type" in message &&
+    typeof message.type === "string" &&
+    HOST_COMMAND_TYPES.has(message.type)
+  );
 }
 
-export function isParticipantStatusMessage(message) {
-  return PARTICIPANT_STATUS_TYPES.has(message?.type);
+export function isParticipantStatusMessage(
+  message: unknown,
+): message is SignalingMessage & { type: ParticipantStatusType } {
+  return (
+    Boolean(message) &&
+    typeof message === "object" &&
+    "type" in message &&
+    typeof message.type === "string" &&
+    PARTICIPANT_STATUS_TYPES.has(message.type)
+  );
 }
 
 export function resolveParticipantStatusMessage(
-  message,
-  { senderId = "" }: { senderId?: any } = {},
+  message: SignalingMessage,
+  { senderId = "" }: { senderId?: string } = {},
 ) {
   if (!isParticipantStatusMessage(message)) return message;
 
@@ -76,8 +122,8 @@ export function canRelayMessage({
   role,
   message,
 }: {
-  role?: any;
-  message?: any;
+  role?: string;
+  message?: SignalingMessage | null;
 }) {
   if (!message?.type) return false;
   if (isHostCommandMessage(message)) {
@@ -94,9 +140,9 @@ export function canSendSignalingMessage({
   message,
   localParticipantId = "",
 }: {
-  isHost?: any;
-  message?: any;
-  localParticipantId?: any;
+  isHost?: boolean;
+  message?: SignalingMessage | null;
+  localParticipantId?: string;
 }) {
   if (!message?.type) return false;
 
@@ -118,10 +164,10 @@ export function canReceiveSignalingMessage({
   senderId = "",
   localParticipantId = "",
 }: {
-  isHost?: any;
-  message?: any;
-  senderId?: any;
-  localParticipantId?: any;
+  isHost?: boolean;
+  message?: SignalingMessage | null;
+  senderId?: string;
+  localParticipantId?: string;
 }) {
   if (!message?.type) return false;
 
@@ -158,26 +204,32 @@ export function canReceiveSignalingMessage({
   }
 
   if (!message.participantId) {
-    return message.type === SIGNALING_MESSAGE.HOST_PRESENT;
+    return false;
   }
 
   return message.participantId === localParticipantId;
 }
 
+export type AuthenticatedChatMessage = ChatMessage & {
+  senderId: string;
+  senderName: string;
+  relayedByHost: boolean;
+};
+
 export function authenticateChatMessage(
-  message,
+  message: unknown,
   {
     senderId = "",
     expectedSenderId = "",
     senderName = "",
     allowHostRelay = false,
   }: {
-    senderId?: any;
-    expectedSenderId?: any;
-    senderName?: any;
-    allowHostRelay?: any;
+    senderId?: string;
+    expectedSenderId?: string;
+    senderName?: string;
+    allowHostRelay?: boolean;
   } = {},
-) {
+): AuthenticatedChatMessage | null {
   if (
     !isChatMessage(message) ||
     !senderId ||

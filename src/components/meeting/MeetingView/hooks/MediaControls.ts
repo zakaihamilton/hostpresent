@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import type { RoomMediaControlsConnection } from "@/hooks/roomDataChannel/types";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import type { ParticipantMode } from "@/lib/signaling/messages";
 import {
   createHostAudioMutedMessage,
   createHostAudioUnmutedMessage,
@@ -23,7 +32,10 @@ const AUDIO_PROCESSING_CONSTRAINTS = {
   autoGainControl: true,
 };
 
-function audioConstraintsForDevice(deviceId, voiceIsolationEnabled = true) {
+function audioConstraintsForDevice(
+  deviceId?: string,
+  voiceIsolationEnabled = true,
+) {
   return {
     ...AUDIO_PROCESSING_CONSTRAINTS,
     voiceIsolation: voiceIsolationEnabled,
@@ -51,14 +63,14 @@ export function MediaControls({
   screenStream,
   setScreenStream,
 }: {
-  isHost?: any;
-  participantMode?: any;
-  publishingGranted?: any;
-  roomConnection?: any;
-  localStream?: any;
-  setLocalStream?: any;
-  screenStream?: any;
-  setScreenStream?: any;
+  isHost?: boolean;
+  participantMode?: ParticipantMode;
+  publishingGranted?: boolean;
+  roomConnection?: RoomMediaControlsConnection;
+  localStream?: MediaStream | null;
+  setLocalStream: Dispatch<SetStateAction<MediaStream | null>>;
+  screenStream?: MediaStream | null;
+  setScreenStream: Dispatch<SetStateAction<MediaStream | null>>;
 }) {
   const [isAudioMuted, setIsAudioMuted] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -95,8 +107,8 @@ export function MediaControls({
 
   const setScreenStreamRef = useRef(setScreenStream);
   setScreenStreamRef.current = setScreenStream;
-  const localStreamRef = useRef(null);
-  const screenStreamRef = useRef(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
   const activeScreenStreamRef = useRef(screenStream);
   const initialAudioMutedRef = useRef(isAudioMuted);
   const initialVideoMutedRef = useRef(isVideoMuted);
@@ -445,7 +457,13 @@ export function MediaControls({
   const participantId = roomConnection?.localParticipantId;
   const sendStatus = roomConnection?.send;
   const publishParticipantMediaStatus = useCallback(
-    ({ audioMuted, videoMuted }: { audioMuted?: any; videoMuted?: any }) => {
+    ({
+      audioMuted,
+      videoMuted,
+    }: {
+      audioMuted?: boolean;
+      videoMuted?: boolean;
+    }) => {
       if (!participantId) return;
 
       if (typeof audioMuted === "boolean") {

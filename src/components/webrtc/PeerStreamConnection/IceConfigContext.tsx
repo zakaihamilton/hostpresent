@@ -2,13 +2,13 @@
 
 import { createContext, useContext } from "react";
 
-const IceConfigContext = createContext(null);
+const IceConfigContext = createContext<RTCIceServer[] | null>(null);
 
 export function IceConfigProvider({
   iceServers,
   children,
 }: {
-  iceServers?: any;
+  iceServers?: RTCIceServer[] | null;
   children?: any;
 }) {
   return (

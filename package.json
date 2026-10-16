@@ -10,7 +10,7 @@
     "format": "biome format --write",
     "test": "jest",
     "test:unit": "jest",
-    "test:automated": "pnpm run test:unit -- --runInBand && pnpm run build && pnpm run test:e2e:smoke",
+    "test:automated": "pnpm run test:unit --runInBand && pnpm run build && pnpm run test:e2e:smoke",
     "test:e2e": "env -u FORCE_COLOR -u NO_COLOR playwright test",
     "test:e2e:smoke": "env -u FORCE_COLOR -u NO_COLOR PLAYWRIGHT_SERVER_MODE=production playwright test tests/e2e/welcome-smoke.spec.ts --project=chromium",
     "test:e2e:webrtc": "env -u FORCE_COLOR -u NO_COLOR RUN_WEBRTC_E2E=1 playwright test tests/e2e/meeting-webrtc.spec.ts --project=chromium",
@@ -18,7 +18,7 @@
     "health": "repnix check",
     "health:dead-code": "knip",
     "health:duplication": "jscpd src",
-    "health:coverage": "c8 --all --reporter=text pnpm run test:unit -- --runInBand",
+    "health:coverage": "c8 --all --reporter=text pnpm run test:unit --runInBand",
     "health:architecture": "depcruise --output-type json --config -- src",
     "health:licenses": "license-checker --json",
     "health:documentation": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
@@ -30,7 +30,7 @@
     "build:public-scripts": "tsc -p tsconfig.public-sw.json && tsc -p tsconfig.public-theme.json",
     "predev": "pnpm run build:public-scripts",
     "prebuild": "pnpm run build:public-scripts",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.public-sw.json --noEmit && tsc -p tsconfig.public-theme.json --noEmit"
+    "typecheck": "next typegen && tsc --noEmit -p tsconfig.typecheck.json && tsc -p tsconfig.public-sw.json --noEmit && tsc -p tsconfig.public-theme.json --noEmit"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",

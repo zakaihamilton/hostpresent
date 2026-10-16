@@ -33,6 +33,29 @@ describe("ParticipantsSidebar", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Guest")).toBeInTheDocument();
     expect(screen.getByText("Alex")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "You can mute participants or revoke publishing; removal and bans aren’t available.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show host moderation guidance to participants", () => {
+    render(
+      <ParticipantsSidebar
+        visible
+        audioList={[]}
+        videoParticipants={[]}
+        peerParticipants={[]}
+        isVideoMuted={false}
+        isAudioMuted={false}
+        isHost={false}
+      />,
+    );
+
+    expect(
+      screen.queryByText(/removal and bans aren’t available/i),
+    ).not.toBeInTheDocument();
   });
 
   it("calls close handler", async () => {

@@ -1,3 +1,5 @@
+import type { PeerJsConfig } from "@/lib/room/roomTypes";
+
 const DEFAULT_SIGNALING_PORT = 443;
 const DEFAULT_SIGNALING_KEY = "peerjs";
 export const REQUIRED_SIGNALING_AUTH_MODE = "project-session-peerovo-v1";
@@ -29,14 +31,14 @@ export function getSignalingConfigHint() {
   return SIGNALING_CONFIG_HINT;
 }
 
-export function isWaitingForHostMessage(message) {
+export function isWaitingForHostMessage(message: unknown): boolean {
   return (
     typeof message === "string" && message.includes("Waiting for the host")
   );
 }
 
-export function isSignalingRetryMessage(message) {
-  if (!message) return false;
+export function isSignalingRetryMessage(message: unknown): boolean {
+  if (typeof message !== "string") return false;
   return (
     message.includes("Retrying…") ||
     message.includes("Reconnecting…") ||
@@ -44,16 +46,16 @@ export function isSignalingRetryMessage(message) {
   );
 }
 
-export function isSignalingConfigError(message) {
-  if (!message) return false;
+export function isSignalingConfigError(message: unknown): boolean {
+  if (typeof message !== "string") return false;
   return (
     message.includes(SIGNALING_ERROR.NOT_CONFIGURED) ||
     message.includes(SIGNALING_ERROR.CONFIG_LOAD_FAILED)
   );
 }
 
-export function isSignalingServerReachabilityError(message) {
-  if (!message) return false;
+export function isSignalingServerReachabilityError(message: unknown): boolean {
+  if (typeof message !== "string") return false;
   return (
     message.includes(SIGNALING_ERROR.HOST_TIMEOUT) ||
     message.includes(SIGNALING_ERROR.HOST_RETRY_EXHAUSTED) ||
@@ -65,8 +67,8 @@ export function isSignalingServerReachabilityError(message) {
   );
 }
 
-export function isFatalSignalingError(message) {
-  if (!message) return false;
+export function isFatalSignalingError(message: unknown): boolean {
+  if (typeof message !== "string" || !message) return false;
   if (isWaitingForHostMessage(message)) return false;
   if (isWaitingForParticipantsMessage(message)) return false;
   if (isSignalingRetryMessage(message)) return false;
@@ -74,8 +76,8 @@ export function isFatalSignalingError(message) {
 }
 
 export function getSignalingErrorHint(
-  message,
-  { isHost = false }: { isHost?: any } = {},
+  message: unknown,
+  { isHost = false }: { isHost?: boolean } = {},
 ) {
   if (isSignalingConfigError(message)) {
     return SIGNALING_CONFIG_HINT;
@@ -107,25 +109,27 @@ export const SIGNALING_CONNECT_TIMEOUT_MS = 45000;
 export const HOST_ID_RETRY_DELAY_MS = 1000;
 
 /** Backoff while reclaiming a sticky host PeerJS id after leave/rejoin. */
-export function hostIdRetryDelayMs(attempt) {
+export function hostIdRetryDelayMs(attempt: number): number {
   return Math.min(HOST_ID_RETRY_DELAY_MS * 2 ** attempt, 8000);
 }
 
-export function getPeerJsConfigFromApi(payload) {
-  const host = payload?.host;
-  if (!host) return null;
+export function getPeerJsConfigFromApi(payload: unknown): PeerJsConfig | null {
+  if (!payload || typeof payload !== "object") return null;
+  const config = payload as Record<string, unknown>;
+  const host = config.host;
+  if (typeof host !== "string" || !host) return null;
   const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(
     host.toLowerCase(),
   );
   return {
     host,
-    port: Number(payload?.port ?? (isLocal ? 9000 : DEFAULT_SIGNALING_PORT)),
-    path: payload?.path ?? "/",
+    port: Number(config.port ?? (isLocal ? 9000 : DEFAULT_SIGNALING_PORT)),
+    path: typeof config.path === "string" ? config.path : "/",
     key:
-      typeof payload?.key === "string" && payload.key
-        ? payload.key
+      typeof config.key === "string" && config.key
+        ? config.key
         : DEFAULT_SIGNALING_KEY,
-    secure: payload?.secure !== undefined ? payload.secure !== false : !isLocal,
+    secure: config.secure !== undefined ? config.secure !== false : !isLocal,
     debug: 0,
   };
 }
@@ -134,14 +138,14 @@ export function hostPeerId(roomId) {
   return `hp-${roomId}`;
 }
 
-async function loadPeerModule() {
+async function loadPeerModule(): Promise<typeof import("peerjs").Peer> {
   const { Peer } = await import("peerjs");
   return Peer;
 }
 
 let peerModulePromise = null;
 
-export function loadPeer() {
+export function loadPeer(): Promise<typeof import("peerjs").Peer> {
   if (!peerModulePromise) {
     peerModulePromise = loadPeerModule().catch((error) => {
       peerModulePromise = null;
@@ -151,8 +155,14 @@ export function loadPeer() {
   return peerModulePromise;
 }
 
-export function isRetryablePeerError(error) {
-  const type = error?.type ?? "";
+export function isRetryablePeerError(error: unknown): boolean {
+  const type =
+    error &&
+    typeof error === "object" &&
+    "type" in error &&
+    typeof error.type === "string"
+      ? error.type
+      : "";
   return [
     "network",
     "server-error",
@@ -163,10 +173,13 @@ export function isRetryablePeerError(error) {
 }
 
 export function peerErrorMessage(
-  error,
-  { isHost = false }: { isHost?: any } = {},
+  error: unknown,
+  { isHost = false }: { isHost?: boolean } = {},
 ) {
-  const type = error?.type ?? "unknown";
+  const type =
+    error && typeof error === "object" && "type" in error
+      ? String(error.type ?? "unknown")
+      : "unknown";
 
   if (type === "peer-unavailable" && !isHost) {
     return "[E011] Waiting for the host to join…";
@@ -209,7 +222,11 @@ export function peerErrorMessage(
       break;
   }
 
-  const details = error?.message ? `: ${error.message}` : "";
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? error.message
+      : undefined;
+  const details = message ? `: ${String(message)}` : "";
   const suffix = isRetryablePeerError(error) ? ". Retrying…" : "";
 
   let finalMsg = baseMsg + details;
@@ -225,12 +242,12 @@ export function peerErrorMessage(
   return finalMsg;
 }
 
-export function isWaitingForParticipantsMessage(message) {
+export function isWaitingForParticipantsMessage(message: unknown): boolean {
   return (
     typeof message === "string" && message.includes("Waiting for participants")
   );
 }
 
-export function connectionRetryDelayMs(attempt) {
+export function connectionRetryDelayMs(attempt: number): number {
   return Math.min(2000 * 2 ** attempt, 15000);
 }

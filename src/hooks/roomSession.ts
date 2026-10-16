@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isValidJoinCode, normalizeJoinCode } from "@/lib/room/joinCodeFormat";
+import {
+  type CreatedRoom,
+  isCreatedRoom,
+  isRoomState,
+  type RoomRole,
+  type RoomState,
+} from "@/lib/room/roomTypes";
 import { readRoomTokenRole } from "@/lib/room/tokenClaims";
 import { removeParticipantRoomByToken } from "@/lib/settings/participantRoomSettings";
 import {
@@ -20,9 +27,15 @@ export const ROOM_SESSION_STATUS = {
   WAITING: "waiting",
   OPEN: "open",
   ERROR: "error",
-};
+} as const;
+export type RoomSessionStatus =
+  (typeof ROOM_SESSION_STATUS)[keyof typeof ROOM_SESSION_STATUS];
 
-async function readErrorMessage(response, fallback, token) {
+async function readErrorMessage(
+  response: Response,
+  fallback: string,
+  token?: string,
+): Promise<string> {
   try {
     const payload = await response.json();
     if (payload?.error === "[E077] Token expired") {
@@ -44,7 +57,7 @@ async function readErrorMessage(response, fallback, token) {
   return fallback;
 }
 
-async function fetchRoomState(token) {
+async function fetchRoomState(token: string): Promise<RoomState> {
   let response: Response;
   try {
     response = await fetch("/api/rooms/state", {
@@ -69,35 +82,32 @@ async function fetchRoomState(token) {
       ),
     );
   }
-  const state = await response.json();
+  const state: unknown = await response.json();
+  if (!isRoomState(state)) {
+    throw new Error("[E024] Room state response was invalid.");
+  }
   return state;
 }
 
-async function createRoomRequest() {
+async function createRoomRequest(): Promise<CreatedRoom> {
   const response = await fetch("/api/rooms", { method: "POST" });
   if (!response.ok) {
     throw new Error("[E020] Failed to create room");
   }
 
-  let created = {} as {
-    joinCode?: string;
-    roomId?: string;
-    hostToken?: string;
-  };
+  let created: unknown;
   try {
     created = await response.json();
   } catch {
     throw new Error("[E020] Failed to create a room with a valid room code");
   }
 
-  const joinCode = normalizeJoinCode(created?.joinCode);
-  if (
-    typeof created?.roomId !== "string" ||
-    !created.roomId ||
-    typeof created?.hostToken !== "string" ||
-    !created.hostToken ||
-    !isValidJoinCode(joinCode)
-  ) {
+  if (!isCreatedRoom(created)) {
+    throw new Error("[E020] Failed to create a room with a valid room code");
+  }
+
+  const joinCode = normalizeJoinCode(created.joinCode);
+  if (!isValidJoinCode(joinCode)) {
     throw new Error("[E020] Failed to create a room with a valid room code");
   }
 
@@ -105,22 +115,30 @@ async function createRoomRequest() {
 }
 
 export function useRoomSettings() {
-  const getSavedRoom = useCallback((hostToken) => {
+  const getSavedRoom = useCallback((hostToken?: string | null) => {
     if (hostToken) {
       return getRoomByHostToken(hostToken);
     }
     return getActiveRoom();
   }, []);
 
-  const persistRoom = useCallback((room) => {
-    saveRoom({
-      roomId: room.roomId,
-      hostToken: room.hostToken,
-      joinCode: room.joinCode ?? null,
-      createdAt: room.createdAt ?? Date.now(),
-    });
-    setActiveHostToken(room.hostToken);
-  }, []);
+  const persistRoom = useCallback(
+    (room: {
+      roomId: string;
+      hostToken: string;
+      joinCode?: string | null;
+      createdAt?: number;
+    }) => {
+      saveRoom({
+        roomId: room.roomId,
+        hostToken: room.hostToken,
+        joinCode: room.joinCode ?? null,
+        createdAt: room.createdAt ?? Date.now(),
+      });
+      setActiveHostToken(room.hostToken);
+    },
+    [],
+  );
 
   const getRecentHostRooms = useCallback(() => listHostRooms(), []);
 
@@ -136,16 +154,18 @@ export function useRoomSession({
   token,
   enabled = true,
 }: {
-  role?: any;
-  token?: any;
-  enabled?: any;
+  role?: RoomRole;
+  token?: string | null;
+  enabled?: boolean;
 }) {
-  const [status, setStatus] = useState(ROOM_SESSION_STATUS.IDLE);
-  const [roomState, setRoomState] = useState(null);
+  const [status, setStatus] = useState<RoomSessionStatus>(
+    ROOM_SESSION_STATUS.IDLE,
+  );
+  const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState("");
-  const previousTokenRef = useRef(null);
+  const previousTokenRef = useRef<string | null>(null);
 
-  const refreshState = useCallback(async (roomToken) => {
+  const refreshState = useCallback(async (roomToken?: string | null) => {
     if (!roomToken) return null;
     const state = await fetchRoomState(roomToken);
     setRoomState(state);
@@ -153,7 +173,7 @@ export function useRoomSession({
     return state;
   }, []);
 
-  const createRoom = useCallback(async () => {
+  const createRoom = useCallback(async (): Promise<CreatedRoom> => {
     setStatus(ROOM_SESSION_STATUS.LOADING);
     setError("");
     try {
@@ -175,7 +195,11 @@ export function useRoomSession({
       return created;
     } catch (createError) {
       setStatus(ROOM_SESSION_STATUS.ERROR);
-      setError(createError.message);
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : String(createError),
+      );
       throw createError;
     }
   }, []);
@@ -204,7 +228,9 @@ export function useRoomSession({
       } catch (loadError) {
         if (cancelled) return;
         setStatus(ROOM_SESSION_STATUS.ERROR);
-        setError(loadError.message);
+        setError(
+          loadError instanceof Error ? loadError.message : String(loadError),
+        );
       } finally {
         previousTokenRef.current = token;
       }

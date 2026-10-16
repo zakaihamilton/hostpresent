@@ -1,41 +1,40 @@
 "use client";
 
+import type { DataConnection, Peer as PeerJS } from "peerjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIceServers } from "@/components/webrtc/PeerStreamConnection";
 import {
   canSendSignalingMessage,
   isParticipantStatusMessage,
 } from "@/lib/room/messageAuth";
-import { MAX_PARTICIPANT_CONNECTIONS } from "@/lib/room/peerLimits";
+import type { PeerJsConfig, RoomRole } from "@/lib/room/roomTypes";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import { getOrCreateParticipantDeviceId } from "@/lib/settings/participantDeviceId";
+import type {
+  ChatMessage,
+  ParticipantMode,
+  SignalingMessage,
+} from "@/lib/signaling/messages";
 import {
   createChatMessage,
   createChatPrivateMessage,
   createHostPresentMessage,
   createParticipantProfileMessage,
-  createRoomFullMessage,
   isSignalingMessage,
   SIGNALING_MESSAGE,
 } from "@/lib/signaling/messages";
-import {
+import type {
   AudienceMediaController,
-  type AudienceMediaState,
+  AudienceMediaState,
 } from "@/lib/webrtc/AudienceMediaController";
-import {
-  buildOutboundMediaStream,
-  destroyOutboundAudioMixer,
-} from "@/lib/webrtc/outboundMedia";
+import type { MediaControlMessage } from "@/lib/webrtc/audienceProtocol";
+import { destroyOutboundAudioMixer } from "@/lib/webrtc/outboundMedia";
 import {
   connectionRetryDelayMs,
-  hostIdRetryDelayMs,
   hostPeerId,
   hostSignalingRetryExhaustedError,
   hostSignalingTimeoutError,
-  isRetryablePeerError,
   isWaitingForHostMessage,
-  loadPeer,
-  MAX_HOST_ID_RETRIES,
   MAX_SIGNALING_RETRIES,
   participantSignalingRetryExhaustedError,
   participantSignalingTimeoutError,
@@ -46,7 +45,13 @@ import {
 import { clearWindowTimer } from "@/lib/webrtc/roomConnectionLifecycle";
 import { fetchPeerJsConfig } from "@/lib/webrtc/signalingConfig";
 import { bindRoomConnection } from "./roomDataChannel/bindRoomConnection";
+import { startRoomPeerLifecycle } from "./roomDataChannel/peerLifecycle";
 import { sendOnConnection } from "./roomDataChannel/sendOnConnection";
+import type {
+  RemoteParticipantUpdate,
+  RoomMessageHandler,
+  SendParticipantProfileOptions,
+} from "./roomDataChannel/types";
 
 export { sendOnConnection } from "./roomDataChannel/sendOnConnection";
 
@@ -55,7 +60,9 @@ const SIGNALING_NOT_CONFIGURED_ERROR = SIGNALING_ERROR.NOT_CONFIGURED;
 const HOST_PRESENT_INTERVAL_MS = 5000;
 const CONNECT_RETRY_MS = 2000;
 
-async function hasRelayCandidate(peerConnections) {
+async function hasRelayCandidate(
+  peerConnections: Array<RTCPeerConnection | null | undefined>,
+): Promise<boolean> {
   for (const peerConnection of peerConnections) {
     if (!peerConnection) continue;
     try {
@@ -93,76 +100,80 @@ export function useRoomDataChannel({
   onChatMessage,
   sessionTitle = "",
 }: {
-  role?: any;
-  token?: any;
-  peerAuthToken?: any;
-  peerId?: any;
-  roomId?: any;
-  enabled?: any;
-  displayName?: any;
-  hostAudioMuted?: any;
-  hostVideoMuted?: any;
-  hostMode?: any;
-  participantMode?: any;
-  localStream?: any;
-  screenStream?: any;
-  onRemoteParticipant?: any;
-  onRemoteHostStream?: any;
-  onChatMessage?: any;
-  sessionTitle?: any;
+  role?: RoomRole;
+  token?: string;
+  peerAuthToken?: string;
+  peerId?: string;
+  roomId?: string | null;
+  enabled?: boolean;
+  displayName?: string;
+  hostAudioMuted?: boolean;
+  hostVideoMuted?: boolean;
+  hostMode?: ParticipantMode;
+  participantMode?: ParticipantMode;
+  localStream?: MediaStream | null;
+  screenStream?: MediaStream | null;
+  onRemoteParticipant?: (participant: RemoteParticipantUpdate) => void;
+  onRemoteHostStream?: (stream: MediaStream | null) => void;
+  onChatMessage?: (message: ChatMessage) => void;
+  sessionTitle?: string;
 }) {
   const isHost = role === "host";
   const [isConnected, setIsConnected] = useState(false);
   const [hostPresent, setHostPresent] = useState(isHost);
   const [localParticipantId, setLocalParticipantId] = useState("");
-  const [connectionError, setConnectionError] = useState(null);
-  const [peerConfig, setPeerConfig] = useState(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [peerConfig, setPeerConfig] = useState<PeerJsConfig | null>(null);
   const [configReady, setConfigReady] = useState(false);
   const [reconnectTrigger, setReconnectTrigger] = useState(0);
   const iceServers = useIceServers();
 
-  const peerRef = useRef(null);
-  const audienceRef = useRef(null);
+  const peerRef = useRef<PeerJS | null>(null);
+  const audienceRef = useRef<AudienceMediaController | null>(null);
   const [audienceState, setAudienceState] = useState<
     Partial<AudienceMediaState> & Pick<AudienceMediaState, "canPublish">
   >({ canPublish: isHost });
-  const peerConfigRef = useRef(null);
-  const iceServersRef = useRef(null);
-  const connectionsRef = useRef(new Map());
-  const peerDeviceIdsRef = useRef(new Map());
-  const participantDisplayNamesRef = useRef(new Map());
-  const hostConnectionRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const screenStreamRef = useRef(null);
-  const handlersRef = useRef(new Set<(message: any) => void>());
-  const hostPresentTimerRef = useRef(null);
+  const peerConfigRef = useRef<PeerJsConfig | null>(null);
+  const iceServersRef = useRef<RTCIceServer[] | null>(null);
+  const connectionsRef = useRef(new Map<string, DataConnection>());
+  const peerDeviceIdsRef = useRef(new Map<string, string>());
+  const participantDisplayNamesRef = useRef(new Map<string, string>());
+  const hostConnectionRef = useRef<DataConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const handlersRef = useRef(new Set<RoomMessageHandler>());
+  const hostPresentTimerRef = useRef<number | null>(null);
   const openCountRef = useRef(0);
   const signalingOpenRef = useRef(false);
-  const retryTimerRef = useRef(null);
-  const connectRetryTimerRef = useRef(null);
-  const connectToHostRef = useRef(() => {});
-  const connectTimeoutRef = useRef(null);
+  const retryTimerRef = useRef<number | null>(null);
+  const connectRetryTimerRef = useRef<number | null>(null);
+  const connectToHostRef = useRef<() => void>(() => {});
+  const connectTimeoutRef = useRef<number | null>(null);
   const retryAttemptRef = useRef(0);
   const localParticipantIdRef = useRef("");
-  const teardownPeerRef = useRef(() => {});
+  const teardownPeerRef = useRef<() => void>(() => {});
   const displayNameRef = useRef("");
   const hostAudioMutedRef = useRef(false);
   const hostVideoMutedRef = useRef(false);
-  const hostModeRef = useRef("available");
-  const participantModeRef = useRef(PARTICIPANT_MODE.AVAILABLE);
-  const sendParticipantProfileRef = useRef<(options?: any) => boolean>(
-    () => false,
+  const hostModeRef = useRef<ParticipantMode>("available");
+  const participantModeRef = useRef<ParticipantMode>(
+    PARTICIPANT_MODE.AVAILABLE,
   );
-  const onRemoteParticipantRef = useRef<((participant: any) => void) | null>(
-    null,
-  );
+  const sendParticipantProfileRef = useRef<
+    (options?: SendParticipantProfileOptions) => boolean
+  >(() => false);
+  const onRemoteParticipantRef = useRef<
+    ((participant: RemoteParticipantUpdate) => void) | null
+  >(null);
   const onRemoteHostStreamRef = useRef<
     ((stream: MediaStream | null) => void) | null
   >(null);
-  const onChatMessageRef = useRef(null);
+  const onChatMessageRef = useRef<((message: ChatMessage) => void) | null>(
+    null,
+  );
   const sessionTitleRef = useRef("");
   const hostDisplayNameRef = useRef("");
-  const roomIdRef = useRef(roomId);
+  const roomIdRef = useRef<string | null | undefined>(roomId);
   const destroyedRef = useRef(false);
 
   useEffect(() => {
@@ -200,11 +211,9 @@ export function useRoomDataChannel({
 
   useEffect(() => {
     onRemoteParticipantRef.current =
-      typeof onRemoteParticipant === "function"
-        ? onRemoteParticipant
-        : undefined;
+      typeof onRemoteParticipant === "function" ? onRemoteParticipant : null;
     onRemoteHostStreamRef.current =
-      typeof onRemoteHostStream === "function" ? onRemoteHostStream : undefined;
+      typeof onRemoteHostStream === "function" ? onRemoteHostStream : null;
   }, [onRemoteParticipant, onRemoteHostStream]);
 
   useEffect(() => {
@@ -225,7 +234,7 @@ export function useRoomDataChannel({
     });
   }, []);
 
-  const updateConnectedState = useCallback((delta) => {
+  const updateConnectedState = useCallback((delta: number) => {
     openCountRef.current = Math.max(0, openCountRef.current + delta);
     const connected = openCountRef.current > 0;
     setIsConnected(connected);
@@ -235,13 +244,16 @@ export function useRoomDataChannel({
     }
   }, []);
 
-  const notifyHandlers = useCallback((message) => {
-    for (const handler of handlersRef.current) {
-      handler(message);
-    }
-  }, []);
+  const notifyHandlers = useCallback(
+    (message: SignalingMessage | ChatMessage) => {
+      for (const handler of handlersRef.current) {
+        handler(message);
+      }
+    },
+    [],
+  );
 
-  const subscribe = useCallback((handler) => {
+  const subscribe = useCallback((handler: RoomMessageHandler) => {
     handlersRef.current.add(handler);
     return () => handlersRef.current.delete(handler);
   }, []);
@@ -338,7 +350,7 @@ export function useRoomDataChannel({
   }, [isHost]);
 
   const send = useCallback(
-    (message) => {
+    (message: unknown) => {
       if (!isSignalingMessage(message)) return false;
 
       let outboundMessage = message;
@@ -417,22 +429,26 @@ export function useRoomDataChannel({
   );
 
   const onMediaOpen = useCallback(
-    (id) => audienceRef.current?.connectionOpen(id),
+    (id: string) => audienceRef.current?.connectionOpen(id),
     [],
   );
   const onMediaClose = useCallback(
-    (id) => audienceRef.current?.connectionClose(id),
+    (id: string) => audienceRef.current?.connectionClose(id),
     [],
   );
   const onMediaControl = useCallback(
-    (id, message) => audienceRef.current?.handleControl(id, message),
+    (id: string, message: MediaControlMessage) =>
+      audienceRef.current?.handleControl(id, message),
     [],
   );
 
   const bindConnection = useCallback(
     (
-      conn,
-      { remoteId, remoteName = "Guest" }: { remoteId?: any; remoteName?: any },
+      conn: DataConnection,
+      {
+        remoteId,
+        remoteName = "Guest",
+      }: { remoteId?: string; remoteName?: string },
     ) => {
       bindRoomConnection(
         conn,
@@ -481,10 +497,7 @@ export function useRoomDataChannel({
     ({
       nextDisplayName,
       nextParticipantMode,
-    }: {
-      nextDisplayName?: any;
-      nextParticipantMode?: any;
-    } = {}) => {
+    }: SendParticipantProfileOptions = {}) => {
       if (isHost) return false;
 
       const participantId = localParticipantIdRef.current;
@@ -524,7 +537,7 @@ export function useRoomDataChannel({
   }, [displayName, isHost, participantMode, sendParticipantProfile]);
 
   const sendToParticipant = useCallback(
-    (participantId, message) => {
+    (participantId: string, message: unknown) => {
       if (!isHost || !participantId || !isSignalingMessage(message)) {
         return false;
       }
@@ -545,7 +558,7 @@ export function useRoomDataChannel({
   );
 
   const deliverChatMessage = useCallback(
-    (message, recipientId?: string) => {
+    (message: ChatMessage, recipientId?: string) => {
       if (isHost) {
         let sent = false;
         if (recipientId) {
@@ -571,7 +584,7 @@ export function useRoomDataChannel({
   );
 
   const sendChatMessage = useCallback(
-    (text) => {
+    (text: string) => {
       const senderId = isHost
         ? hostPeerId(roomId)
         : localParticipantIdRef.current;
@@ -587,7 +600,7 @@ export function useRoomDataChannel({
   );
 
   const sendPrivateChatMessage = useCallback(
-    (text, recipientId) => {
+    (text: string, recipientId: string) => {
       const senderId = isHost
         ? hostPeerId(roomId)
         : localParticipantIdRef.current;
@@ -604,7 +617,7 @@ export function useRoomDataChannel({
   );
 
   const schedulePeerRetry = useCallback(
-    (restart) => {
+    (restart: () => void) => {
       if (!peerConfigRef.current) return;
 
       if (retryAttemptRef.current >= MAX_SIGNALING_RETRIES) {
@@ -722,237 +735,42 @@ export function useRoomDataChannel({
     };
     teardownPeerRef.current = teardownPeer;
 
-    const createPeer = (Peer, id) => {
-      if (destroyedRef.current) return null;
-
-      teardownPeer();
-      scheduleConnectTimeout();
-      const baseOptions = peerConfigRef.current ?? peerConfig;
-      const options = {
-        ...baseOptions,
-        token: peerAuthToken,
-        config: { iceServers: iceServersRef.current ?? iceServers },
-      };
-      const peer = new Peer(id, options);
-      peerRef.current = peer;
-      audienceRef.current = new AudienceMediaController({
-        isHost,
-        localId: id,
-        hostId: hostPeerId(roomId),
-        getPeer: () => peerRef.current,
-        getLocalStream: () =>
-          buildOutboundMediaStream(
-            localStreamRef.current,
-            screenStreamRef.current,
-          ),
-        sendControl: (target, message) =>
-          sendOnConnection(
-            isHost
-              ? connectionsRef.current.get(target)
-              : hostConnectionRef.current,
-            message,
-          ),
-        onStream: (sourceId, stream) => {
-          if (!isHost && sourceId === hostPeerId(roomId))
-            onRemoteHostStreamRef.current?.(stream);
-          else
-            onRemoteParticipantRef.current?.({
-              id: sourceId,
-              stream,
-              preserveProfile: true,
-            });
-        },
-        onState: setAudienceState,
-        rejectPeer: (target) =>
-          setTimeout(() => connectionsRef.current.get(target)?.close(), 500),
-      });
-      return peer;
-    };
-
-    const startHostPeer = (Peer) => {
-      const peer = createPeer(Peer, hostPeerId(roomId));
-      if (!peer) return;
-
-      peer.on("open", () => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-        signalingOpenRef.current = true;
-        setLocalParticipantId(hostPeerId(roomId));
-        clearConnectTimeout();
-        setConnectionError(null);
-        retryAttemptRef.current = 0;
-
-        void audienceRef.current?.sync();
-      });
-
-      peer.on("disconnected", () => {
-        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current)
-          return;
-        console.warn(
-          "[peer] host disconnected from signaling server, reconnecting...",
-        );
-        audienceRef.current?.restartEpoch();
-        peer.reconnect();
-      });
-
-      peer.on("connection", (conn) => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-        const remoteId = conn.peer;
-
-        if (connectionsRef.current.has(remoteId)) {
-          conn.close();
-          return;
-        }
-
-        if (connectionsRef.current.size >= MAX_PARTICIPANT_CONNECTIONS) {
-          const rejectConnection = () => {
-            try {
-              conn.send(JSON.stringify(createRoomFullMessage()));
-            } catch (err) {
-              console.warn("[peer] failed to send room_full signal", err);
-            }
-            setTimeout(() => {
-              conn.close();
-            }, 500);
-          };
-
-          if (conn.open) {
-            rejectConnection();
-          } else {
-            conn.on("open", rejectConnection);
-          }
-          return;
-        }
-
-        connectionsRef.current.set(remoteId, conn);
-        bindConnection(conn, { remoteId, remoteName: "Guest" });
-        conn.on("close", () => {
-          if (connectionsRef.current.get(remoteId) !== conn) return;
-          connectionsRef.current.delete(remoteId);
-          peerDeviceIdsRef.current.delete(remoteId);
-          participantDisplayNamesRef.current.delete(remoteId);
-        });
-      });
-
-      peer.on("call", (call) => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-        audienceRef.current?.handleCall(call);
-      });
-
-      peer.on("error", (error) => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-        console.warn("[peer] host error", error);
-
-        if (error?.type === "unavailable-id") {
-          setConnectionError(SIGNALING_ERROR.HOST_ID_RECONNECTING);
-          clearRetryTimer();
-          if (retryAttemptRef.current >= MAX_HOST_ID_RETRIES) {
-            setConnectionError(hostSignalingRetryExhaustedError());
-            return;
-          }
-          const delay = hostIdRetryDelayMs(retryAttemptRef.current);
-          retryAttemptRef.current += 1;
-          // startHostPeer tears down any prior peer before reclaiming the ID.
-          retryTimerRef.current = window.setTimeout(() => {
-            startHostPeer(Peer);
-          }, delay);
-          scheduleConnectTimeout();
-          return;
-        }
-
-        if (isRetryablePeerError(error)) {
-          setConnectionError(peerErrorMessage(error, { isHost: true }));
-          schedulePeerRetry(() => startHostPeer(Peer));
-          return;
-        }
-
-        setConnectionError(peerErrorMessage(error, { isHost: true }));
-      });
-    };
-
-    const startParticipantPeer = (Peer) => {
-      const peer = createPeer(Peer, peerId);
-      if (!peer) return;
-
-      const connectToHost = () => {
-        if (
-          destroyedRef.current ||
-          !peerRef.current ||
-          hostConnectionRef.current?.open
-        ) {
-          return;
-        }
-
-        hostConnectionRef.current?.close();
-        hostConnectionRef.current = null;
-
-        const conn = peer.connect(hostPeerId(roomId));
-        hostConnectionRef.current = conn;
-        bindConnection(conn, {
-          remoteId: peer.id ?? "guest",
-          remoteName: "Guest",
-        });
-
-        conn.on("error", (error) => {
-          if (destroyedRef.current) return;
-          setConnectionError(peerErrorMessage(error, { isHost: false }));
-          scheduleReconnectToHost();
-        });
-      };
-      connectToHostRef.current = connectToHost;
-
-      peer.on("call", (call) => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-        audienceRef.current?.handleCall(call);
-      });
-
-      peer.on("open", (id) => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-        signalingOpenRef.current = true;
-        clearConnectTimeout();
-        localParticipantIdRef.current = id;
-        setLocalParticipantId(id);
-        setConnectionError(null);
-        retryAttemptRef.current = 0;
-        connectToHost();
-      });
-
-      peer.on("disconnected", () => {
-        if (destroyedRef.current || peer.destroyed || peer !== peerRef.current)
-          return;
-        console.warn(
-          "[peer] participant disconnected from signaling server, reconnecting...",
-        );
-        peer.reconnect();
-      });
-
-      peer.on("error", (error) => {
-        if (destroyedRef.current || peer !== peerRef.current) return;
-
-        if (error?.type === "peer-unavailable") {
-          setConnectionError(peerErrorMessage(error, { isHost: false }));
-          scheduleReconnectToHost();
-          return;
-        }
-
-        console.warn("[peer] participant error", error);
-
-        if (isRetryablePeerError(error)) {
-          setConnectionError(peerErrorMessage(error, { isHost: false }));
-          schedulePeerRetry(() => startParticipantPeer(Peer));
-          return;
-        }
-
-        setConnectionError(peerErrorMessage(error, { isHost: false }));
-      });
-    };
-
-    void loadPeer().then((Peer) => {
-      if (destroyedRef.current) return;
-      if (isHost) {
-        startHostPeer(Peer);
-      } else {
-        startParticipantPeer(Peer);
-      }
+    startRoomPeerLifecycle({
+      isHost,
+      roomId,
+      peerId,
+      peerAuthToken,
+      peerConfig,
+      iceServers,
+      peerConfigRef,
+      iceServersRef,
+      peerRef,
+      audienceRef,
+      connectionsRef,
+      hostConnectionRef,
+      peerDeviceIdsRef,
+      participantDisplayNamesRef,
+      destroyedRef,
+      localParticipantIdRef,
+      localStreamRef,
+      screenStreamRef,
+      onRemoteParticipantRef,
+      onRemoteHostStreamRef,
+      hostDisplayNameRef,
+      signalingOpenRef,
+      retryAttemptRef,
+      retryTimerRef,
+      connectToHostRef,
+      setAudienceState,
+      setLocalParticipantId,
+      setConnectionError,
+      teardownPeer,
+      bindConnection,
+      clearConnectTimeout,
+      clearRetryTimer,
+      scheduleConnectTimeout,
+      schedulePeerRetry,
+      scheduleReconnectToHost,
     });
 
     return () => {
@@ -1008,7 +826,7 @@ export function useRoomDataChannel({
 
     const announce = () => send(createHostPresencePayload());
     announce();
-    hostPresentTimerRef.current = setInterval(
+    hostPresentTimerRef.current = window.setInterval(
       announce,
       HOST_PRESENT_INTERVAL_MS,
     );

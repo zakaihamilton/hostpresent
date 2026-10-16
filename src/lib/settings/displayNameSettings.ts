@@ -4,7 +4,7 @@ export const PARTICIPANT_MODE_STORAGE_KEY = "hostpresent.participantMode";
 export const PARTICIPANT_MODE = {
   AVAILABLE: "available",
   LISTENING: "listening",
-};
+} as const;
 
 export const MAX_DISPLAY_NAME_LENGTH = 32;
 export const DEFAULT_DISPLAY_NAME = "Guest";
@@ -48,7 +48,7 @@ export function saveDisplayName(value) {
   }
 }
 
-export function loadParticipantMode() {
+export function loadParticipantMode(): "available" | "listening" {
   if (typeof window === "undefined") return PARTICIPANT_MODE.AVAILABLE;
 
   try {
@@ -63,7 +63,7 @@ export function loadParticipantMode() {
   return PARTICIPANT_MODE.AVAILABLE;
 }
 
-export function saveParticipantMode(mode) {
+export function saveParticipantMode(mode: "available" | "listening") {
   if (typeof window === "undefined") return;
 
   try {
