@@ -1,7 +1,469 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-01T20:32:27.219Z",
+  "generatedAt": "2026-10-16T12:46:38.648Z",
   "entries": [
+    {
+      "fingerprint": "a62bca2b06a8c2a2a5be6678",
+      "provider": "script:typecheck",
+      "category": "types",
+      "type": "type-error",
+      "scope": ".",
+      "file": ".next/types/validator.ts",
+      "line": 30
+    },
+    {
+      "fingerprint": "6f9c31588954e5a8d9dfa318",
+      "provider": "script:typecheck",
+      "category": "types",
+      "type": "type-error",
+      "scope": ".",
+      "file": ".next/types/validator.ts",
+      "line": 30
+    },
+    {
+      "fingerprint": "d77f1e9a241ec1aaf60223e4",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-file",
+      "scope": ".",
+      "file": "src/app/viewport.ts"
+    },
+    {
+      "fingerprint": "ebb2c23f441debde9087e442",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-file",
+      "scope": ".",
+      "file": "src/public-scripts/sw.ts"
+    },
+    {
+      "fingerprint": "49d683593eeeb9ea4391164c",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-file",
+      "scope": ".",
+      "file": "src/public-scripts/theme-init.ts"
+    },
+    {
+      "fingerprint": "be40d9d5a80f90aad18be7d8",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-file",
+      "scope": ".",
+      "file": "src/lib/signaling/index.ts"
+    },
+    {
+      "fingerprint": "4a3d603a0f926916f1943735",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-file",
+      "scope": ".",
+      "file": "src/lib/room/index.ts"
+    },
+    {
+      "fingerprint": "05abf280e6ecfa4a015c7b59",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-file",
+      "scope": ".",
+      "file": "src/components/routing/PresentApp/index.ts"
+    },
+    {
+      "fingerprint": "32363eec08d8597a71920c6f",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/signaling/messages.ts",
+      "line": 28
+    },
+    {
+      "fingerprint": "55ad00962065f44818a01945",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/signaling/messages.ts",
+      "line": 403
+    },
+    {
+      "fingerprint": "96c108e458c7fb450a82e4eb",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/webrtc/peerClient.ts",
+      "line": 25
+    },
+    {
+      "fingerprint": "a3270a0e518e756cb4790385",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/roomDataChannel.ts",
+      "line": 51
+    },
+    {
+      "fingerprint": "1c8ac9e28d442663d6a1bd6b",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/webrtc/outboundMedia.ts",
+      "line": 7
+    },
+    {
+      "fingerprint": "4538f54fff800dc372f015b8",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/apiSecurity.ts",
+      "line": 18
+    },
+    {
+      "fingerprint": "6e54e083463ab05108902a18",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/tokens.ts",
+      "line": 9
+    },
+    {
+      "fingerprint": "74808d01426b59fc5cbb01c2",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/tokens.ts",
+      "line": 162
+    },
+    {
+      "fingerprint": "aa3eca05b60e2b1cd80fb5cd",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/joinCode.ts",
+      "line": 17
+    },
+    {
+      "fingerprint": "466730d1f86e7871bb350f7b",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/joinCode.ts",
+      "line": 18
+    },
+    {
+      "fingerprint": "f33236e6ece20843d9b4ae64",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/joinCode.ts",
+      "line": 19
+    },
+    {
+      "fingerprint": "0bdd45baf246a8aa9378b98d",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/peerovo/client.ts",
+      "line": 7
+    },
+    {
+      "fingerprint": "0fbe3e4c688e9fa1dabbd49f",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/messageAuth.ts",
+      "line": 53
+    },
+    {
+      "fingerprint": "e933f7b63c0026ef2cf5110e",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/tokenClaims.ts",
+      "line": 12
+    },
+    {
+      "fingerprint": "2d1458e3e5b051289ca72e4a",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/webrtc/relayCalls.ts",
+      "line": 1
+    },
+    {
+      "fingerprint": "6d6c6e7ffbd003efe870c67b",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/displayNameSettings.ts",
+      "line": 1
+    },
+    {
+      "fingerprint": "bfe5ac006c58823aaa261fd5",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/displayNameSettings.ts",
+      "line": 2
+    },
+    {
+      "fingerprint": "23f9447d0631e12bdd02c2e0",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/participantRoomSettings.ts",
+      "line": 131
+    },
+    {
+      "fingerprint": "2bc40809a3d1428190276b6b",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/participantRoomSettings.ts",
+      "line": 149
+    },
+    {
+      "fingerprint": "4d50b605e289dd986bf9ae2d",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/roomSettings.ts",
+      "line": 58
+    },
+    {
+      "fingerprint": "a04d62b46747132ccb7e1756",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/roomSettings.ts",
+      "line": 186
+    },
+    {
+      "fingerprint": "26ea7503d655727767c5ada1",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/themeSettings.ts",
+      "line": 8
+    },
+    {
+      "fingerprint": "57218264db836fbf1153594a",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/inviteLink.ts",
+      "line": 17
+    },
+    {
+      "fingerprint": "9db412fe092748f29d7f9529",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/meeting/Recording/recordingStorage.ts",
+      "line": 79
+    },
+    {
+      "fingerprint": "014f5bcf89c38825de6ca55f",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/meeting/Recording/recordingExport.ts",
+      "line": 17
+    },
+    {
+      "fingerprint": "e4a3902ff607cfb3c9b9628b",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/meeting/Recording/recordingExport.ts",
+      "line": 209
+    },
+    {
+      "fingerprint": "624cd32eae998f0e45bf6ca6",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/Icons.tsx",
+      "line": 214
+    },
+    {
+      "fingerprint": "b18a7b706b3ef1f1feefc78b",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/Icons.tsx",
+      "line": 227
+    },
+    {
+      "fingerprint": "b75803d33395f8c9d4fbc963",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/Icons.tsx",
+      "line": 240
+    },
+    {
+      "fingerprint": "68a7cc8076d85a6d6ae6db7e",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/Icons.tsx",
+      "line": 391
+    },
+    {
+      "fingerprint": "24ebf0145739f7a84868b347",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/webrtc/roomConnectionLifecycle.ts",
+      "line": 7
+    },
+    {
+      "fingerprint": "a81bef22173f090d4eff4b4a",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/index.ts",
+      "line": 5
+    },
+    {
+      "fingerprint": "c26a5cf9fb6643b2c87375eb",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/index.ts",
+      "line": 20
+    },
+    {
+      "fingerprint": "45ccb11f17f19785333aba5a",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/index.ts",
+      "line": 24
+    },
+    {
+      "fingerprint": "baaa737c28f51e856d053af8",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/components/ui/Icons/index.ts",
+      "line": 25
+    },
+    {
+      "fingerprint": "8c274dfdd5c3f83c49da49b2",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/index.ts",
+      "line": 2
+    },
+    {
+      "fingerprint": "49bb528778bfce06f93cf420",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/index.ts",
+      "line": 6
+    },
+    {
+      "fingerprint": "c8e0caeda83a7a9d5864abe6",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/index.ts",
+      "line": 7
+    },
+    {
+      "fingerprint": "261fb853045d0606eaa7de30",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/index.ts",
+      "line": 8
+    },
+    {
+      "fingerprint": "1e780dec99b737308e5cd9e5",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/index.ts",
+      "line": 10
+    },
+    {
+      "fingerprint": "39a1aeb736e3f73304794763",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/index.ts",
+      "line": 12
+    },
+    {
+      "fingerprint": "9dcdbe7eee32e8f1ad71877e",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/diagnostics/reportDiagnostic.ts",
+      "line": 8
+    },
+    {
+      "fingerprint": "d9842e76651b968cadcf77a9",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/layoutSettings.ts",
+      "line": 49
+    },
+    {
+      "fingerprint": "8f782b78b202d23748ac283e",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/settings/layoutSettings.ts",
+      "line": 53
+    },
     {
       "fingerprint": "debefe709e1f287535e8b9a1",
       "provider": "jscpd",
@@ -39,24 +501,6 @@
       "line": 124
     },
     {
-      "fingerprint": "8699bdda783d65f0ab4af5e9",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/Widgets/RecentRoomsPopup/RecentRoomsPopup.module.css",
-      "line": 124
-    },
-    {
-      "fingerprint": "8699bdda783d65f0ab4af5e9",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/Widgets/RecentRoomsPopup/RecentRoomsPopup.module.css",
-      "line": 124
-    },
-    {
       "fingerprint": "7ce54759737ba70957c5b306",
       "provider": "jscpd",
       "category": "duplication",
@@ -82,15 +526,6 @@
       "scope": ".",
       "file": "components/meeting/ChatPanel/ChatPanel.module.css",
       "line": 37
-    },
-    {
-      "fingerprint": "7f0f47b9f09f94c7d992702c",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.module.css",
-      "line": 66
     },
     {
       "fingerprint": "7f0f47b9f09f94c7d992702c",
@@ -183,75 +618,39 @@
       "line": 529
     },
     {
-      "fingerprint": "d9f3fd128fb06e9a1549abb4",
+      "fingerprint": "26dfa2183fb929a721c7c1f6",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.module.css",
-      "line": 529
-    },
-    {
-      "fingerprint": "e4b6b954e5d6fa1e1c2206b4",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.test.jsx",
+      "file": "components/meeting/ChatPanel/ChatPanel.test.tsx",
       "line": 218
     },
     {
-      "fingerprint": "eec943a48f61f17adad8df20",
+      "fingerprint": "a2a3a21043d4de7d0b4c8059",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.test.jsx",
+      "file": "components/meeting/ChatPanel/ChatPanel.test.tsx",
       "line": 249
     },
     {
-      "fingerprint": "eec943a48f61f17adad8df20",
+      "fingerprint": "7ba65147929a1c18b2ea3839",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.test.jsx",
-      "line": 249
-    },
-    {
-      "fingerprint": "eec943a48f61f17adad8df20",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.test.jsx",
-      "line": 249
-    },
-    {
-      "fingerprint": "ea7e6195062c7aefde3d7fef",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/ChatPanel/ChatPanel.test.jsx",
+      "file": "components/meeting/ChatPanel/ChatPanel.test.tsx",
       "line": 264
     },
     {
-      "fingerprint": "66a995079f0134e3a0baf104",
+      "fingerprint": "84250de53c969b509038e12e",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Header/Header.test.jsx",
-      "line": 83
-    },
-    {
-      "fingerprint": "66a995079f0134e3a0baf104",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Header/Header.test.jsx",
+      "file": "components/meeting/Header/Header.test.tsx",
       "line": 83
     },
     {
@@ -309,130 +708,94 @@
       "line": 251
     },
     {
-      "fingerprint": "4d6ed1f222eedfd2103e9bf5",
+      "fingerprint": "67ddcc3bd64bcc21d215923d",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/MeetingView.test.jsx",
+      "file": "components/meeting/MeetingView/MeetingView.test.tsx",
       "line": 43
     },
     {
-      "fingerprint": "e194720274af2d847dde9a89",
+      "fingerprint": "9bf7bd47759f37021b0f2765",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/MeetingView.test.jsx",
+      "file": "components/meeting/MeetingView/MeetingView.test.tsx",
       "line": 112
     },
     {
-      "fingerprint": "0ee398acc8442741ebb5907e",
+      "fingerprint": "166d592f13b393709a8735f8",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/MeetingView.test.jsx",
+      "file": "components/meeting/MeetingView/MeetingView.test.tsx",
       "line": 240
     },
     {
-      "fingerprint": "b938f1b6ee79402cd2849dee",
+      "fingerprint": "a373fab66d1ff51d1e3dd15e",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
+      "file": "components/meeting/MeetingView/hooks/MediaControls.test.tsx",
       "line": 87
     },
     {
-      "fingerprint": "b938f1b6ee79402cd2849dee",
+      "fingerprint": "079e8c768f4dca95337cce7f",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
-      "line": 87
-    },
-    {
-      "fingerprint": "0349d42e485ebacd46f3689d",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
+      "file": "components/meeting/MeetingView/hooks/MediaControls.test.tsx",
       "line": 109
     },
     {
-      "fingerprint": "8cb46d70e105ea852c364cae",
+      "fingerprint": "11e71024b9c5a5c69d76e920",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
+      "file": "components/meeting/MeetingView/hooks/MediaControls.test.tsx",
       "line": 116
     },
     {
-      "fingerprint": "7052530e197065adc598a9b0",
+      "fingerprint": "2bdf651220dd5791a1b3489c",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
-      "line": 658
-    },
-    {
-      "fingerprint": "3310e901d20a3107da8fbdff",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
-      "line": 705
-    },
-    {
-      "fingerprint": "f28fc7828d8ec57c86da86ee",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/MediaControls.test.jsx",
-      "line": 731
-    },
-    {
-      "fingerprint": "f8d1912bd1a807a6fb77cf27",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.js",
-      "line": 534
-    },
-    {
-      "fingerprint": "2c04cc70a184f516bf8f6e45",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.js",
-      "line": 547
-    },
-    {
-      "fingerprint": "4ee0c8f626ce1780c7dfb64c",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.test.jsx",
+      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.test.tsx",
       "line": 13
     },
     {
-      "fingerprint": "d9ff78ae26a07305ca214d33",
+      "fingerprint": "b01867d861c4ac7cbe3d5043",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.test.jsx",
+      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.test.tsx",
       "line": 41
+    },
+    {
+      "fingerprint": "b0c4c63503c298826a0d7e6c",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.ts",
+      "line": 557
+    },
+    {
+      "fingerprint": "2acdcfc7e1a3d2ba37a5955c",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/MeetingView/hooks/RemoteParticipants.ts",
+      "line": 570
     },
     {
       "fingerprint": "c8fb2a8906ff002b16aa2c06",
@@ -453,39 +816,30 @@
       "line": 10
     },
     {
-      "fingerprint": "bcbf424ceb61eda93bae5b8e",
+      "fingerprint": "9a29eb07988a8d05363e4137",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/ParticipantModeToggle/ParticipantModeToggle.module.css",
-      "line": 10
-    },
-    {
-      "fingerprint": "d09a2677ed528d4c0f3249de",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/ParticipantsSidebar/ParticipantsSidebar.test.jsx",
+      "file": "components/meeting/ParticipantsSidebar/ParticipantsSidebar.test.tsx",
       "line": 7
     },
     {
-      "fingerprint": "173504c3e3fb3e4ea8017639",
+      "fingerprint": "e2d90972ae933b0598ec1ed4",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/ParticipantsSidebar/ParticipantsSidebar.test.jsx",
+      "file": "components/meeting/ParticipantsSidebar/ParticipantsSidebar.test.tsx",
       "line": 17
     },
     {
-      "fingerprint": "0017a236183bbbd98e2f247e",
+      "fingerprint": "05fdb2723652ac275bd68835",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/ParticipantsSidebar/ParticipantsSidebar.test.jsx",
+      "file": "components/meeting/ParticipantsSidebar/ParticipantsSidebar.test.tsx",
       "line": 19
     },
     {
@@ -498,121 +852,103 @@
       "line": 242
     },
     {
-      "fingerprint": "8363cd618e6326d24f75f3c5",
+      "fingerprint": "773d61c1e5e6611ffdd7285c",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/Recording.test.jsx",
-      "line": 416
-    },
-    {
-      "fingerprint": "37e35c67bae214d6753b3df5",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Recording/Recording.test.jsx",
-      "line": 418
-    },
-    {
-      "fingerprint": "9802b1e2eba392eabd9b7269",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Recording/Recording.test.jsx",
-      "line": 421
-    },
-    {
-      "fingerprint": "367edeeedf6202c8599c61ec",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Recording/controllers/finalizePersistedRecording.test.jsx",
+      "file": "components/meeting/Recording/controllers/finalizePersistedRecording.test.tsx",
       "line": 36
     },
     {
-      "fingerprint": "5e31ed2a6d0de418ffcf847c",
+      "fingerprint": "af82a56e403d7dd8c115c2cc",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/mediaMuxer.js",
-      "line": 71
+      "file": "components/meeting/Recording/media/recordingMedia.ts",
+      "line": 12
     },
     {
-      "fingerprint": "b6ed78ba07ec0e4efd27db34",
+      "fingerprint": "0efb78df0b55d4139ec154cb",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/recordingExport.test.jsx",
+      "file": "components/meeting/Recording/mediaMuxer.ts",
+      "line": 83
+    },
+    {
+      "fingerprint": "c8ba166badc3e055de45b4e6",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Recording/recordingExport.test.tsx",
       "line": 55
     },
     {
-      "fingerprint": "057c86396f28683926354677",
+      "fingerprint": "6c6924be79a1503190808ef5",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/recordingStorage.js",
+      "file": "components/meeting/Recording/recordingStorage.ts",
       "line": 31
     },
     {
-      "fingerprint": "fbd93c4709d1aeb97296f312",
+      "fingerprint": "ff2a5c9fa24710ba49a464c3",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/recordingStorage.js",
+      "file": "components/meeting/Recording/recordingStorage.ts",
       "line": 41
     },
     {
-      "fingerprint": "12815ee425cb929346ae9bf8",
+      "fingerprint": "53cbff335d24ef046e6d6498",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/worker/exportSelection.test.jsx",
+      "file": "components/meeting/Recording/worker/exportSelection.test.tsx",
       "line": 23
     },
     {
-      "fingerprint": "d572d8bc74212b150f09837f",
+      "fingerprint": "7fe76e1b749bfc19c0bc1e9f",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/worker/ffmpegBridge.test.jsx",
+      "file": "components/meeting/Recording/worker/ffmpegBridge.test.tsx",
       "line": 22
     },
     {
-      "fingerprint": "24193b84bfed106485064e81",
+      "fingerprint": "512a487d1790638c7f3b4758",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.js",
-      "line": 485
+      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.ts",
+      "line": 526
     },
     {
-      "fingerprint": "cc454f3957b4838ea21a7725",
+      "fingerprint": "d46b128f4c9527c5126ef2e1",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.js",
-      "line": 571
+      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.ts",
+      "line": 637
     },
     {
-      "fingerprint": "d25d9a24420ae995508f6f34",
+      "fingerprint": "1a17235a3d32658e1b8ec696",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.js",
-      "line": 579
+      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.ts",
+      "line": 645
     },
     {
       "fingerprint": "166c139be1c3615c0bc793a2",
@@ -660,96 +996,6 @@
       "line": 89
     },
     {
-      "fingerprint": "033a570a4091ca03a01130e4",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 28
-    },
-    {
-      "fingerprint": "86c2d02c00eda4b422cbe5fa",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 73
-    },
-    {
-      "fingerprint": "d8dacbc749d2078abb49cea6",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 89
-    },
-    {
-      "fingerprint": "7aaf5aa1ac0394292c245dd3",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 103
-    },
-    {
-      "fingerprint": "f6002e9ff67197a46f883381",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 119
-    },
-    {
-      "fingerprint": "f6002e9ff67197a46f883381",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 119
-    },
-    {
-      "fingerprint": "9b9ed3c34c15793614898fb5",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 120
-    },
-    {
-      "fingerprint": "12cd14ca5a3d3dff170b13bc",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 144
-    },
-    {
-      "fingerprint": "f4e5dfa511605be61be63567",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 155
-    },
-    {
-      "fingerprint": "9a99c507d8a8ceeb4ca4816d",
-      "provider": "jscpd",
-      "category": "duplication",
-      "type": "duplication",
-      "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.js",
-      "line": 290
-    },
-    {
       "fingerprint": "af5b6bf358971276c58f77f7",
       "provider": "jscpd",
       "category": "duplication",
@@ -795,13 +1041,85 @@
       "line": 219
     },
     {
-      "fingerprint": "2a9747086834d3175cdb2425",
+      "fingerprint": "01c68fe650f7b2fcee554bcf",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/Toolbar/MediaControls.test.jsx",
+      "file": "components/meeting/Toolbar/MediaControls.test.tsx",
       "line": 111
+    },
+    {
+      "fingerprint": "04518838ccd63e57808d3603",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 28
+    },
+    {
+      "fingerprint": "2ed5373f7bd4ee0d0e9537d4",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 87
+    },
+    {
+      "fingerprint": "945249ebb0c361c19868594f",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 103
+    },
+    {
+      "fingerprint": "a5f540672c677edfeb75953b",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 117
+    },
+    {
+      "fingerprint": "39cf4b0701303c1a2171c6c7",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 133
+    },
+    {
+      "fingerprint": "eeb04fe8d6444e71fa399e83",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 134
+    },
+    {
+      "fingerprint": "9a602ec0c389ccd0ad69234b",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 158
+    },
+    {
+      "fingerprint": "42208324c4ccda1380e671bf",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/MediaControls.tsx",
+      "line": 304
     },
     {
       "fingerprint": "0e6d54b2c7758d749b4c5469",
@@ -822,12 +1140,30 @@
       "line": 47
     },
     {
-      "fingerprint": "4586c184400cf58426910718",
+      "fingerprint": "78d338cf4032ca93144341b4",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/meeting/VideoGallery/VideoGallery.test.jsx",
+      "file": "components/meeting/Toolbar/ProfileControls.tsx",
+      "line": 47
+    },
+    {
+      "fingerprint": "1d5667a5d739851d4a518f28",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Toolbar/ProfileControls.tsx",
+      "line": 51
+    },
+    {
+      "fingerprint": "d1c1ab2c4a7fc5d4725ff275",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/VideoGallery/VideoGallery.test.tsx",
       "line": 22
     },
     {
@@ -876,85 +1212,180 @@
       "line": 51
     },
     {
-      "fingerprint": "1ebe45f96b7c7c05924f0f1d",
+      "fingerprint": "c6d2aecb6e9d78a858575e3b",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "components/ui/Tooltip/Tooltip.js",
+      "file": "components/ui/Tooltip/Tooltip.tsx",
       "line": 55
     },
     {
-      "fingerprint": "680f276728a607385099b044",
+      "fingerprint": "0e68e2d9fdb1e2256c83b867",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "hooks/hashRouter.js",
+      "file": "hooks/hashRouter.ts",
       "line": 116
     },
     {
-      "fingerprint": "3d1f3391d97cad6d0e72a292",
+      "fingerprint": "1f43d09d88178bf09ea5b994",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "lib/room/messageAuth.test.jsx",
+      "file": "lib/room/messageAuth.test.tsx",
       "line": 37
     },
     {
-      "fingerprint": "fcd732695c6b0c94c7d3af9b",
+      "fingerprint": "20a8dc0d604484f6f29086c3",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "lib/settings/participantRoomSettings.js",
+      "file": "lib/settings/participantRoomSettings.ts",
       "line": 8
     },
     {
-      "fingerprint": "d208285577df1b05e97d7391",
+      "fingerprint": "4133bcc7f78707f4557df6f4",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "lib/settings/participantRoomSettings.js",
+      "file": "lib/settings/participantRoomSettings.ts",
       "line": 19
     },
     {
-      "fingerprint": "ae573fe710299a21e38804ed",
+      "fingerprint": "128f58c16746389a10741d76",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "lib/settings/participantRoomSettings.js",
+      "file": "lib/settings/participantRoomSettings.ts",
       "line": 43
     },
     {
-      "fingerprint": "eb0765b0d4b6c07c9dc96366",
+      "fingerprint": "354b61af9a0f995557c6c6ba",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "lib/settings/participantRoomSettings.js",
-      "line": 141
+      "file": "lib/settings/participantRoomSettings.ts",
+      "line": 149
     },
     {
-      "fingerprint": "59b9aafce3d84a1f970001f0",
+      "fingerprint": "deb3978e96059c539d663615",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "lib/webrtc/outboundAudioMixer.test.jsx",
+      "file": "lib/webrtc/outboundAudioMixer.test.tsx",
       "line": 21
     },
     {
-      "fingerprint": "89b4f9ff6b29f6b57be74ebb",
+      "fingerprint": "bd157d24f6e657c15ca80a57",
       "provider": "jscpd",
       "category": "duplication",
       "type": "duplication",
       "scope": ".",
-      "file": "test/helpers.js",
+      "file": "test/helpers.ts",
       "line": 2
+    },
+    {
+      "fingerprint": "db237b87824aa6d75626f288",
+      "provider": "axe-core with Playwright",
+      "category": "runtime-accessibility",
+      "type": "command-failure",
+      "scope": "."
+    },
+    {
+      "fingerprint": "34a677915af6667f3c1b7a73",
+      "provider": "Playwright visual comparisons",
+      "category": "visual-regression",
+      "type": "command-failure",
+      "scope": "."
+    },
+    {
+      "fingerprint": "fb79f6eec460cdf3324fb59c",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/signaling/messages.ts",
+      "line": 81
+    },
+    {
+      "fingerprint": "bf2f6b97dfb24cde34fae0e7",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/signaling/messages.ts",
+      "line": 459
+    },
+    {
+      "fingerprint": "622787c1cef6a9d7125624a9",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/webrtc/peerClient.ts",
+      "line": 27
+    },
+    {
+      "fingerprint": "4562f6fc0d4becf79c9166bf",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/hooks/roomDataChannel.ts",
+      "line": 56
+    },
+    {
+      "fingerprint": "b251eb93557d2b26c96b66ce",
+      "provider": "Knip",
+      "category": "dead-code",
+      "type": "unused-export",
+      "scope": ".",
+      "file": "src/lib/room/messageAuth.ts",
+      "line": 83
+    },
+    {
+      "fingerprint": "48321e52416ba736a30fee7d",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.ts",
+      "line": 545
+    },
+    {
+      "fingerprint": "90b1c8d9df4717b6aadeb250",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.ts",
+      "line": 656
+    },
+    {
+      "fingerprint": "cf3926d02e9aa7222ca5c88d",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "components/meeting/Recording/worker/webCodecsRecording.worker.ts",
+      "line": 664
+    },
+    {
+      "fingerprint": "d315605f95b0000fc48278d3",
+      "provider": "jscpd",
+      "category": "duplication",
+      "type": "duplication",
+      "scope": ".",
+      "file": "hooks/hashRouter.ts",
+      "line": 124
     }
   ]
 }

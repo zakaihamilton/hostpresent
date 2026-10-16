@@ -10,10 +10,9 @@ export const MEDIA_CONTROL = Object.freeze({
   RELOAD: "media_reload_required",
 } as const);
 
-export type MediaControlType =
-  (typeof MEDIA_CONTROL)[keyof typeof MEDIA_CONTROL];
+type MediaControlType = (typeof MEDIA_CONTROL)[keyof typeof MEDIA_CONTROL];
 
-export interface MediaPlanEdge {
+interface MediaPlanEdge {
   id: string;
   parentId: string;
   childId: string;
@@ -22,7 +21,7 @@ export interface MediaPlanEdge {
   ready?: boolean;
 }
 
-export interface MediaHealthEdge {
+interface MediaHealthEdge {
   id: string;
   ready: boolean;
 }

@@ -1,4 +1,4 @@
-export type RecordingStream = "audio" | "video";
+type RecordingStream = "audio" | "video";
 
 export interface RecordingExportFile {
   stream: RecordingStream;

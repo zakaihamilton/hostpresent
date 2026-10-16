@@ -25,12 +25,12 @@ export const SIGNALING_MESSAGE = {
   MEDIA_RENEGOTIATE: "media_renegotiate",
 } as const;
 
-export type SignalingMessageType =
+type SignalingMessageType =
   (typeof SIGNALING_MESSAGE)[keyof typeof SIGNALING_MESSAGE];
 export type ParticipantMode = "available" | "listening";
 export type ParticipantType = "audio" | "video";
 
-export interface RoomEnvelope {
+interface RoomEnvelope {
   roomId?: string;
   token?: string;
 }

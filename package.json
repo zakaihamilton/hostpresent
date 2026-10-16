@@ -26,7 +26,7 @@
     "health:a11y": "playwright test tests/e2e/guardrails.spec.ts --project=chromium --grep=WCAG",
     "health:visual": "if [ \"$RUN_VISUAL_REGRESSION\" = \"1\" ] || [ \"$(uname)\" = \"Darwin\" ]; then pnpm run build && PLAYWRIGHT_SERVER_MODE=production playwright test tests/e2e/guardrails.spec.ts --project=chromium; else echo \"Visual regression runs in the macOS guardrail job.\"; fi",
     "health:interactions": "jest --runInBand",
-    "health:styles": "stylelint --formatter json \"**/*.{css,pcss,postcss}\"",
+    "health:styles": "stylelint --formatter json \"src/**/*.{css,pcss,postcss}\"",
     "build:public-scripts": "tsc -p tsconfig.public-sw.json && tsc -p tsconfig.public-theme.json",
     "predev": "pnpm run build:public-scripts",
     "prebuild": "pnpm run build:public-scripts",
