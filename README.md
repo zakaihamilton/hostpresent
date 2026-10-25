@@ -72,7 +72,7 @@ Peerovo
 
 ### Requirements
 
-- Node.js **24.22.0** (Node 24 LTS; see `.nvmrc`)
+- Node.js **24.22.1** (Node 24 LTS; see `.nvmrc`)
 - pnpm 10.33.0
 - A Peerovo service configured for Host Present, reachable from the app server and browser
 - A modern browser with camera, microphone, and screen-sharing support
