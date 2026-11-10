@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
+import { VisitoringProvider } from "visitoring";
 import "./globals.css";
 
 export const metadata = {
@@ -56,7 +57,9 @@ export default async function RootLayout({ children }: { children?: any }) {
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body>
-        {children}
+        <VisitoringProvider siteKey="vk_swfqsMJOQrc07zGodN2euMUDTXs5CMKW">
+          {children}
+        </VisitoringProvider>
         <ServiceWorkerRegistration />
       </body>
     </html>

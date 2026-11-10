@@ -32,6 +32,9 @@ importers:
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
+      visitoring:
+        specifier: ^0.1.0
+        version: 0.1.0(react@19.2.4)
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
@@ -4196,6 +4199,11 @@ packages:
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
+
+  visitoring@0.1.0:
+    resolution: {integrity: sha512-AzaFrOphyYmZmpuOS4n2YGUUDhXVQ2Z5eUSVvX+3I10v0sObipEA/FDuFLrtG9i85iGVh5J3m/pO27lE3XiS9Q==}
+    peerDependencies:
+      react: '>=18.0.0 <20'
 
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
@@ -8955,6 +8963,10 @@ snapshots:
       spdx-expression-parse: 3.0.1
 
   vary@1.1.2: {}
+
+  visitoring@0.1.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
 
   w3c-xmlserializer@5.0.0:
     dependencies:
