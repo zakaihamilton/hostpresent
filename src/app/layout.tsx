@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
-import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { VisitoringProvider } from "visitoring";
+import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import "./globals.css";
 
 export const metadata = {
