@@ -1,21 +1,29 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createRef } from "react";
+import type { RoomMessageHandler } from "@/hooks/roomDataChannel/types";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import type { SignalingMessage } from "@/lib/signaling/messages";
 import { SIGNALING_MESSAGE } from "@/lib/signaling/messages";
-import { RemoteParticipants } from "./RemoteParticipants";
+import {
+  type RemoteParticipantsConnection,
+  useRemoteParticipants,
+} from "./RemoteParticipants";
 
-function createRoomConnection() {
-  const subscribers = [];
+function createRoomConnection(): RemoteParticipantsConnection & {
+  emit: (message: SignalingMessage) => void;
+} {
+  const subscribers: RoomMessageHandler[] = [];
   return {
     localParticipantId: "local-1",
     hostPresent: true,
-    send: jest.fn(),
-    sendToParticipant: jest.fn(),
-    subscribe: jest.fn((callback) => {
+    send: jest.fn(() => true),
+    sendToParticipant: jest.fn(() => true),
+    disconnect: jest.fn(),
+    subscribe: jest.fn((callback: RoomMessageHandler) => {
       subscribers.push(callback);
       return () => {};
     }),
-    emit(message) {
+    emit(message: SignalingMessage) {
       for (const callback of subscribers) callback(message);
     },
   };
@@ -27,11 +35,11 @@ function renderRemoteParticipants({
   isAudioMuted = false,
   isVideoMuted = false,
 } = {}) {
-  const roomConnectionRef = createRef();
+  const roomConnectionRef = createRef<RemoteParticipantsConnection>();
   roomConnectionRef.current = roomConnection;
 
   const view = renderHook(() =>
-    RemoteParticipants({
+    useRemoteParticipants({
       isHost,
       roomConnectionRef,
       roomConnection,
@@ -129,11 +137,11 @@ describe("RemoteParticipants", () => {
     const setIsVideoMuted = jest.fn();
     const setSessionTitle = jest.fn();
     const roomConnection = createRoomConnection();
-    const roomConnectionRef = createRef();
+    const roomConnectionRef = createRef<RemoteParticipantsConnection>();
     roomConnectionRef.current = roomConnection;
 
     const { result } = renderHook(() =>
-      RemoteParticipants({
+      useRemoteParticipants({
         isHost: false,
         roomConnectionRef,
         roomConnection,
@@ -205,11 +213,11 @@ describe("RemoteParticipants", () => {
     const setIsVideoMuted = jest.fn();
     const publishParticipantMediaStatus = jest.fn();
     const roomConnection = createRoomConnection();
-    const roomConnectionRef = createRef();
+    const roomConnectionRef = createRef<RemoteParticipantsConnection>();
     roomConnectionRef.current = roomConnection;
 
     renderHook(() =>
-      RemoteParticipants({
+      useRemoteParticipants({
         isHost: false,
         roomConnectionRef,
         roomConnection,
@@ -262,11 +270,11 @@ describe("RemoteParticipants", () => {
     const syncOutboundMedia = jest.fn();
     const roomConnection = createRoomConnection();
     roomConnection.syncOutboundMedia = syncOutboundMedia;
-    const roomConnectionRef = createRef();
+    const roomConnectionRef = createRef<RemoteParticipantsConnection>();
     roomConnectionRef.current = roomConnection;
 
     renderHook(() =>
-      RemoteParticipants({
+      useRemoteParticipants({
         isHost: false,
         roomConnectionRef,
         roomConnection,

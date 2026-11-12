@@ -1,8 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import type { RoomMessageHandler } from "@/hooks/roomDataChannel/types";
 import {
   PARTICIPANT_MODE,
   resolveDisplayName,
 } from "@/lib/settings/displayNameSettings";
+import type {
+  ParticipantMode,
+  SignalingMessage,
+} from "@/lib/signaling/messages";
 import {
   createParticipantProfileBroadcastMessage,
   SIGNALING_MESSAGE,
@@ -10,9 +23,70 @@ import {
 import {
   attachRemoteStreamMediaListeners,
   hasPlayableRemoteAudio,
+  type readRemoteStreamMediaState,
 } from "@/lib/webrtc/remoteParticipantMedia";
 
-function participantColor(id) {
+export interface RemoteParticipantsConnection {
+  localParticipantId?: string;
+  hostPresent?: boolean;
+  send: (message: SignalingMessage) => boolean;
+  sendToParticipant: (
+    participantId: string,
+    message: SignalingMessage,
+  ) => boolean;
+  subscribe: (handler: RoomMessageHandler) => () => void;
+  disconnect: () => void;
+  syncOutboundMedia?: (streams?: {
+    localStream?: MediaStream | null;
+    screenStream?: MediaStream | null;
+  }) => Promise<void>;
+}
+
+interface ParticipantMediaState {
+  isAudioMuted: boolean;
+  isVideoMuted: boolean;
+  isScreenSharing: boolean;
+}
+
+interface VideoParticipant extends ParticipantMediaState {
+  id: string;
+  name: string;
+  avatarColor: string;
+  stream: MediaStream | null;
+  mode: ParticipantMode;
+  isSpeaking?: boolean;
+}
+
+interface PeerParticipant extends Omit<VideoParticipant, "stream"> {}
+
+interface AudioParticipant {
+  id: string;
+  name: string;
+  isMuted: boolean;
+  isSpeaking?: boolean;
+}
+
+interface RemoteParticipantsProps {
+  isHost: boolean;
+  roomConnectionRef: MutableRefObject<RemoteParticipantsConnection | null>;
+  roomConnection: RemoteParticipantsConnection;
+  localStream: MediaStream | null;
+  screenStream: MediaStream | null;
+  isAudioMuted: boolean;
+  isVideoMuted: boolean;
+  setIsAudioMuted: Dispatch<SetStateAction<boolean>>;
+  setIsVideoMuted: Dispatch<SetStateAction<boolean>>;
+  setIsRecording: Dispatch<SetStateAction<boolean>>;
+  setIsRecordingPaused: Dispatch<SetStateAction<boolean>>;
+  resetRecordingTimer: () => void;
+  publishParticipantMediaStatus: (state: {
+    audioMuted?: boolean;
+    videoMuted?: boolean;
+  }) => void;
+  setSessionTitle: Dispatch<SetStateAction<string>>;
+}
+
+function participantColor(id: string) {
   let hash = 0;
   for (let index = 0; index < id.length; index += 1) {
     hash = id.charCodeAt(index) + ((hash << 5) - hash);
@@ -23,7 +97,10 @@ function participantColor(id) {
 const SPEAKING_SAMPLE_MS = 140;
 const SPEAKING_THRESHOLD = 0.055;
 
-export function attachSpeakingDetector(stream, onSpeakingChange) {
+export function attachSpeakingDetector(
+  stream: MediaStream | null | undefined,
+  onSpeakingChange: (isSpeaking: boolean) => void,
+) {
   if (
     typeof window === "undefined" ||
     !stream?.getAudioTracks?.().some((track) => track.readyState === "live") ||
@@ -76,7 +153,7 @@ export function attachSpeakingDetector(stream, onSpeakingChange) {
   };
 }
 
-export function RemoteParticipants({
+export function useRemoteParticipants({
   isHost,
   roomConnectionRef,
   roomConnection,
@@ -91,42 +168,35 @@ export function RemoteParticipants({
   resetRecordingTimer,
   publishParticipantMediaStatus,
   setSessionTitle,
-}: {
-  isHost?: any;
-  roomConnectionRef?: any;
-  roomConnection?: any;
-  localStream?: any;
-  screenStream?: any;
-  isAudioMuted?: any;
-  isVideoMuted?: any;
-  setIsAudioMuted?: any;
-  setIsVideoMuted?: any;
-  setIsRecording?: any;
-  setIsRecordingPaused?: any;
-  resetRecordingTimer?: any;
-  publishParticipantMediaStatus?: any;
-  setSessionTitle?: any;
-}) {
-  const [hostStream, setHostStream] = useState(null);
+}: RemoteParticipantsProps) {
+  const [hostStream, setHostStream] = useState<MediaStream | null>(null);
   const [hostStreamPlaybackMuted, setHostStreamPlaybackMuted] = useState(true);
-  const [videoParticipants, setVideoParticipants] = useState([]);
-  const [peerParticipants, setPeerParticipants] = useState([]);
+  const [videoParticipants, setVideoParticipants] = useState<
+    VideoParticipant[]
+  >([]);
+  const [peerParticipants, setPeerParticipants] = useState<PeerParticipant[]>(
+    [],
+  );
   const [hostDisplayName, setHostDisplayName] = useState("Host");
   const [hostAudioMuted, setHostAudioMuted] = useState(false);
   const [hostVideoMuted, setHostVideoMuted] = useState(false);
   const [hostScreenSharing, setHostScreenSharing] = useState(false);
-  const [hostMode, setHostMode] = useState("available");
+  const [hostMode, setHostMode] = useState<ParticipantMode>("available");
   const [hostPresent, setHostPresent] = useState(isHost);
   const [hostIsSpeaking, setHostIsSpeaking] = useState(false);
-  const [audioList, setAudioList] = useState([]);
+  const [audioList, setAudioList] = useState<AudioParticipant[]>([]);
 
-  const participantProfilesRef = useRef(new Map());
-  const peerMediaStateRef = useRef(new Map());
-  const streamListenerCleanupsRef = useRef(new Map());
-  const speakingCleanupsRef = useRef(new Map());
-  const hostSpeakingCleanupRef = useRef(null);
+  const participantProfilesRef = useRef(
+    new Map<string, { displayName?: string; mode?: ParticipantMode }>(),
+  );
+  const peerMediaStateRef = useRef(
+    new Map<string, Partial<ParticipantMediaState>>(),
+  );
+  const streamListenerCleanupsRef = useRef(new Map<string, () => void>());
+  const speakingCleanupsRef = useRef(new Map<string, () => void>());
+  const hostSpeakingCleanupRef = useRef<(() => void) | null>(null);
 
-  const handleRemoteHostStream = useCallback((stream) => {
+  const handleRemoteHostStream = useCallback((stream: MediaStream | null) => {
     hostSpeakingCleanupRef.current?.();
     hostSpeakingCleanupRef.current = null;
     setHostStream(stream);
@@ -159,9 +229,9 @@ export function RemoteParticipants({
       displayName,
       mode,
     }: {
-      participantId?: any;
-      displayName?: any;
-      mode?: any;
+      participantId?: string;
+      displayName?: string;
+      mode?: ParticipantMode;
     }) => {
       if (!isHost) return;
       const participant = videoParticipants.find(
@@ -183,7 +253,7 @@ export function RemoteParticipants({
   );
 
   const broadcastPeerLeft = useCallback(
-    (participantId) => {
+    (participantId: string) => {
       if (!isHost) return;
       participantProfilesRef.current.delete(participantId);
       roomConnectionRef.current?.send(
@@ -220,7 +290,10 @@ export function RemoteParticipants({
   );
 
   const applyRemoteStreamMediaState = useCallback(
-    (participantId, mediaState) => {
+    (
+      participantId: string,
+      mediaState: ReturnType<typeof readRemoteStreamMediaState>,
+    ) => {
       setVideoParticipants((previous) =>
         previous.map((entry) => {
           if (entry.id !== participantId) return entry;
@@ -240,7 +313,7 @@ export function RemoteParticipants({
   );
 
   const bindRemoteStreamMediaListeners = useCallback(
-    (participantId, stream) => {
+    (participantId: string, stream: MediaStream | null | undefined) => {
       const cleanups = streamListenerCleanupsRef.current;
       cleanups.get(participantId)?.();
       cleanups.delete(participantId);
@@ -258,7 +331,13 @@ export function RemoteParticipants({
   );
 
   const handleRemoteParticipant = useCallback(
-    (participant) => {
+    (participant: {
+      id: string;
+      name?: string;
+      stream?: MediaStream | null;
+      mode?: ParticipantMode;
+      preserveProfile?: boolean;
+    }) => {
       if (!participant?.id) return;
 
       if (participant.stream === null) {
@@ -358,88 +437,91 @@ export function RemoteParticipants({
     ],
   );
 
-  const handlePeerProfileBroadcast = useCallback((message) => {
-    if (!message?.participantId) return;
+  const handlePeerProfileBroadcast = useCallback(
+    (message: SignalingMessage) => {
+      if (!message?.participantId) return;
+      const participantId = message.participantId;
 
-    if (message.present === false) {
-      peerMediaStateRef.current.delete(message.participantId);
-      streamListenerCleanupsRef.current.get(message.participantId)?.();
-      streamListenerCleanupsRef.current.delete(message.participantId);
-      speakingCleanupsRef.current.get(message.participantId)?.();
-      speakingCleanupsRef.current.delete(message.participantId);
-      setPeerParticipants((previous) =>
-        previous.filter((entry) => entry.id !== message.participantId),
-      );
-      setVideoParticipants((previous) =>
-        previous.filter((entry) => entry.id !== message.participantId),
-      );
-      return;
-    }
-
-    const previousMediaState =
-      peerMediaStateRef.current.get(message.participantId) ?? {};
-    const nextMediaState = {
-      isScreenSharing:
-        typeof message.screenSharing === "boolean"
-          ? message.screenSharing
-          : (previousMediaState.isScreenSharing ?? false),
-      isAudioMuted:
-        typeof message.isAudioMuted === "boolean"
-          ? message.isAudioMuted
-          : (previousMediaState.isAudioMuted ?? false),
-      isVideoMuted:
-        typeof message.isVideoMuted === "boolean"
-          ? message.isVideoMuted
-          : (previousMediaState.isVideoMuted ?? false),
-    };
-    peerMediaStateRef.current.set(message.participantId, nextMediaState);
-
-    const nextName = resolveDisplayName(message.displayName);
-    const nextMode =
-      message.mode === PARTICIPANT_MODE.LISTENING
-        ? PARTICIPANT_MODE.LISTENING
-        : PARTICIPANT_MODE.AVAILABLE;
-
-    setPeerParticipants((previous) => {
-      const existing = previous.find(
-        (entry) => entry.id === message.participantId,
-      );
-      if (existing) {
-        return previous.map((entry) =>
-          entry.id === message.participantId
-            ? { ...entry, name: nextName, mode: nextMode, ...nextMediaState }
-            : entry,
+      if (message.present === false) {
+        peerMediaStateRef.current.delete(participantId);
+        streamListenerCleanupsRef.current.get(participantId)?.();
+        streamListenerCleanupsRef.current.delete(participantId);
+        speakingCleanupsRef.current.get(participantId)?.();
+        speakingCleanupsRef.current.delete(participantId);
+        setPeerParticipants((previous) =>
+          previous.filter((entry) => entry.id !== participantId),
         );
+        setVideoParticipants((previous) =>
+          previous.filter((entry) => entry.id !== participantId),
+        );
+        return;
       }
-      return [
-        ...previous,
-        {
-          id: message.participantId,
-          name: nextName,
-          mode: nextMode,
-          ...nextMediaState,
-          isSpeaking: false,
-          avatarColor: participantColor(message.participantId),
-        },
-      ];
-    });
 
-    setVideoParticipants((previous) =>
-      previous.map((entry) =>
-        entry.id === message.participantId
-          ? {
-              ...entry,
-              name: nextName,
-              mode: nextMode,
-              ...nextMediaState,
-            }
-          : entry,
-      ),
-    );
-  }, []);
+      const previousMediaState =
+        peerMediaStateRef.current.get(participantId) ?? {};
+      const nextMediaState = {
+        isScreenSharing:
+          typeof message.screenSharing === "boolean"
+            ? message.screenSharing
+            : (previousMediaState.isScreenSharing ?? false),
+        isAudioMuted:
+          typeof message.isAudioMuted === "boolean"
+            ? message.isAudioMuted
+            : (previousMediaState.isAudioMuted ?? false),
+        isVideoMuted:
+          typeof message.isVideoMuted === "boolean"
+            ? message.isVideoMuted
+            : (previousMediaState.isVideoMuted ?? false),
+      };
+      peerMediaStateRef.current.set(participantId, nextMediaState);
+
+      const nextName = resolveDisplayName(message.displayName);
+      const nextMode =
+        message.mode === PARTICIPANT_MODE.LISTENING
+          ? PARTICIPANT_MODE.LISTENING
+          : PARTICIPANT_MODE.AVAILABLE;
+
+      setPeerParticipants((previous) => {
+        const existing = previous.find((entry) => entry.id === participantId);
+        if (existing) {
+          return previous.map((entry) =>
+            entry.id === participantId
+              ? { ...entry, name: nextName, mode: nextMode, ...nextMediaState }
+              : entry,
+          );
+        }
+        return [
+          ...previous,
+          {
+            id: participantId,
+            name: nextName,
+            mode: nextMode,
+            ...nextMediaState,
+            isSpeaking: false,
+            avatarColor: participantColor(participantId),
+          },
+        ];
+      });
+
+      setVideoParticipants((previous) =>
+        previous.map((entry) =>
+          entry.id === participantId
+            ? {
+                ...entry,
+                name: nextName,
+                mode: nextMode,
+                ...nextMediaState,
+              }
+            : entry,
+        ),
+      );
+    },
+    [],
+  );
 
   const setParticipantScreenSharing = useCallback(
-    (participantId, isScreenSharing) => {
+    (participantId: string | undefined, isScreenSharing: boolean) => {
+      if (!participantId) return;
       const mediaState = peerMediaStateRef.current.get(participantId) ?? {};
       peerMediaStateRef.current.set(participantId, {
         ...mediaState,
@@ -677,8 +759,7 @@ export function RemoteParticipants({
   ]);
 
   useEffect(() => {
-    if (isHost || !roomConnectionRef.current?.localParticipantId)
-      return undefined;
+    if (isHost || !roomConnection?.localParticipantId) return undefined;
 
     publishParticipantMediaStatus({
       audioMuted: isAudioMuted,
@@ -691,7 +772,7 @@ export function RemoteParticipants({
     isHost,
     isVideoMuted,
     publishParticipantMediaStatus,
-    roomConnectionRef.current?.localParticipantId,
+    roomConnection?.localParticipantId,
   ]);
 
   useEffect(() => {

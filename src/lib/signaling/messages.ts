@@ -312,7 +312,7 @@ export function createParticipantProfileBroadcastMessage({
   screenSharing?: boolean;
   isAudioMuted?: boolean;
   isVideoMuted?: boolean;
-}) {
+}): SignalingMessage {
   return {
     type: SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST,
     participantId,

@@ -9,6 +9,7 @@ import {
   useRoomDataChannel,
   useSessionTimers,
 } from "@/hooks";
+import type { RemoteParticipantUpdate } from "@/hooks/roomDataChannel/types";
 import type { RoomSessionStatus } from "@/hooks/roomSession";
 import { useRoomSession } from "@/hooks/roomSession";
 import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
@@ -29,6 +30,7 @@ import {
   getRoomTitleByHostToken,
   updateRoomTitle,
 } from "@/lib/settings/roomSettings";
+import type { ChatMessage } from "@/lib/signaling/messages";
 import {
   createHostFocusChangedMessage,
   createMeetingEndedMessage,
@@ -42,7 +44,8 @@ import {
 import { MediaControls } from "./hooks/MediaControls";
 import {
   attachSpeakingDetector,
-  RemoteParticipants,
+  type RemoteParticipantsConnection,
+  useRemoteParticipants,
 } from "./hooks/RemoteParticipants";
 import { useMeetingChat } from "./hooks/useMeetingChat";
 import { useMeetingFocus } from "./hooks/useMeetingFocus";
@@ -112,10 +115,16 @@ function MeetingViewInner({
   sessionError: string;
 }) {
   const isHost = role === "host";
-  const roomConnectionRef = useRef(null);
-  const onRemoteParticipantRef = useRef(null);
-  const onRemoteHostStreamRef = useRef(null);
-  const onChatMessageRef = useRef(null);
+  const roomConnectionRef = useRef<RemoteParticipantsConnection | null>(null);
+  const onRemoteParticipantRef = useRef<
+    ((participant: RemoteParticipantUpdate) => void) | null
+  >(null);
+  const onRemoteHostStreamRef = useRef<
+    ((stream: MediaStream | null) => void) | null
+  >(null);
+  const onChatMessageRef = useRef<((message: ChatMessage) => void) | null>(
+    null,
+  );
 
   const roomJoinCode = routeJoinCode ?? roomState?.joinCode ?? "";
   const formattedRoomId = useMemo(
@@ -197,15 +206,16 @@ function MeetingViewInner({
   }, [localStream]);
 
   const onRemoteParticipant = useCallback(
-    (arg) => onRemoteParticipantRef.current?.(arg),
+    (participant: RemoteParticipantUpdate) =>
+      onRemoteParticipantRef.current?.(participant),
     [],
   );
   const onRemoteHostStream = useCallback(
-    (arg) => onRemoteHostStreamRef.current?.(arg),
+    (stream: MediaStream | null) => onRemoteHostStreamRef.current?.(stream),
     [],
   );
   const onChatMessage = useCallback(
-    (message) => onChatMessageRef.current?.(message),
+    (message: ChatMessage) => onChatMessageRef.current?.(message),
     [],
   );
 
@@ -329,7 +339,7 @@ function MeetingViewInner({
     streamListenerCleanupsRef,
     handleRemoteParticipant,
     handleRemoteHostStream,
-  } = RemoteParticipants({
+  } = useRemoteParticipants({
     isHost,
     roomConnectionRef,
     roomConnection,
