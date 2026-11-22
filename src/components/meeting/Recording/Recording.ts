@@ -4,30 +4,24 @@ import {
   hasDirectFileExport,
 } from "@/components/meeting/Recording/recordingExport";
 import {
-  beginRecordingSegment,
   clearSavedRecording,
-  closeActiveRecordingSegment,
   createRecordingSession,
-  flushRecordingWrites,
   getRecordingStoragePreflight,
-  loadSavedRecording,
   updateRecordingSession,
 } from "@/components/meeting/Recording/recordingStorage";
 import { createRecordingStateMessage } from "@/lib/signaling/messages";
 import { finalizePersistedRecording } from "./controllers/finalizePersistedRecording";
 import { rebuildRecordingCapture } from "./controllers/rebuildRecordingCapture";
-import {
-  pickTracksForFocus,
-  selectRecordingFormat,
-  stopActiveRecorders,
-} from "./media/recordingMedia";
+import { createRecordingFormats } from "./controllers/recordingFormats";
+import { stopRecordingCapture } from "./controllers/stopRecordingCapture";
+import { useRecordingTrackSync } from "./hooks/useRecordingTrackSync";
+import { useSavedRecordingRecovery } from "./hooks/useSavedRecordingRecovery";
 
 export { CanvasVideoRenderer } from "./media/CanvasVideoRenderer";
 export { RecordingAudioMixer } from "./media/RecordingAudioMixer";
 export { getRecordingMediaSignature } from "./media/recordingMedia";
 
 const MIN_RECORDING_STORAGE_BYTES = 128 * 1024 * 1024;
-const LIVE_CAPTURE_STOP_TIMEOUT_MS = 15_000;
 
 export function Recording({
   isHost,
@@ -59,9 +53,6 @@ export function Recording({
   sessionName?: any;
 }) {
   const [downloadState, setDownloadState] = useState(null);
-  const [savedRecording, setSavedRecording] = useState(null);
-  const [canResumeSavedRecording, setCanResumeSavedRecording] = useState(false);
-  const [trackRevision, setTrackRevision] = useState(0);
   const [isRecordingBusy, setIsRecordingBusy] = useState(false);
   const operationRef = useRef(null);
 
@@ -225,6 +216,36 @@ export function Recording({
     updateDownloadProgress,
   ]);
 
+  const {
+    savedRecording,
+    setSavedRecording,
+    canResumeSavedRecording,
+    resumeSavedRecording,
+    downloadSavedRecording,
+    discardSavedRecording,
+  } = useSavedRecordingRecovery({
+    isHost,
+    localStream,
+    minStorageBytes: MIN_RECORDING_STORAGE_BYTES,
+    runRecordingOperation,
+    mediaRecorderRef,
+    localStreamRef,
+    exportDirectoryRef,
+    recordingSessionRef,
+    recordingFormatsRef,
+    chunkIndexRef,
+    videoChunkCountRef,
+    audioChunkCountRef,
+    recordingStopRequestedRef,
+    rebuildRecorder,
+    finalizeRecordingDownload,
+    updateDownloadProgress,
+    resetRecordingTimer,
+    setIsRecording,
+    setIsRecordingPaused,
+    publishRecordingState,
+  });
+
   const startRecording = useCallback(
     () =>
       runRecordingOperation(async () => {
@@ -247,38 +268,7 @@ export function Recording({
           return;
         }
 
-        recordingFormatsRef.current = {
-          video: selectRecordingFormat(
-            [
-              { mimeType: "video/mp4;codecs=avc1", extension: "mp4" },
-              { mimeType: "video/mp4", extension: "mp4" },
-              { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
-            ],
-            { mimeType: "video/webm", extension: "webm" },
-          ),
-          audio: selectRecordingFormat(
-            [
-              { mimeType: "audio/mp4", extension: "m4a" },
-              { mimeType: "audio/webm;codecs=opus", extension: "webm" },
-            ],
-            { mimeType: "audio/webm", extension: "webm" },
-          ),
-        };
-        recordingFormatsRef.current.recoveryVideo = selectRecordingFormat(
-          [
-            { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
-            { mimeType: "video/webm;codecs=vp8,opus", extension: "webm" },
-            { mimeType: "video/webm", extension: "webm" },
-          ],
-          recordingFormatsRef.current.video,
-        );
-        recordingFormatsRef.current.recoveryAudio = selectRecordingFormat(
-          [
-            { mimeType: "audio/webm;codecs=opus", extension: "webm" },
-            { mimeType: "audio/webm", extension: "webm" },
-          ],
-          recordingFormatsRef.current.audio,
-        );
+        recordingFormatsRef.current = createRecordingFormats();
 
         if (hasDirectFileExport()) {
           exportDirectoryRef.current = await chooseRecordingDirectory();
@@ -341,6 +331,7 @@ export function Recording({
       publishRecordingState,
       setIsRecording,
       setIsRecordingPaused,
+      setSavedRecording,
       updateDownloadProgress,
     ],
   );
@@ -358,10 +349,7 @@ export function Recording({
       publishRecordingState(true, true);
       return;
     }
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
+    if (mediaRecorderRef.current?.state === "recording") {
       mediaRecorderRef.current.pause();
       if (audioRecorderRef.current?.state === "recording") {
         audioRecorderRef.current.pause();
@@ -370,72 +358,6 @@ export function Recording({
       publishRecordingState(true, true);
     }
   }, [publishRecordingState, setIsRecordingPaused]);
-
-  const resumeSavedRecording = useCallback(
-    () =>
-      runRecordingOperation(async () => {
-        if (
-          !isHost ||
-          mediaRecorderRef.current?.state === "recording" ||
-          mediaRecorderRef.current?.state === "paused"
-        )
-          return;
-        const saved = savedRecording;
-        if (!saved?.meta) return;
-        const preflight = await getRecordingStoragePreflight(
-          MIN_RECORDING_STORAGE_BYTES,
-        );
-        const canCapture =
-          typeof MediaRecorder !== "undefined" &&
-          Boolean(
-            localStreamRef.current
-              ?.getVideoTracks()
-              .find((track) => track.readyState === "live"),
-          );
-        if (!preflight.allowed || !canCapture) {
-          updateDownloadProgress(
-            "warning",
-            0,
-            "Resume is unavailable until recording storage and media capture are ready.",
-          );
-          return;
-        }
-        if (hasDirectFileExport() && !exportDirectoryRef.current) {
-          exportDirectoryRef.current = await chooseRecordingDirectory();
-        }
-        recordingSessionRef.current = saved.meta;
-        recordingFormatsRef.current = {
-          video: saved.meta.tracks.video,
-          audio: saved.meta.tracks.audio,
-          recoveryVideo: saved.meta.tracks.video,
-          recoveryAudio: saved.meta.tracks.audio,
-        };
-        chunkIndexRef.current = saved.meta.tracks.video.chunkCount;
-        videoChunkCountRef.current = saved.meta.tracks.video.chunkCount;
-        audioChunkCountRef.current = saved.meta.tracks.audio.chunkCount;
-        const session = await beginRecordingSegment();
-        recordingSessionRef.current = session;
-        recordingStopRequestedRef.current = false;
-        await rebuildRecorder();
-        setSavedRecording(null);
-        setCanResumeSavedRecording(false);
-        resetRecordingTimer();
-        setIsRecording(true);
-        setIsRecordingPaused(false);
-        publishRecordingState(true, false);
-      }),
-    [
-      runRecordingOperation,
-      isHost,
-      publishRecordingState,
-      rebuildRecorder,
-      resetRecordingTimer,
-      savedRecording,
-      setIsRecording,
-      setIsRecordingPaused,
-      updateDownloadProgress,
-    ],
-  );
 
   const resumeRecording = useCallback(() => {
     if (webCodecsWorkerRef.current) {
@@ -450,10 +372,7 @@ export function Recording({
       publishRecordingState(true, false);
       return;
     }
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "paused"
-    ) {
+    if (mediaRecorderRef.current?.state === "paused") {
       mediaRecorderRef.current.resume();
       if (audioRecorderRef.current?.state === "paused") {
         audioRecorderRef.current.resume();
@@ -467,83 +386,34 @@ export function Recording({
     () =>
       runRecordingOperation(async () => {
         if (!isHost) return;
-
         recordingStopRequestedRef.current = true;
         isRecordingRef.current = false;
         setIsRecording(false);
         setIsRecordingPaused(false);
-
-        if (webCodecsWorkerRef.current) {
-          updateDownloadProgress("preparing", 5);
-          const captureWorker = webCodecsWorkerRef.current;
-          const saving = new Promise((resolve) => {
-            captureSaveCompletionRef.current = resolve;
-          });
-          persistedStopRef.current = stopActiveRecorders(
-            mediaRecorderRef.current,
-            audioRecorderRef.current,
-          )
-            .then(() => flushRecordingWrites())
-            .then(() => closeActiveRecordingSegment("stopped"));
-          liveCaptureStopTimerRef.current = setTimeout(() => {
-            if (webCodecsWorkerRef.current !== captureWorker) return;
-            captureWorker.terminate();
-            webCodecsWorkerRef.current = null;
-            void finalizeRecordingDownload().finally(
-              resolveCaptureSaveCompletion,
-            );
-          }, LIVE_CAPTURE_STOP_TIMEOUT_MS);
-          captureWorker.postMessage({ type: "stop" });
-          await persistedStopRef.current;
-          canvasRendererRef.current?.stop();
-          canvasRendererRef.current = null;
-          audioMixerRef.current?.destroy();
-          audioMixerRef.current = null;
-          setIsRecording(false);
-          setIsRecordingPaused(false);
-          resetRecordingTimer();
-          publishRecordingState(false, false);
-          await saving;
-          return;
-        }
-
-        const recorder = mediaRecorderRef.current;
-        const hasActiveRecorder = recorder && recorder.state !== "inactive";
-        const audioRecorder = audioRecorderRef.current;
-        const hasActiveAudioRecorder =
-          audioRecorder && audioRecorder.state !== "inactive";
-
-        if (!hasActiveRecorder && !hasActiveAudioRecorder) {
-          setIsRecording(false);
-          setIsRecordingPaused(false);
-          resetRecordingTimer();
-          publishRecordingState(false, false);
-          await flushRecordingWrites();
-          await closeActiveRecordingSegment("stopped");
-          if (videoChunkCountRef.current > 0) {
-            updateDownloadProgress("preparing", 5);
-            canvasRendererRef.current?.stop();
-            canvasRendererRef.current = null;
-            audioMixerRef.current?.destroy();
-            audioMixerRef.current = null;
-            await finalizeRecordingDownload();
-          }
-          return;
-        }
-
-        updateDownloadProgress("preparing", 5);
-        await stopActiveRecorders(recorder, audioRecorder);
-        await flushRecordingWrites();
-        await closeActiveRecordingSegment("stopped");
-        canvasRendererRef.current?.stop();
-        canvasRendererRef.current = null;
-        audioMixerRef.current?.destroy();
-        audioMixerRef.current = null;
-        await finalizeRecordingDownload();
-        setIsRecording(false);
-        setIsRecordingPaused(false);
-        resetRecordingTimer();
-        publishRecordingState(false, false);
+        await stopRecordingCapture({
+          media: {
+            webCodecsWorkerRef,
+            mediaRecorderRef,
+            audioRecorderRef,
+            canvasRendererRef,
+            audioMixerRef,
+          },
+          storage: {
+            persistedStopRef,
+            liveCaptureStopTimerRef,
+            captureSaveCompletionRef,
+            videoChunkCountRef,
+          },
+          callbacks: {
+            updateDownloadProgress,
+            finalizeRecordingDownload,
+            resolveCaptureSaveCompletion,
+            setIsRecording,
+            setIsRecordingPaused,
+            resetRecordingTimer,
+            publishRecordingState,
+          },
+        });
       }),
     [
       runRecordingOperation,
@@ -567,173 +437,21 @@ export function Recording({
     stopRecording();
   };
 
-  useEffect(() => {
-    if (!isHost || !isRecording) return undefined;
-    const streams = new Set([
-      localStream,
-      screenStream,
-      ...videoParticipants.map((participant) => participant.stream),
-    ]);
-    const handleTrackChange = () =>
-      setTrackRevision((revision) => revision + 1);
-    for (const stream of streams) {
-      stream?.addEventListener?.("addtrack", handleTrackChange);
-      stream?.addEventListener?.("removetrack", handleTrackChange);
-    }
-    return () => {
-      for (const stream of streams) {
-        stream?.removeEventListener?.("addtrack", handleTrackChange);
-        stream?.removeEventListener?.("removetrack", handleTrackChange);
-      }
-    };
-  }, [isHost, isRecording, localStream, screenStream, videoParticipants]);
-
-  useEffect(() => {
-    if (!isHost || !isRecording) return;
-
-    const { videoTrack } = pickTracksForFocus({
-      focusedParticipantId,
-      videoParticipants,
-      localStream,
-      screenStream,
-    });
-    // Track events can change a MediaStream without changing its identity.
-    void trackRevision;
-    void localTrackRevision;
-    canvasRendererRef.current?.setTrack(videoTrack);
-
-    const micTrack = localStream
-      ?.getAudioTracks()
-      .find((t) => t.readyState === "live");
-    const screenAudio = screenStream
-      ?.getAudioTracks()
-      .find((t) => t.readyState === "live");
-    const remoteAudioTracks = videoParticipants
-      .map((p) =>
-        p.stream?.getAudioTracks().find((t) => t.readyState === "live"),
-      )
-      .filter(Boolean);
-
-    const allAudioTracks = [micTrack, screenAudio, ...remoteAudioTracks].filter(
-      Boolean,
-    );
-    audioMixerRef.current?.updateTracks(allAudioTracks);
-  }, [
+  useRecordingTrackSync({
     isHost,
     isRecording,
-    focusedParticipantId,
-    videoParticipants,
     localStream,
     screenStream,
-    trackRevision,
+    videoParticipants,
+    focusedParticipantId,
     localTrackRevision,
-  ]);
-
-  useEffect(() => {
-    if (!isHost || !isRecording) return;
-
-    const handleUnload = () => {
-      if (webCodecsWorkerRef.current) {
-        webCodecsWorkerRef.current.postMessage({ type: "stop" });
-      }
-      const recorder = mediaRecorderRef.current;
-      if (recorder && recorder.state !== "inactive") {
-        recorder.stop();
-      }
-      const audioRecorder = audioRecorderRef.current;
-      if (audioRecorder && audioRecorder.state !== "inactive") {
-        audioRecorder.stop();
-      }
-      Promise.all([
-        closeActiveRecordingSegment("unload"),
-        updateRecordingSession({ status: "interrupted" }),
-      ]).catch(() => {});
-    };
-
-    window.addEventListener("beforeunload", handleUnload);
-    return () => window.removeEventListener("beforeunload", handleUnload);
-  }, [isHost, isRecording]);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadSavedRecording().then((saved) => {
-      if (cancelled || !saved) return;
-      setSavedRecording(saved);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!savedRecording || !isHost) {
-      setCanResumeSavedRecording(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-    getRecordingStoragePreflight(MIN_RECORDING_STORAGE_BYTES)
-      .then((preflight) => {
-        const canCapture =
-          typeof MediaRecorder !== "undefined" &&
-          Boolean(
-            localStream
-              ?.getVideoTracks()
-              .find((track) => track.readyState === "live"),
-          );
-        if (!cancelled)
-          setCanResumeSavedRecording(preflight.allowed && canCapture);
-      })
-      .catch(() => {
-        if (!cancelled) setCanResumeSavedRecording(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isHost, localStream, savedRecording]);
-
-  useEffect(
-    () => () => {
-      if (liveCaptureStopTimerRef.current) {
-        clearTimeout(liveCaptureStopTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  const handleDownloadSavedRecording = useCallback(
-    () =>
-      runRecordingOperation(async () => {
-        const saved = savedRecording;
-        if (
-          !saved ||
-          mediaRecorderRef.current?.state === "recording" ||
-          mediaRecorderRef.current?.state === "paused"
-        )
-          return;
-        const directory = await chooseRecordingDirectory();
-        recordingSessionRef.current = saved.meta;
-        exportDirectoryRef.current = directory ?? null;
-        await finalizeRecordingDownload();
-      }),
-    [finalizeRecordingDownload, savedRecording, runRecordingOperation],
-  );
-
-  const handleDiscardSavedRecording = useCallback(
-    () =>
-      runRecordingOperation(async () => {
-        if (
-          mediaRecorderRef.current?.state === "recording" ||
-          mediaRecorderRef.current?.state === "paused"
-        )
-          return;
-        await clearSavedRecording();
-        setSavedRecording(null);
-        setCanResumeSavedRecording(false);
-      }),
-    [runRecordingOperation],
-  );
+    canvasRendererRef,
+    audioMixerRef,
+    webCodecsWorkerRef,
+    mediaRecorderRef,
+    audioRecorderRef,
+    liveCaptureStopTimerRef,
+  });
 
   return {
     isRecordingBusy,
@@ -741,9 +459,9 @@ export function Recording({
     savedRecording,
     canResumeSavedRecording,
     dismissDownloadBanner,
-    downloadSavedRecording: handleDownloadSavedRecording,
+    downloadSavedRecording,
     resumeSavedRecording,
-    discardSavedRecording: handleDiscardSavedRecording,
+    discardSavedRecording,
     startRecording,
     pauseRecording,
     resumeRecording,

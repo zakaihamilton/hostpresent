@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import styles from "./Header.module.css";
+import styles from "./JoinCodeControl.module.css";
 
 export function JoinCodeControl({ roomId }: { roomId?: any }) {
   const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");

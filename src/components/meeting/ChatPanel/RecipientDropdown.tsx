@@ -8,7 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Chat as ChatIcon, ChevronDown } from "@/components/ui/Icons";
-import styles from "./ChatPanel.module.css";
+import styles from "./RecipientDropdown.module.css";
 
 function participantInitial(name) {
   return (name || "?").charAt(0).toUpperCase();

@@ -1,0 +1,113 @@
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  min-width: 5.5rem;
+}
+
+.statLabel {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.statRoom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  min-width: 5.5rem;
+}
+
+.roomIdCopyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--text-main);
+  line-height: 1.2;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.roomIdCopyButton:hover {
+  color: var(--text-main);
+}
+
+.roomIdCopyButton:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.roomIdValue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.roomIdCopyButtonSuccess .roomIdValue {
+  color: var(--success);
+}
+
+.roomIdCopyButtonError .roomIdValue {
+  color: var(--danger);
+}
+
+@media (max-width: 900px) {
+  .statLabel {
+    display: none;
+  }
+  .statRoom {
+    min-width: auto;
+    padding: 0.35rem 0.55rem;
+    flex-shrink: 0;
+    max-width: min(14ch, 42vw);
+  }
+  .statRoom .roomIdValue,
+  .statRoom .roomIdCopyButton {
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .statRoom {
+    padding: 0.25rem 0.45rem;
+  }
+  .roomIdValue {
+    font-size: 0.8125rem;
+  }
+}
+
+@container (max-width: 500px) {
+  .statRoom {
+    display: none;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .statRoom {
+    padding: 0.25rem 0.45rem;
+  }
+  .roomIdValue {
+    font-size: 0.8125rem;
+  }
+}

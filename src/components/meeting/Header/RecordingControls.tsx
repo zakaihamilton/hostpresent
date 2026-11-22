@@ -1,7 +1,7 @@
 import { Pause, Play, Stop } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDuration } from "@/lib/formatDuration";
-import styles from "./Header.module.css";
+import styles from "./RecordingControls.module.css";
 
 export function RecordingControls({
   showRecording,

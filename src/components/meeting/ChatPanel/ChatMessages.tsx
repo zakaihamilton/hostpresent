@@ -1,5 +1,5 @@
 import { Chat as ChatIcon } from "@/components/ui/Icons";
-import styles from "./ChatPanel.module.css";
+import styles from "./ChatMessages.module.css";
 import { formatTime } from "./formatTime";
 
 export function ChatMessages({
