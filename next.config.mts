@@ -23,6 +23,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   outputFileTracingRoot: projectRoot,
   reactCompiler: true,
+  experimental: {
+    agentUpgrade: false,
+  },
   async headers() {
     return [
       {
