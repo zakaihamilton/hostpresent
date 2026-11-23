@@ -8,6 +8,7 @@ import { SecurityNotice } from "./SecurityNotice";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 import { WelcomeParticipantPanel } from "./WelcomeParticipantPanel";
 import styles from "./WelcomeView.module.css";
+import surfaceStyles from "../../FloatingSurface.module.css";
 
 const AUTHOR_GITHUB_URL = "https://github.com/zakaihamilton/hostpresent";
 const AUTHOR_LINKEDIN_URL = "https://www.linkedin.com/in/zakai-hamilton";
@@ -52,7 +53,7 @@ export function WelcomeView({
         </div>
 
         {/* Setup Card: Now the main visual anchor */}
-        <div className={styles.card}>
+        <div className={`${styles.card} ${surfaceStyles.floatingSurface}`}>
           <SecurityNotice />
 
           <div className={styles.tabs} role="tablist" aria-label="Welcome mode">

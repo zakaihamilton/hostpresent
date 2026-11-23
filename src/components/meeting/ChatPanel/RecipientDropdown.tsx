@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { Chat as ChatIcon, ChevronDown } from "@/components/ui/Icons";
 import styles from "./RecipientDropdown.module.css";
+import surfaceStyles from "../../FloatingSurface.module.css";
 
 function participantInitial(name) {
   return (name || "?").charAt(0).toUpperCase();
@@ -116,7 +117,7 @@ export function RecipientDropdown({
             {participantInitial(selectedRecipient.name)}
           </span>
         ) : (
-          <span className={styles.triggerEveryoneIcon}>
+          <span className={`${styles.triggerEveryoneIcon} ${styles.iconCircle}`}>
             <ChatIcon size={12} />
           </span>
         )}
@@ -131,7 +132,7 @@ export function RecipientDropdown({
               ref={menuRef}
               id={menuId}
               role="listbox"
-              className={`${styles.dropdownMenu} ${positioned ? styles.dropdownMenuVisible : ""}`}
+              className={`${styles.dropdownMenu} ${surfaceStyles.floatingSurface} ${positioned ? styles.dropdownMenuVisible : ""}`}
               style={{
                 top: coords.top,
                 left: coords.left,
@@ -144,7 +145,7 @@ export function RecipientDropdown({
                 className={`${styles.dropdownItem} ${!recipientId || recipientId === "everyone" ? styles.dropdownItemSelected : ""}`}
                 onClick={() => handleSelect("")}
               >
-                <span className={styles.dropdownItemIcon}>
+                <span className={`${styles.dropdownItemIcon} ${styles.iconCircle}`}>
                   <ChatIcon size={14} />
                 </span>
                 <span className={styles.dropdownItemName}>Everyone</span>

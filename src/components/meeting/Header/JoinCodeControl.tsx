@@ -45,7 +45,7 @@ export function JoinCodeControl({ roomId }: { roomId?: any }) {
     <>
       {roomId ? (
         <div className={`${styles.stat} ${styles.statRoom}`}>
-          <span className={styles.statLabel}>Join code</span>
+          <span className={`${headerStyles.statLabel} ${styles.statLabel}`}>Join code</span>
           <Tooltip text="Copy join code" placement="bottom">
             <button
               type="button"

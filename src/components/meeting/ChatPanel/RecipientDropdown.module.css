@@ -81,13 +81,11 @@
 }
 
 .triggerEveryoneIcon {
-  composes: iconCircle;
   width: 20px;
   height: 20px;
 }
 
 .dropdownMenu {
-  composes: floatingSurface from "../../FloatingSurface.module.css";
   position: fixed;
   z-index: 1000;
   min-width: 200px;
@@ -139,7 +137,6 @@
 }
 
 .dropdownItemIcon {
-  composes: iconCircle;
   width: 24px;
   height: 24px;
 }

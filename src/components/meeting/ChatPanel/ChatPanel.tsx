@@ -4,6 +4,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { buildRecordingFilename } from "@/lib/recordingFilename";
 import { ChatMessages } from "./ChatMessages";
 import styles from "./ChatPanel.module.css";
+import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { formatTime } from "./formatTime";
 import { RecipientDropdown } from "./RecipientDropdown";
 
@@ -85,11 +86,22 @@ export const ChatPanel = memo(function ChatPanel({
 
   return (
     <div
-      className={`${styles.slot} ${visible ? "" : styles.slotClosed} ${flex ? styles.slotFlex : ""}`}
+      className={[
+        styles.slot,
+        responsiveStyles.mobileSlot,
+        responsiveStyles.mobileSlotMargin,
+        !visible && styles.slotClosed,
+        !visible && responsiveStyles.mobileClosedSlot,
+        !visible && responsiveStyles.mobileClosedSlotTransition,
+        !visible && responsiveStyles.mobileClosedSlotHidden,
+        flex && styles.slotFlex,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-hidden={!visible}
     >
-      <aside className={styles.panel}>
-        <div className={styles.header}>
+      <aside className={`${styles.panel} ${responsiveStyles.mobilePanel}`}>
+        <div className={`${styles.header} ${responsiveStyles.mobileHeader}`}>
           <div className={styles.headerTitle}>
             <ChatIcon size={18} />
             <span>Chat</span>
@@ -111,7 +123,7 @@ export const ChatPanel = memo(function ChatPanel({
               <Tooltip text="Close chat" placement="left">
                 <button
                   type="button"
-                  className={styles.closeButton}
+                  className={`${styles.closeButton} ${responsiveStyles.mobileCloseButton}`}
                   onClick={onClose}
                   aria-label="Close chat"
                 >

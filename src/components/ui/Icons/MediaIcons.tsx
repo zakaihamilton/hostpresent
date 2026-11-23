@@ -52,6 +52,40 @@ export function ScreenShare({ size = 20, className }: IconProps = {}) {
   );
 }
 
+export function ShareAudio({ size = 20, className }: IconProps = {}) {
+  return (
+    <Icon title="Share screen audio" size={size} className={className}>
+      <path d="M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+      <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+      <path d="M12 11v10" />
+      <path d="m8 14 4-3 4 3" />
+      <path d="M18 9.5a4 4 0 0 1 0 5" />
+      <path d="M21 7a7.5 7.5 0 0 1 0 10" />
+    </Icon>
+  );
+}
+
+export function ShareAudioOff({ size = 20, className }: IconProps = {}) {
+  return (
+    <Icon title="Screen audio off" size={size} className={className}>
+      <path d="M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+      <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+      <path d="M12 11v10" />
+      <path d="m8 14 4-3 4 3" />
+      <line x1="18" x2="22" y1="8" y2="12" />
+      <line x1="22" x2="18" y1="8" y2="12" />
+    </Icon>
+  );
+}
+
+export function Record({ size = 20, className }: IconProps = {}) {
+  return (
+    <Icon title="Record" size={size} className={className}>
+      <circle cx="12" cy="12" r="8" />
+    </Icon>
+  );
+}
+
 export function Pause({ size = 20, className }: IconProps = {}) {
   return (
     <Icon title="Pause" size={size} className={className}>

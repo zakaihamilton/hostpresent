@@ -78,7 +78,6 @@
 }
 
 .combinedSlot {
-  composes: mobileSlot from "../ResponsiveSidebar.module.css";
   flex-shrink: 0;
   overflow: hidden;
   width: 320px;
@@ -86,13 +85,11 @@
 }
 
 .combinedSlotClosed {
-  composes: mobileClosedSlot from "../ResponsiveSidebar.module.css";
   width: 0;
   pointer-events: none;
 }
 
 .combinedSidebar {
-  composes: mobilePanel from "../ResponsiveSidebar.module.css";
   width: 320px;
   height: 100%;
   background: var(--bg-panel);

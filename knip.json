@@ -16,6 +16,7 @@
     "src/app/**/manifest.{js,jsx}",
     "src/app/**/viewport.{js,jsx}",
     "src/components/**/index.js",
+    "src/components/ui/Icons/index.ts",
     "src/components/**/*.js",
     "src/hooks/*.js",
     "src/lib/**/*.js",

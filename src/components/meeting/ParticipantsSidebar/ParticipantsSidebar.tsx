@@ -4,6 +4,7 @@ import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
 import { ParticipantRow } from "./ParticipantRow";
 import { ParticipantsHeader } from "./ParticipantsHeader";
 import styles from "./ParticipantsSidebar.module.css";
+import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { buildParticipantItems } from "./participantItems";
 
 const PARTICIPANT_ITEM_HEIGHT = 52;
@@ -182,10 +183,20 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
 
   return (
     <div
-      className={`${styles.slot} ${visible ? "" : styles.slotClosed} ${flex ? styles.slotFlex : ""}`}
+      className={[
+        styles.slot,
+        responsiveStyles.mobileSlot,
+        responsiveStyles.mobileSlotMargin,
+        !visible && styles.slotClosed,
+        !visible && responsiveStyles.mobileClosedSlot,
+        !visible && responsiveStyles.mobileClosedSlotTransition,
+        flex && styles.slotFlex,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-hidden={!visible}
     >
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${responsiveStyles.mobilePanel}`}>
         <ParticipantsHeader
           totalCount={totalCount}
           remoteCount={remoteCount}
