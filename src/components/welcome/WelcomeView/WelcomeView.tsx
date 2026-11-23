@@ -4,11 +4,11 @@ import { GitHub, LinkedIn, Logo } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
+import surfaceStyles from "../../FloatingSurface.module.css";
 import { SecurityNotice } from "./SecurityNotice";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 import { WelcomeParticipantPanel } from "./WelcomeParticipantPanel";
 import styles from "./WelcomeView.module.css";
-import surfaceStyles from "../../FloatingSurface.module.css";
 
 const AUTHOR_GITHUB_URL = "https://github.com/zakaihamilton/hostpresent";
 const AUTHOR_LINKEDIN_URL = "https://www.linkedin.com/in/zakai-hamilton";

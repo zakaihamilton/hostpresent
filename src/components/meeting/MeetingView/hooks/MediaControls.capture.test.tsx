@@ -52,12 +52,12 @@ describe("MediaControls Hook - Capture & State", () => {
   });
 
   it("requests microphone capture with voice isolation constraints", async () => {
-    renderHook(() =>
-      MediaControls(createDefaultMediaControlsProps()),
-    );
+    renderHook(() => MediaControls(createDefaultMediaControlsProps()));
 
     await waitFor(() => {
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(PUBLISHER_CAPTURE_CONSTRAINTS);
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(
+        PUBLISHER_CAPTURE_CONSTRAINTS,
+      );
     });
   });
 
@@ -87,7 +87,9 @@ describe("MediaControls Hook - Capture & State", () => {
     rerender({ participantMode: PARTICIPANT_MODE.AVAILABLE });
 
     await waitFor(() => {
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(PUBLISHER_CAPTURE_CONSTRAINTS);
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(
+        PUBLISHER_CAPTURE_CONSTRAINTS,
+      );
     });
   });
 
@@ -196,9 +198,11 @@ describe("MediaControls Hook - Capture & State", () => {
     );
 
     const { result } = renderHook(() =>
-      MediaControls(createDefaultMediaControlsProps({
-        roomConnection: { send: jest.fn(), syncOutboundMedia: jest.fn() },
-      })),
+      MediaControls(
+        createDefaultMediaControlsProps({
+          roomConnection: { send: jest.fn(), syncOutboundMedia: jest.fn() },
+        }),
+      ),
     );
 
     await waitFor(() => {

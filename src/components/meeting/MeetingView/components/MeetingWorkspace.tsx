@@ -5,8 +5,8 @@ import { PrimaryView } from "@/components/meeting/PrimaryView";
 import { RecordingDownloadBanner } from "@/components/meeting/Recording";
 import { VideoGallery } from "@/components/meeting/VideoGallery";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import styles from "../MeetingView.module.css";
 import responsiveStyles from "../../ResponsiveSidebar.module.css";
+import styles from "../MeetingView.module.css";
 import { SavedRecordingBanner } from "./SavedRecordingBanner";
 
 export function MeetingWorkspace({
@@ -103,8 +103,12 @@ export function MeetingWorkspace({
       </div>
 
       {isSidebarVisible && isChatVisible && !isMobile ? (
-        <div className={`${styles.combinedSlot} ${responsiveStyles.mobileSlot}`}>
-          <aside className={`${styles.combinedSidebar} ${responsiveStyles.mobilePanel}`}>
+        <div
+          className={`${styles.combinedSlot} ${responsiveStyles.mobileSlot}`}
+        >
+          <aside
+            className={`${styles.combinedSidebar} ${responsiveStyles.mobilePanel}`}
+          >
             <div className={styles.combinedSection}>
               <ParticipantsSidebar
                 {...participantSidebarProps}

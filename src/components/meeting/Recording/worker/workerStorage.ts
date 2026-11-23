@@ -21,10 +21,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-async function storeDatabaseValue(
-  key: string,
-  value: unknown,
-): Promise<void> {
+async function storeDatabaseValue(key: string, value: unknown): Promise<void> {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");

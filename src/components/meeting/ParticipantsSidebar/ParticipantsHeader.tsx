@@ -1,7 +1,7 @@
 import { MicOff, VideoOff, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
-import styles from "./ParticipantsSidebar.module.css";
 import responsiveStyles from "../ResponsiveSidebar.module.css";
+import styles from "./ParticipantsSidebar.module.css";
 
 interface ParticipantsHeaderProps {
   totalCount: number;

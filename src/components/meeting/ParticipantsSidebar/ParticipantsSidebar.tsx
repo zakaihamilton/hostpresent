@@ -1,10 +1,10 @@
 import { memo, useCallback, useMemo } from "react";
 import { VirtualList } from "@/components/Widgets";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { ParticipantRow } from "./ParticipantRow";
 import { ParticipantsHeader } from "./ParticipantsHeader";
 import styles from "./ParticipantsSidebar.module.css";
-import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { buildParticipantItems } from "./participantItems";
 
 const PARTICIPANT_ITEM_HEIGHT = 52;
