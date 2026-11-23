@@ -28,8 +28,6 @@ import { attachSpeakingDetector } from "@/lib/webrtc/speakingDetector";
 import { useAttendeeSignalingCommands } from "./useAttendeeSignalingCommands";
 import { useRemoteHostState } from "./useRemoteHostState";
 
-export { attachSpeakingDetector } from "@/lib/webrtc/speakingDetector";
-
 export interface RemoteParticipantsConnection {
   localParticipantId?: string;
   hostPresent?: boolean;
