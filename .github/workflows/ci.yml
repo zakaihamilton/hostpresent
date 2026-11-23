@@ -20,6 +20,11 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Repository health
         run: pnpm run health --details
+      - name: Diagnose remaining health findings
+        if: always()
+        run: |
+          pnpm exec repnix check dead-code --format json || true
+          pnpm exec repnix check duplication --format json || true
       - run: pnpm exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pnpm run lint
