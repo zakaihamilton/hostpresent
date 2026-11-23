@@ -2,9 +2,9 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Chat as ChatIcon, Download, Send, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { buildRecordingFilename } from "@/lib/recordingFilename";
+import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { ChatMessages } from "./ChatMessages";
 import styles from "./ChatPanel.module.css";
-import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { formatTime } from "./formatTime";
 import { RecipientDropdown } from "./RecipientDropdown";
 
