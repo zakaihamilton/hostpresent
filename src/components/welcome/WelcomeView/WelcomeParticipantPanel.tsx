@@ -246,8 +246,6 @@ export function WelcomeParticipantPanel({
                   setRoomIdInput(value);
                   setResolveError("");
                 }}
-                // Opening the join panel should focus the first code digit.
-                autoFocus
                 className={shared.joinCodeBoxes}
               />
             </div>
