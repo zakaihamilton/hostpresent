@@ -5,7 +5,7 @@ let ffmpegPromise: Promise<
 > | null = null;
 let ffmpegBridge: any = null;
 
-export async function getFfmpeg() {
+async function getFfmpeg() {
   if (!ffmpegPromise) {
     ffmpegPromise = createFfmpegBridge()
       .then((bridge) => {

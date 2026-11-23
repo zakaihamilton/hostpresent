@@ -170,13 +170,16 @@ export async function appendEncodedPackets({
   }
 }
 
-async function getEncodedTrackConfig({
-  source,
-  stream,
-}: {
-  source?: any;
-  stream?: any;
-}) {
+async function withFinalTrack<T>(
+  {
+    source,
+    stream,
+  }: {
+    source: any;
+    stream: "video" | "audio";
+  },
+  readTrack: (track: any) => Promise<T>,
+): Promise<T> {
   const input = new Input({ formats: [MP4], source });
   try {
     if (!(await input.canRead())) {
@@ -186,6 +189,20 @@ async function getEncodedTrackConfig({
       stream === "video"
         ? await input.getPrimaryVideoTrack()
         : await input.getPrimaryAudioTrack();
+    return await readTrack(track);
+  } finally {
+    input.dispose();
+  }
+}
+
+async function getEncodedTrackConfig({
+  source,
+  stream,
+}: {
+  source?: any;
+  stream?: any;
+}) {
+  return withFinalTrack({ source, stream }, async (track) => {
     const expectedCodec = stream === "video" ? "avc" : "aac";
     if (!track || (await track.getCodec()) !== expectedCodec) {
       throw new Error(`Final ${stream} track is not ${expectedCodec}.`);
@@ -195,9 +212,7 @@ async function getEncodedTrackConfig({
       throw new Error(`Final ${stream} track has no decoder metadata.`);
     }
     return decoderConfig;
-  } finally {
-    input.dispose();
-  }
+  });
 }
 
 async function appendFinalTrackToRecording({
@@ -209,15 +224,7 @@ async function appendFinalTrackToRecording({
   stream?: any;
   muxer?: any;
 }) {
-  const input = new Input({ formats: [MP4], source });
-  try {
-    if (!(await input.canRead())) {
-      throw new Error(`Final ${stream} track is unreadable.`);
-    }
-    const track =
-      stream === "video"
-        ? await input.getPrimaryVideoTrack()
-        : await input.getPrimaryAudioTrack();
+  return withFinalTrack({ source, stream }, async (track) => {
     if (!track) throw new Error(`Final ${stream} track is missing.`);
     const sink = new EncodedPacketSink(track);
     let timeline = 0;
@@ -227,9 +234,7 @@ async function appendFinalTrackToRecording({
       timeline += duration;
       await muxer.add(stream, normalized);
     }
-  } finally {
-    input.dispose();
-  }
+  });
 }
 
 export async function muxFinalRecording({

@@ -11,6 +11,7 @@ import {
 import type {
   ParticipantMediaState,
   PeerParticipant,
+  RemoteParticipantSignalingProps,
   RemoteParticipantsConnection,
   VideoParticipant,
 } from "./RemoteParticipants";
@@ -73,23 +74,7 @@ export function useAttendeeSignalingCommands({
   setPeerParticipants,
   handlePeerProfileBroadcast,
   setParticipantScreenSharing,
-}: {
-  isHost: boolean;
-  roomConnectionRef: MutableRefObject<RemoteParticipantsConnection | null>;
-  roomConnection: RemoteParticipantsConnection;
-  localStream: MediaStream | null;
-  screenStream: MediaStream | null;
-  isAudioMuted: boolean;
-  isVideoMuted: boolean;
-  setIsAudioMuted: Dispatch<SetStateAction<boolean>>;
-  setIsVideoMuted: Dispatch<SetStateAction<boolean>>;
-  setIsRecording: Dispatch<SetStateAction<boolean>>;
-  setIsRecordingPaused: Dispatch<SetStateAction<boolean>>;
-  resetRecordingTimer: () => void;
-  publishParticipantMediaStatus: (state: {
-    audioMuted?: boolean;
-    videoMuted?: boolean;
-  }) => void;
+}: RemoteParticipantSignalingProps & {
   peerMediaStateRef: MutableRefObject<
     Map<string, Partial<ParticipantMediaState>>
   >;

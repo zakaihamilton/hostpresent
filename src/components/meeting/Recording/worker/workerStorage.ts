@@ -1,7 +1,7 @@
 import { BlobSource, ReadableStreamSource } from "mediabunny";
 
-export const DB_NAME = "HPRecording";
-export const STORE_NAME = "data";
+const DB_NAME = "HPRecording";
+const STORE_NAME = "data";
 export const MANIFEST_KEY = "manifest";
 
 export interface WorkerExportOutput {
@@ -21,7 +21,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function storeDatabaseValue(
+async function storeDatabaseValue(
   key: string,
   value: unknown,
 ): Promise<void> {
@@ -46,7 +46,7 @@ export async function readDatabaseValue(key: string): Promise<any> {
   });
 }
 
-export async function deleteDatabaseValue(key: string): Promise<void> {
+async function deleteDatabaseValue(key: string): Promise<void> {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -84,11 +84,11 @@ export async function removeCancelledExportOutputs(
   await session.removeEntry("exports", { recursive: true }).catch(() => {});
 }
 
-export function fragmentKey(stream: string, index: number): string {
+function fragmentKey(stream: string, index: number): string {
   return `chunk:${stream}:${String(index).padStart(9, "0")}`;
 }
 
-export function exportChunkKey(
+function exportChunkKey(
   sessionId: string,
   filename: string,
   index: number,
@@ -225,7 +225,7 @@ export async function readExportFile(
   return handle.getFile();
 }
 
-export async function readPersistedFragment(
+async function readPersistedFragment(
   manifest: any,
   stream: string,
   index: number,

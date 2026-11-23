@@ -20,11 +20,6 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Repository health
         run: pnpm run health --details
-      - name: Print health diagnostics after a failed health check
-        if: failure()
-        run: |
-          pnpm exec repnix check --format json > /tmp/repnix-health.json || true
-          node -e 'const report = JSON.parse(require("node:fs").readFileSync("/tmp/repnix-health.json", "utf8")); const results = report.results ?? []; const findings = results.flatMap((result) => (result.findings ?? []).map((finding) => ({ provider: result.provider, category: result.category, ...finding }))); console.log(JSON.stringify({ summary: report.summary, providerErrors: results.filter((result) => result.status === "error").map(({ provider, message }) => ({ provider, message })), newFindings: findings.filter((finding) => finding.baselineState === "new") }, null, 2));'
       - run: pnpm exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pnpm run lint

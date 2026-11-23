@@ -69,12 +69,10 @@
   line-height: 1;
 }
 
-.triggerEveryoneIcon {
+.iconCircle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
   border-radius: 50%;
   background: var(--bg-hover);
   color: var(--text-muted);
@@ -82,17 +80,20 @@
   border: 1px solid var(--border);
 }
 
+.triggerEveryoneIcon {
+  composes: iconCircle;
+  width: 20px;
+  height: 20px;
+}
+
 .dropdownMenu {
+  composes: floatingSurface from "../../FloatingSurface.module.css";
   position: fixed;
   z-index: 1000;
   min-width: 200px;
   max-width: 280px;
   max-height: 240px;
   overflow-y: auto;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
   padding: 0.25rem 0;
   opacity: 0;
   transform: translateY(-4px) scale(0.97);
@@ -138,16 +139,9 @@
 }
 
 .dropdownItemIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  composes: iconCircle;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  background: var(--bg-hover);
-  color: var(--text-muted);
-  flex-shrink: 0;
-  border: 1px solid var(--border);
 }
 
 .dropdownItemAvatar {

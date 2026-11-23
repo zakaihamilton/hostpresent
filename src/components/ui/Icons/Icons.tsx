@@ -1,5 +1,4 @@
 export { GitHub, LinkedIn, Logo } from "./BrandIcons";
-export type { IconProps } from "./IconBase";
 export {
   Focus,
   Gallery,
@@ -8,10 +7,7 @@ export {
   Pause,
   Pip,
   Play,
-  Record,
   ScreenShare,
-  ShareAudio,
-  ShareAudioOff,
   Stop,
   Video,
   VideoOff,
@@ -20,7 +16,6 @@ export {
   ArrowLeft,
   Chat,
   ChevronDown,
-  Copy,
   Download,
   Edit,
   Link,

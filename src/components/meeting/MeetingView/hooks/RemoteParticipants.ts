@@ -70,7 +70,7 @@ interface AudioParticipant {
   isSpeaking?: boolean;
 }
 
-interface RemoteParticipantsProps {
+export interface RemoteParticipantSignalingProps {
   isHost: boolean;
   roomConnectionRef: MutableRefObject<RemoteParticipantsConnection | null>;
   roomConnection: RemoteParticipantsConnection;
@@ -87,6 +87,9 @@ interface RemoteParticipantsProps {
     audioMuted?: boolean;
     videoMuted?: boolean;
   }) => void;
+}
+
+interface RemoteParticipantsProps extends RemoteParticipantSignalingProps {
   setSessionTitle: Dispatch<SetStateAction<string>>;
 }
 

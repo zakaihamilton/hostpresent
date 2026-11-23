@@ -19,8 +19,6 @@ import { useRoomMessaging } from "./roomDataChannel/useRoomMessaging";
 import { useSignalingConfig } from "./roomDataChannel/useSignalingConfig";
 import { useTurnRelayDetection } from "./roomDataChannel/useTurnRelayDetection";
 
-export { sendOnConnection } from "./roomDataChannel/sendOnConnection";
-
 const HOST_PRESENT_INTERVAL_MS = 5000;
 
 export function useRoomDataChannel({

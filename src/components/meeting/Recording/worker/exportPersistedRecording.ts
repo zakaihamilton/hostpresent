@@ -34,6 +34,27 @@ interface ExportPersistedContext {
   clearActiveOutputs: () => void;
 }
 
+function getTrackSegments(
+  manifest: any,
+  stream: "video" | "audio",
+  chunkCount: number,
+) {
+  const startKey = stream === "video" ? "videoStartIndex" : "audioStartIndex";
+  const endKey = stream === "video" ? "videoEndIndex" : "audioEndIndex";
+  const segments = manifest.segments?.length
+    ? manifest.segments
+    : [{ id: 0, [startKey]: 0, [endKey]: chunkCount }];
+  return {
+    total: segments.length,
+    items: segments.map((segment: any, index: number) => ({
+      segment,
+      index,
+      start: segment[startKey] ?? 0,
+      end: segment[endKey] ?? chunkCount,
+    })),
+  };
+}
+
 async function exportPersistedNativeTrack({
   manifest,
   stream,
@@ -50,18 +71,11 @@ async function exportPersistedNativeTrack({
   const track = manifest.tracks[stream];
   const writable = await outputHandle.createWritable();
   const muxer = await createMp4SampleMuxer({ writable, stream });
-  const startKey = stream === "video" ? "videoStartIndex" : "audioStartIndex";
-  const endKey = stream === "video" ? "videoEndIndex" : "audioEndIndex";
-  const segments = manifest.segments?.length
-    ? manifest.segments
-    : [{ id: 0, [startKey]: 0, [endKey]: track.chunkCount }];
+  const trackSegments = getTrackSegments(manifest, stream, track.chunkCount);
   let timeline = 0;
   let samples = 0;
   try {
-    for (let index = 0; index < segments.length; index += 1) {
-      const segment = segments[index];
-      const start = segment[startKey] ?? 0;
-      const end = segment[endKey] ?? track.chunkCount;
+    for (const { segment, index, start, end } of trackSegments.items) {
       if (end <= start) continue;
       timeline += (segment.gapDurationMs ?? 0) / 1000;
       const result = await appendInputSamples({
@@ -83,7 +97,7 @@ async function exportPersistedNativeTrack({
         phase: "encoding",
         stream,
         completed: index + 1,
-        total: segments.length,
+        total: trackSegments.total,
       });
     }
     if (samples === 0) throw new Error(`Recording has no ${stream} packets.`);
@@ -121,15 +135,8 @@ async function exportPersistedTrack({
   let packets = 0;
   let muxer: Awaited<ReturnType<typeof createMp4EncodedMuxer>> | null = null;
   try {
-    const startKey = stream === "video" ? "videoStartIndex" : "audioStartIndex";
-    const endKey = stream === "video" ? "videoEndIndex" : "audioEndIndex";
-    const segments = manifest.segments?.length
-      ? manifest.segments
-      : [{ id: 0, [startKey]: 0, [endKey]: track.chunkCount }];
-    for (let index = 0; index < segments.length; index += 1) {
-      const segment = segments[index];
-      const start = segment[startKey] ?? 0;
-      const end = segment[endKey] ?? track.chunkCount;
+    const trackSegments = getTrackSegments(manifest, stream, track.chunkCount);
+    for (const { segment, index, start, end } of trackSegments.items) {
       if (end <= start) continue;
       timeline += (segment.gapDurationMs ?? 0) / 1000;
       if (isCancelled()) throw new Error("Recording export was cancelled.");
@@ -191,7 +198,7 @@ async function exportPersistedTrack({
         phase: "transcoding",
         stream,
         completed: index + 1,
-        total: segments.length,
+        total: trackSegments.total,
       });
     }
     if (!muxer || packets === 0) {

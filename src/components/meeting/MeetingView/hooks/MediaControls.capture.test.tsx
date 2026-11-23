@@ -8,6 +8,33 @@ import {
   setupMediaDevicesMock,
 } from "./mediaTestUtils";
 
+type MediaControlsProps = Parameters<typeof MediaControls>[0];
+
+function createDefaultMediaControlsProps(
+  overrides: Partial<MediaControlsProps> = {},
+): MediaControlsProps {
+  return {
+    publishingGranted: true,
+    isHost: false,
+    roomConnection: { send: jest.fn() },
+    localStream: null,
+    setLocalStream: jest.fn(),
+    screenStream: null,
+    setScreenStream: jest.fn(),
+    ...overrides,
+  };
+}
+
+const PUBLISHER_CAPTURE_CONSTRAINTS = {
+  video: PUBLISHER_VIDEO_CONSTRAINTS,
+  audio: {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    voiceIsolation: true,
+  },
+};
+
 describe("MediaControls Hook - Capture & State", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -17,16 +44,7 @@ describe("MediaControls Hook - Capture & State", () => {
 
   it("loads default media states (unmuted)", () => {
     const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: { send: jest.fn() },
-        streamListenerCleanupsRef: { current: [] },
-        localStream: null,
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
+      MediaControls(createDefaultMediaControlsProps()),
     );
 
     expect(result.current.isAudioMuted).toBe(false);
@@ -35,28 +53,11 @@ describe("MediaControls Hook - Capture & State", () => {
 
   it("requests microphone capture with voice isolation constraints", async () => {
     renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: { send: jest.fn() },
-        streamListenerCleanupsRef: { current: [] },
-        localStream: null,
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
+      MediaControls(createDefaultMediaControlsProps()),
     );
 
     await waitFor(() => {
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: PUBLISHER_VIDEO_CONSTRAINTS,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          voiceIsolation: true,
-        },
-      });
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(PUBLISHER_CAPTURE_CONSTRAINTS);
     });
   });
 
@@ -86,15 +87,7 @@ describe("MediaControls Hook - Capture & State", () => {
     rerender({ participantMode: PARTICIPANT_MODE.AVAILABLE });
 
     await waitFor(() => {
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: PUBLISHER_VIDEO_CONSTRAINTS,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          voiceIsolation: true,
-        },
-      });
+      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(PUBLISHER_CAPTURE_CONSTRAINTS);
     });
   });
 
@@ -203,16 +196,9 @@ describe("MediaControls Hook - Capture & State", () => {
     );
 
     const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
+      MediaControls(createDefaultMediaControlsProps({
         roomConnection: { send: jest.fn(), syncOutboundMedia: jest.fn() },
-        streamListenerCleanupsRef: { current: [] },
-        localStream: null,
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
+      })),
     );
 
     await waitFor(() => {
@@ -225,16 +211,7 @@ describe("MediaControls Hook - Capture & State", () => {
     window.localStorage.setItem("hostpresent.videoMuted", "true");
 
     const { result } = renderHook(() =>
-      MediaControls({
-        publishingGranted: true,
-        isHost: false,
-        roomConnection: { send: jest.fn() },
-        streamListenerCleanupsRef: { current: [] },
-        localStream: null,
-        setLocalStream: jest.fn(),
-        screenStream: null,
-        setScreenStream: jest.fn(),
-      }),
+      MediaControls(createDefaultMediaControlsProps()),
     );
 
     expect(result.current.isAudioMuted).toBe(true);
