@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo } from "react";
 import { VirtualList } from "@/components/Widgets";
 import { PARTICIPANT_MODE } from "@/lib/settings/displayNameSettings";
+import responsiveStyles from "../ResponsiveSidebar.module.css";
 import { ParticipantRow } from "./ParticipantRow";
 import { ParticipantsHeader } from "./ParticipantsHeader";
 import styles from "./ParticipantsSidebar.module.css";
@@ -182,10 +183,20 @@ export const ParticipantsSidebar = memo(function ParticipantsSidebar({
 
   return (
     <div
-      className={`${styles.slot} ${visible ? "" : styles.slotClosed} ${flex ? styles.slotFlex : ""}`}
+      className={[
+        styles.slot,
+        responsiveStyles.mobileSlot,
+        responsiveStyles.mobileSlotMargin,
+        !visible && styles.slotClosed,
+        !visible && responsiveStyles.mobileClosedSlot,
+        !visible && responsiveStyles.mobileClosedSlotTransition,
+        flex && styles.slotFlex,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-hidden={!visible}
     >
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${responsiveStyles.mobilePanel}`}>
         <ParticipantsHeader
           totalCount={totalCount}
           remoteCount={remoteCount}

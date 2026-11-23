@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import styles from "./Header.module.css";
+import headerStyles from "./Header.module.css";
+import styles from "./JoinCodeControl.module.css";
 
 export function JoinCodeControl({ roomId }: { roomId?: any }) {
   const [roomIdCopyMessage, setRoomIdCopyMessage] = useState("");
@@ -44,8 +45,10 @@ export function JoinCodeControl({ roomId }: { roomId?: any }) {
   return (
     <>
       {roomId ? (
-        <div className={`${styles.stat} ${styles.statRoom}`}>
-          <span className={styles.statLabel}>Join code</span>
+        <div className={`${headerStyles.stat} ${styles.statRoom}`}>
+          <span className={`${headerStyles.statLabel} ${styles.statLabel}`}>
+            Join code
+          </span>
           <Tooltip text="Copy join code" placement="bottom">
             <button
               type="button"

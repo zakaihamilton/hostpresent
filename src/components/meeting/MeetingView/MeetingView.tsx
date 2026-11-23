@@ -12,38 +12,23 @@ import {
 import type { RemoteParticipantUpdate } from "@/hooks/roomDataChannel/types";
 import type { RoomSessionStatus } from "@/hooks/roomSession";
 import { useRoomSession } from "@/hooks/roomSession";
-import { DIAGNOSTIC_EVENT } from "@/lib/diagnostics/diagnosticsPayload";
-import { reportDiagnostic } from "@/lib/diagnostics/reportDiagnostic";
 import { buildParticipantInviteLink } from "@/lib/room/inviteLink";
 import { formatJoinCode, isValidJoinCode } from "@/lib/room/joinCodeFormat";
 import type { RoomRole, RoomState } from "@/lib/room/roomTypes";
 import {
   loadDisplayName,
   loadParticipantMode,
-  normalizeDisplayNameInput,
   PARTICIPANT_MODE,
   resolveDisplayName,
-  saveDisplayName,
-  saveParticipantMode,
 } from "@/lib/settings/displayNameSettings";
-import {
-  getRoomTitleByHostToken,
-  updateRoomTitle,
-} from "@/lib/settings/roomSettings";
 import type { ChatMessage } from "@/lib/signaling/messages";
-import {
-  createHostFocusChangedMessage,
-  createMeetingEndedMessage,
-  SIGNALING_MESSAGE,
-} from "@/lib/signaling/messages";
 import {
   isFatalSignalingError,
   isSignalingConfigError,
-  isWaitingForHostMessage,
 } from "@/lib/webrtc/peerClient";
+import { attachSpeakingDetector } from "@/lib/webrtc/speakingDetector";
 import { MediaControls } from "./hooks/MediaControls";
 import {
-  attachSpeakingDetector,
   type RemoteParticipantsConnection,
   useRemoteParticipants,
 } from "./hooks/RemoteParticipants";
@@ -51,6 +36,8 @@ import { useMeetingChat } from "./hooks/useMeetingChat";
 import { useMeetingFocus } from "./hooks/useMeetingFocus";
 import { useMeetingInvite } from "./hooks/useMeetingInvite";
 import { useMeetingLayoutState } from "./hooks/useMeetingLayoutState";
+import { useMeetingScreenProps } from "./hooks/useMeetingScreenProps";
+import { useMeetingSessionLifecycle } from "./hooks/useMeetingSessionLifecycle";
 import { useMeetingViewModels } from "./hooks/useMeetingViewModels";
 import { MeetingViewScreen } from "./MeetingViewScreen";
 import { getMeetingStatusScreen } from "./meetingStatusScreen";
@@ -145,15 +132,6 @@ function MeetingViewInner({
     handleCopyInviteLink,
   } = useMeetingInvite(inviteLink);
   const layout = useMeetingLayoutState();
-  const {
-    isGalleryVisible,
-    isSidebarVisible,
-    isPipVisible,
-    isChatVisible,
-    hasUnreadChat,
-    isMobile,
-    setHasUnreadChat,
-  } = layout;
   const [timersEnabled, setTimersEnabled] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState(() =>
     loadDisplayName(),
@@ -165,7 +143,9 @@ function MeetingViewInner({
   );
   const [sessionTitle, setSessionTitle] = useState("");
   const [focusedParticipantId, setFocusedParticipantId] = useState("");
-  const [meetingDisconnectReason, setMeetingDisconnectReason] = useState(null);
+  const [meetingDisconnectReason, setMeetingDisconnectReason] = useState<
+    "ended" | "full" | "limit_reached" | null
+  >(null);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
   const resolvedDisplayName = useMemo(
@@ -182,10 +162,10 @@ function MeetingViewInner({
 
   const { confirm, dialogProps } = useConfirmDialog();
 
-  const [localStream, setLocalStream] = useState(null);
-  const [screenStream, setScreenStream] = useState(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [localIsSpeaking, setLocalIsSpeaking] = useState(false);
-  const localSpeakingCleanupRef = useRef(null);
+  const localSpeakingCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     localSpeakingCleanupRef.current?.();
@@ -241,45 +221,14 @@ function MeetingViewInner({
 
   roomConnectionRef.current = roomConnection;
   const canPublishMedia = isHost || roomConnection.canPublish === true;
-  useEffect(() => {
-    if (!isHost)
-      setParticipantMode(
-        canPublishMedia
-          ? PARTICIPANT_MODE.AVAILABLE
-          : PARTICIPANT_MODE.LISTENING,
-      );
-  }, [canPublishMedia, isHost]);
-
-  const sendDiagnosticReport = useCallback(() => {
-    const hasTurn = Boolean(
-      roomConnection?.iceServers?.some((server) =>
-        (Array.isArray(server.urls) ? server.urls : [server.urls]).some(
-          (url) => url?.startsWith("turn:") || url?.startsWith("turns:"),
-        ),
-      ),
-    );
-    return reportDiagnostic({
-      event: roomConnection?.connectionError
-        ? DIAGNOSTIC_EVENT.CONNECTION_FAILURE
-        : DIAGNOSTIC_EVENT.DIAGNOSTICS_REPORT,
-      code: roomConnection?.connectionError
-        ? "connection_error"
-        : "diagnostics_requested",
-      details: {
-        connectionStatus: roomConnection?.status ?? "unknown",
-        activeConnections: roomConnection?.activeConnectionsCount ?? 0,
-        hasTurn,
-      },
-    });
-  }, [roomConnection]);
 
   const { chatMessages, receiveChatMessage, handleSendChatMessage } =
     useMeetingChat({
       isHost,
       roomId: roomState?.roomId,
       roomConnectionRef,
-      isChatVisible,
-      setHasUnreadChat,
+      isChatVisible: layout.isChatVisible,
+      setHasUnreadChat: layout.setHasUnreadChat,
     });
   onChatMessageRef.current = receiveChatMessage;
 
@@ -420,52 +369,39 @@ function MeetingViewInner({
     enabled: isHost,
   });
 
-  useEffect(() => {
-    if (isHost && token) {
-      setSessionTitle(getRoomTitleByHostToken(token));
-    }
-  }, [isHost, token]);
-
-  useEffect(() => {
-    document.body.classList.add("in-meeting");
-    return () => {
-      document.body.classList.remove("in-meeting");
-    };
-  }, []);
-
-  useEffect(() => {
-    if (meetingSeconds >= 21600) {
-      const autoEnd = async () => {
-        if (isHost) {
-          if (isRecording) {
-            try {
-              await stopRecordingAsync();
-            } catch (err) {
-              console.error("Failed to stop recording on timeout:", err);
-            }
-          }
-          roomConnectionRef.current?.send(createMeetingEndedMessage());
-        }
-        roomConnectionRef.current?.disconnect();
-        setMeetingDisconnectReason("limit_reached");
-      };
-      autoEnd();
-    }
-  }, [meetingSeconds, isHost, isRecording, stopRecordingAsync]);
-
-  useEffect(() => {
-    setTimersEnabled(true);
-    return () => {
-      for (const cleanup of streamListenerCleanupsRef?.current?.values() ??
-        []) {
-        cleanup?.();
-      }
-      streamListenerCleanupsRef?.current?.clear();
-    };
-  }, [
-    streamListenerCleanupsRef?.current?.clear,
-    streamListenerCleanupsRef?.current?.values,
-  ]);
+  const {
+    sendDiagnosticReport,
+    handleBack,
+    handleDisconnectBack,
+    handleDisplayNameChange,
+    handleSessionTitleChange,
+    handleParticipantModeChange,
+    handleFocusParticipant,
+    handleEndMeeting,
+    handleDismissError,
+  } = useMeetingSessionLifecycle({
+    isHost,
+    token,
+    onBack,
+    canPublishMedia,
+    meetingSeconds,
+    isRecording,
+    stopRecordingAsync,
+    roomConnection,
+    roomConnectionRef,
+    streamListenerCleanupsRef,
+    focusedParticipantId,
+    setFocusedParticipantId,
+    effectiveFocusedId,
+    meetingDisconnectReason,
+    setMeetingDisconnectReason,
+    setTimersEnabled,
+    setDisplayNameInput,
+    setSessionTitle,
+    setParticipantMode,
+    setErrorMsg,
+    confirm,
+  });
 
   const fatalConnectionError =
     roomConnection?.connectionError &&
@@ -476,115 +412,6 @@ function MeetingViewInner({
     fatalConnectionError && isSignalingConfigError(fatalConnectionError)
       ? fatalConnectionError
       : null;
-
-  const handleBack = useCallback(() => {
-    roomConnection?.disconnect();
-    onBack();
-  }, [onBack, roomConnection?.disconnect]);
-
-  const handleDisconnectBack = useCallback(() => {
-    onBack();
-  }, [onBack]);
-
-  const handleDisplayNameChange = useCallback((value) => {
-    const normalized = normalizeDisplayNameInput(value);
-    setDisplayNameInput(normalized);
-    saveDisplayName(normalized);
-  }, []);
-
-  const handleSessionTitleChange = useCallback(
-    (newTitle) => {
-      if (isHost && token) {
-        setSessionTitle(newTitle);
-        updateRoomTitle(token, newTitle);
-      }
-    },
-    [isHost, token],
-  );
-
-  const handleParticipantModeChange = useCallback((mode) => {
-    setParticipantMode(mode);
-    saveParticipantMode(mode);
-  }, []);
-
-  const handleFocusParticipant = useCallback(
-    (participantId) => {
-      if (!isHost) return;
-      const nextFocusedId =
-        participantId === focusedParticipantId ? "" : participantId || "";
-      setFocusedParticipantId(nextFocusedId);
-      roomConnectionRef.current?.send(
-        createHostFocusChangedMessage({ focusedId: nextFocusedId }),
-      );
-    },
-    [isHost, focusedParticipantId],
-  );
-
-  const handleEndMeeting = useCallback(async () => {
-    if (!isHost) return;
-    const confirmed = await confirm({
-      title: "End meeting",
-      message: "All participants will be disconnected. This cannot be undone.",
-      confirmLabel: "End meeting",
-      cancelLabel: "Cancel",
-      variant: "danger",
-    });
-    if (!confirmed) return;
-    if (isRecording) {
-      await stopRecordingAsync();
-    }
-    roomConnectionRef.current?.send(createMeetingEndedMessage());
-    roomConnectionRef.current?.disconnect();
-    handleBack();
-  }, [confirm, isHost, isRecording, stopRecordingAsync, handleBack]);
-
-  useEffect(() => {
-    if (isHost) return undefined;
-    return roomConnectionRef.current?.subscribe((message) => {
-      if (message.type === SIGNALING_MESSAGE.HOST_FOCUS_CHANGED) {
-        setFocusedParticipantId(message.focusedId ?? "host");
-      }
-    });
-  }, [isHost]);
-
-  useEffect(() => {
-    if (isHost) return undefined;
-    if (meetingDisconnectReason) return undefined;
-    return roomConnectionRef.current?.subscribe((message) => {
-      if (message.type === SIGNALING_MESSAGE.MEETING_ENDED) {
-        setMeetingDisconnectReason("ended");
-        roomConnectionRef.current?.disconnect();
-      }
-      if (message.type === SIGNALING_MESSAGE.ROOM_FULL) {
-        setMeetingDisconnectReason("full");
-        roomConnectionRef.current?.disconnect();
-      }
-    });
-  }, [isHost, meetingDisconnectReason]);
-
-  useEffect(() => {
-    if (!isHost || !focusedParticipantId || focusedParticipantId === "host")
-      return;
-    if (!roomConnection.publisherIds?.includes(focusedParticipantId)) {
-      handleFocusParticipant(focusedParticipantId);
-    }
-  }, [
-    focusedParticipantId,
-    handleFocusParticipant,
-    isHost,
-    roomConnection.publisherIds,
-  ]);
-
-  useEffect(() => {
-    if (!isHost) return;
-    roomConnectionRef.current?.send(
-      createHostFocusChangedMessage({ focusedId: effectiveFocusedId }),
-    );
-  }, [isHost, effectiveFocusedId]);
-
-  const handleDismissError = useCallback(() => {
-    setErrorMsg("");
-  }, [setErrorMsg]);
 
   const { chatParticipants, galleryParticipants, primaryViewProps } =
     useMeetingViewModels({
@@ -608,6 +435,100 @@ function MeetingViewInner({
       resolvedDisplayName,
     });
 
+  const screenProps = useMeetingScreenProps({
+    role,
+    isHost,
+    formattedRoomId,
+    sessionTitle,
+    meetingSeconds,
+    recordingSeconds,
+    isRecording,
+    isRecordingPaused,
+    isRecordingBusy,
+    inviteLink,
+    inviteBarVisible,
+    inviteCopyMessage,
+    handleShowInviteBar,
+    handleCopyInviteLink,
+    handleDismissInviteBar,
+    handleSessionTitleChange,
+    startRecording,
+    pauseRecording,
+    resumeRecording,
+    stopRecording,
+    hostPresent,
+    roomConnection,
+    fatalConnectionError,
+    chatMessages,
+    chatParticipants,
+    handleSendChatMessage,
+    downloadState,
+    errorMsg,
+    layout,
+    screenStream,
+    localStream,
+    isAudioMuted,
+    isVideoMuted,
+    resolvedDisplayName,
+    localIsSpeaking,
+    selectedSpeaker,
+    effectiveFocusedId,
+    focusedParticipantId,
+    handleFocusParticipant,
+    dismissDownloadBanner,
+    handleDismissError,
+    setIsDiagnosticsOpen,
+    audioList,
+    videoParticipants,
+    peerParticipants,
+    hostDisplayName,
+    hostAudioMuted,
+    hostVideoMuted,
+    hostIsSpeaking,
+    hostMode,
+    displayNameInput,
+    participantMode,
+    hostScreenSharing,
+    muteParticipantVideo,
+    muteParticipantAudio,
+    muteAllVideo,
+    muteAllAudio,
+    canMuteAllVideo,
+    canMuteAllAudio,
+    primaryViewProps,
+    toggleScreenShare,
+    canResumeSavedRecording,
+    resumeSavedRecording,
+    downloadSavedRecording,
+    discardSavedRecording,
+    savedRecording,
+    galleryParticipants,
+    dialogProps,
+    isDiagnosticsOpen,
+    sendDiagnosticReport,
+    shareScreenAudio,
+    isScreenAudioShared,
+    handleDisplayNameChange,
+    handleParticipantModeChange,
+    availableMicrophones,
+    selectedMicrophone,
+    switchMicrophone,
+    isVoiceIsolationEnabled,
+    isVoiceIsolationChanging,
+    setVoiceIsolation,
+    availableSpeakers,
+    switchSpeaker,
+    availableCameras,
+    selectedCamera,
+    switchCamera,
+    toggleAudio,
+    toggleVideo,
+    setShareScreenAudioPreference,
+    handleEndMeeting,
+    handleBack,
+    canPublishMedia,
+  });
+
   const statusScreen = getMeetingStatusScreen({
     sessionStatus,
     sessionError,
@@ -620,220 +541,5 @@ function MeetingViewInner({
   });
   if (statusScreen) return statusScreen;
 
-  return (
-    <MeetingViewScreen
-      headerProps={{
-        isRecording,
-        isRecordingPaused,
-        headerProps: {
-          meetingDurationSeconds: meetingSeconds,
-          roomId: formattedRoomId || null,
-          sessionTitle: sessionTitle || null,
-          isRecording,
-          isRecordingPaused,
-          recordingDurationSeconds: recordingSeconds,
-          isRecordingBusy,
-          onShowInviteLink:
-            isHost && inviteLink && !inviteBarVisible
-              ? handleShowInviteBar
-              : null,
-          onSessionTitleChange: isHost ? handleSessionTitleChange : null,
-          revealTitleOnLogoClick: !isHost,
-          showRecording: isHost,
-          onStartRecording: startRecording,
-          onPauseRecording: pauseRecording,
-          onResumeRecording: resumeRecording,
-          onStopRecording: stopRecording,
-        },
-        connectionProps: {
-          isHost,
-          hostPresent,
-          audienceState: roomConnection,
-          connectionError: roomConnection?.connectionError,
-          activeConnectionsCount: roomConnection?.activeConnectionsCount ?? 0,
-          isWaitingForHost: isWaitingForHostMessage(
-            roomConnection?.connectionError,
-          ),
-          isFatalConnectionError: fatalConnectionError,
-        },
-        inviteProps: {
-          visible: Boolean(isHost && inviteLink && inviteBarVisible),
-          inviteLink,
-          inviteCopyMessage,
-          onCopyInviteLink: handleCopyInviteLink,
-          onDismiss: handleDismissInviteBar,
-          roomId: formattedRoomId,
-        },
-      }}
-      workspaceProps={{
-        chatPanelProps: {
-          messages: chatMessages,
-          participants: chatParticipants,
-          onSendMessage: handleSendChatMessage,
-          sessionName: sessionTitle,
-        },
-        downloadState,
-        errorMessage: errorMsg,
-        galleryProps: {
-          visible: isGalleryVisible,
-          screenStream,
-          localStream,
-          isAudioMuted,
-          isVideoMuted,
-          isScreenSharing: Boolean(screenStream),
-          localDisplayName: resolvedDisplayName,
-          localIsSpeaking,
-          audioOutputDeviceId: selectedSpeaker,
-          focusedParticipantId: effectiveFocusedId,
-          manualFocusedId: focusedParticipantId,
-          allowFocus: isHost,
-          onFocusParticipant: handleFocusParticipant,
-          connectionStatus: roomConnection?.status,
-        },
-        isChatVisible,
-        isMobile,
-        isPipVisible,
-        isSidebarVisible,
-        localStream,
-        onCloseChat: layout.closeChat,
-        onClosePanels: layout.closePanels,
-        onCloseSidebar: layout.closeSidebar,
-        onDismissDownload: dismissDownloadBanner,
-        onDismissError: handleDismissError,
-        onShowDiagnostics: () => setIsDiagnosticsOpen(true),
-        participantSidebarProps: {
-          audioList,
-          videoParticipants,
-          peerParticipants,
-          hostDisplayName,
-          hostIsAudioMuted: hostAudioMuted,
-          hostIsVideoMuted: hostVideoMuted,
-          hostIsSpeaking,
-          hostMode,
-          isVideoMuted,
-          isAudioMuted,
-          isHost,
-          localDisplayName: displayNameInput,
-          localParticipantMode: participantMode,
-          focusedParticipantId,
-          localIsSpeaking,
-          localIsScreenSharing: Boolean(screenStream),
-          hostIsScreenSharing: hostScreenSharing,
-          connectionStatus: roomConnection?.status,
-          onFocusParticipant: handleFocusParticipant,
-          onMuteParticipantVideo: muteParticipantVideo,
-          onMuteParticipantAudio: muteParticipantAudio,
-          publishingRequests: roomConnection.publishingRequests,
-          publisherIds: roomConnection.publisherIds,
-          onApprovePublishing: roomConnection.approvePublishing,
-          onRevokePublishing: roomConnection.revokePublishing,
-          onMuteAllVideo: muteAllVideo,
-          onMuteAllAudio: muteAllAudio,
-          canMuteAllVideo,
-          canMuteAllAudio,
-        },
-        pipProps: {
-          stream: localStream,
-          isVideoMuted,
-          name: resolvedDisplayName,
-          initial: resolvedDisplayName?.charAt(0),
-        },
-        primaryViewProps: {
-          ...primaryViewProps,
-          isScreenSharing: Boolean(screenStream),
-          onStopScreenShare: screenStream ? toggleScreenShare : null,
-          isRecording,
-          isRecordingPaused,
-          recordingDurationSeconds: recordingSeconds,
-          audioOutputDeviceId: selectedSpeaker,
-          connectionStatus:
-            effectiveFocusedId === "host" ||
-            (!isHost &&
-              effectiveFocusedId === roomConnection?.localParticipantId)
-              ? roomConnection?.status
-              : null,
-        },
-        recording: {
-          busy: isRecordingBusy,
-          canResume: canResumeSavedRecording,
-          onResume: resumeSavedRecording,
-          onDownload: downloadSavedRecording,
-          onDiscard: discardSavedRecording,
-        },
-        savedRecording,
-        videoParticipants: galleryParticipants,
-      }}
-      controlsProps={{
-        confirmDialogProps: dialogProps,
-        diagnosticsProps: {
-          isOpen: isDiagnosticsOpen,
-          onClose: () => setIsDiagnosticsOpen(false),
-          role,
-          roomId: formattedRoomId || null,
-          connectionStatus: roomConnection?.status,
-          localParticipantId: roomConnection?.localParticipantId,
-          peerConfig: roomConnection?.peerConfig,
-          iceServers: roomConnection?.iceServers,
-          activeConnectionsCount: roomConnection?.activeConnectionsCount,
-          connectionError: roomConnection?.connectionError,
-          onReconnect: roomConnection?.reconnect,
-          onSendDiagnosticReport: sendDiagnosticReport,
-          isTurnActive: roomConnection?.isTurnActive,
-          audienceState: roomConnection,
-        },
-        toolbarProps: {
-          isAudioMuted,
-          isVideoMuted,
-          screenStream,
-          shareScreenAudio,
-          isScreenAudioShared,
-          isGalleryVisible,
-          isSidebarVisible,
-          isPipVisible,
-          isChatVisible,
-          hasUnreadChat,
-          displayName: displayNameInput,
-          onDisplayNameChange: handleDisplayNameChange,
-          participantMode,
-          onParticipantModeChange:
-            isHost && handleDisplayNameChange
-              ? handleParticipantModeChange
-              : null,
-          availableMicrophones,
-          selectedMicrophone,
-          onMicrophoneChange: switchMicrophone,
-          isVoiceIsolationEnabled,
-          isVoiceIsolationChanging,
-          onVoiceIsolationChange: setVoiceIsolation,
-          availableSpeakers,
-          selectedSpeaker,
-          onSpeakerChange: switchSpeaker,
-          availableCameras,
-          selectedCamera,
-          onCameraChange: switchCamera,
-          onToggleAudio: toggleAudio,
-          onToggleVideo: toggleVideo,
-          onToggleScreenShare: toggleScreenShare,
-          onShareScreenAudioChange: setShareScreenAudioPreference,
-          onToggleGallery: layout.toggleGallery,
-          onToggleSidebar: layout.toggleSidebar,
-          onTogglePip: layout.togglePip,
-          onToggleChat: layout.toggleChat,
-          isHost,
-          onEndMeeting: handleEndMeeting,
-          onLeave: handleBack,
-          participantCount: isHost
-            ? 1 + videoParticipants.length + audioList.length
-            : 2 + peerParticipants.length,
-          mediaPublishingEnabled: canPublishMedia,
-          publishRequested: roomConnection.publishRequested,
-          onRequestPublishing: () =>
-            roomConnection.requestPublishing(
-              !canPublishMedia && !roomConnection.publishRequested,
-            ),
-          allowScreenShare: canPublishMedia,
-        },
-      }}
-    />
-  );
+  return <MeetingViewScreen {...screenProps} />;
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Edit, Logo, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
-import styles from "./Header.module.css";
+import styles from "./MeetingTitle.module.css";
 
 export function MeetingTitle({
   sessionTitle,

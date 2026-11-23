@@ -4,6 +4,7 @@ import { GitHub, LinkedIn, Logo } from "@/components/ui/Icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { APP_ROLE, APP_VIEW } from "@/hooks/hashRouter";
+import surfaceStyles from "../../FloatingSurface.module.css";
 import { SecurityNotice } from "./SecurityNotice";
 import { WelcomeHostPanel } from "./WelcomeHostPanel";
 import { WelcomeParticipantPanel } from "./WelcomeParticipantPanel";
@@ -52,7 +53,7 @@ export function WelcomeView({
         </div>
 
         {/* Setup Card: Now the main visual anchor */}
-        <div className={styles.card}>
+        <div className={`${styles.card} ${surfaceStyles.floatingSurface}`}>
           <SecurityNotice />
 
           <div className={styles.tabs} role="tablist" aria-label="Welcome mode">

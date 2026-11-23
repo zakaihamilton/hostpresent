@@ -22,9 +22,11 @@ import {
 } from "@/lib/signaling/messages";
 import {
   attachRemoteStreamMediaListeners,
-  hasPlayableRemoteAudio,
   type readRemoteStreamMediaState,
 } from "@/lib/webrtc/remoteParticipantMedia";
+import { attachSpeakingDetector } from "@/lib/webrtc/speakingDetector";
+import { useAttendeeSignalingCommands } from "./useAttendeeSignalingCommands";
+import { useRemoteHostState } from "./useRemoteHostState";
 
 export interface RemoteParticipantsConnection {
   localParticipantId?: string;
@@ -42,13 +44,13 @@ export interface RemoteParticipantsConnection {
   }) => Promise<void>;
 }
 
-interface ParticipantMediaState {
+export interface ParticipantMediaState {
   isAudioMuted: boolean;
   isVideoMuted: boolean;
   isScreenSharing: boolean;
 }
 
-interface VideoParticipant extends ParticipantMediaState {
+export interface VideoParticipant extends ParticipantMediaState {
   id: string;
   name: string;
   avatarColor: string;
@@ -57,7 +59,7 @@ interface VideoParticipant extends ParticipantMediaState {
   isSpeaking?: boolean;
 }
 
-interface PeerParticipant extends Omit<VideoParticipant, "stream"> {}
+export interface PeerParticipant extends Omit<VideoParticipant, "stream"> {}
 
 interface AudioParticipant {
   id: string;
@@ -66,7 +68,7 @@ interface AudioParticipant {
   isSpeaking?: boolean;
 }
 
-interface RemoteParticipantsProps {
+export interface RemoteParticipantSignalingProps {
   isHost: boolean;
   roomConnectionRef: MutableRefObject<RemoteParticipantsConnection | null>;
   roomConnection: RemoteParticipantsConnection;
@@ -83,6 +85,9 @@ interface RemoteParticipantsProps {
     audioMuted?: boolean;
     videoMuted?: boolean;
   }) => void;
+}
+
+interface RemoteParticipantsProps extends RemoteParticipantSignalingProps {
   setSessionTitle: Dispatch<SetStateAction<string>>;
 }
 
@@ -92,65 +97,6 @@ function participantColor(id: string) {
     hash = id.charCodeAt(index) + ((hash << 5) - hash);
   }
   return `hsl(${Math.abs(hash) % 360} 55% 45%)`;
-}
-
-const SPEAKING_SAMPLE_MS = 140;
-const SPEAKING_THRESHOLD = 0.055;
-
-export function attachSpeakingDetector(
-  stream: MediaStream | null | undefined,
-  onSpeakingChange: (isSpeaking: boolean) => void,
-) {
-  if (
-    typeof window === "undefined" ||
-    !stream?.getAudioTracks?.().some((track) => track.readyState === "live") ||
-    typeof onSpeakingChange !== "function"
-  ) {
-    return () => {};
-  }
-
-  const AudioContextConstructor =
-    window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextConstructor) return () => {};
-
-  let context: AudioContext | null = null;
-  let source: MediaStreamAudioSourceNode | null = null;
-  let intervalId: number | undefined;
-  let lastSpeaking = false;
-
-  try {
-    context = new AudioContextConstructor();
-    const analyser = context.createAnalyser();
-    analyser.fftSize = 512;
-    source = context.createMediaStreamSource(stream);
-    source.connect(analyser);
-    const samples = new Uint8Array(analyser.fftSize);
-
-    intervalId = window.setInterval(() => {
-      analyser.getByteTimeDomainData(samples);
-      let sum = 0;
-      for (const value of samples) {
-        const normalized = (value - 128) / 128;
-        sum += normalized * normalized;
-      }
-      const speaking = Math.sqrt(sum / samples.length) >= SPEAKING_THRESHOLD;
-      if (speaking !== lastSpeaking) {
-        lastSpeaking = speaking;
-        onSpeakingChange(speaking);
-      }
-    }, SPEAKING_SAMPLE_MS);
-  } catch {
-    return () => {};
-  }
-
-  return () => {
-    if (intervalId) window.clearInterval(intervalId);
-    if (lastSpeaking) onSpeakingChange(false);
-    try {
-      source?.disconnect();
-    } catch {}
-    void context?.close?.();
-  };
 }
 
 export function useRemoteParticipants({
@@ -169,21 +115,12 @@ export function useRemoteParticipants({
   publishParticipantMediaStatus,
   setSessionTitle,
 }: RemoteParticipantsProps) {
-  const [hostStream, setHostStream] = useState<MediaStream | null>(null);
-  const [hostStreamPlaybackMuted, setHostStreamPlaybackMuted] = useState(true);
   const [videoParticipants, setVideoParticipants] = useState<
     VideoParticipant[]
   >([]);
   const [peerParticipants, setPeerParticipants] = useState<PeerParticipant[]>(
     [],
   );
-  const [hostDisplayName, setHostDisplayName] = useState("Host");
-  const [hostAudioMuted, setHostAudioMuted] = useState(false);
-  const [hostVideoMuted, setHostVideoMuted] = useState(false);
-  const [hostScreenSharing, setHostScreenSharing] = useState(false);
-  const [hostMode, setHostMode] = useState<ParticipantMode>("available");
-  const [hostPresent, setHostPresent] = useState(isHost);
-  const [hostIsSpeaking, setHostIsSpeaking] = useState(false);
   const [audioList, setAudioList] = useState<AudioParticipant[]>([]);
 
   const participantProfilesRef = useRef(
@@ -194,34 +131,24 @@ export function useRemoteParticipants({
   );
   const streamListenerCleanupsRef = useRef(new Map<string, () => void>());
   const speakingCleanupsRef = useRef(new Map<string, () => void>());
-  const hostSpeakingCleanupRef = useRef<(() => void) | null>(null);
 
-  const handleRemoteHostStream = useCallback((stream: MediaStream | null) => {
-    hostSpeakingCleanupRef.current?.();
-    hostSpeakingCleanupRef.current = null;
-    setHostStream(stream);
-    setHostStreamPlaybackMuted(!hasPlayableRemoteAudio(stream));
-    if (stream) {
-      hostSpeakingCleanupRef.current = attachSpeakingDetector(
-        stream,
-        setHostIsSpeaking,
-      );
-    } else {
-      setHostIsSpeaking(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isHost) return undefined;
-    if (!hostStream) {
-      setHostStreamPlaybackMuted(true);
-      return undefined;
-    }
-
-    return attachRemoteStreamMediaListeners(hostStream, () => {
-      setHostStreamPlaybackMuted(!hasPlayableRemoteAudio(hostStream));
-    });
-  }, [hostStream, isHost]);
+  const {
+    hostStream,
+    hostStreamPlaybackMuted,
+    hostDisplayName,
+    hostAudioMuted,
+    hostVideoMuted,
+    hostScreenSharing,
+    hostMode,
+    hostPresent,
+    hostIsSpeaking,
+    handleRemoteHostStream,
+  } = useRemoteHostState({
+    isHost,
+    roomConnection,
+    roomConnectionRef,
+    setSessionTitle,
+  });
 
   const broadcastPeerProfile = useCallback(
     ({
@@ -267,7 +194,7 @@ export function useRemoteParticipants({
   );
 
   const syncProfilesToParticipant = useCallback(
-    (participantId) => {
+    (participantId: string) => {
       if (!isHost) return;
       for (const [id, profile] of participantProfilesRef.current) {
         if (id === participantId) continue;
@@ -541,17 +468,8 @@ export function useRemoteParticipants({
     [],
   );
 
-  useEffect(() => {
-    if (isHost) {
-      setHostPresent(true);
-      return;
-    }
-    setHostPresent(roomConnection?.hostPresent);
-  }, [isHost, roomConnection?.hostPresent]);
-
   useEffect(
     () => () => {
-      hostSpeakingCleanupRef.current?.();
       for (const cleanup of speakingCleanupsRef.current.values()) {
         cleanup?.();
       }
@@ -560,238 +478,27 @@ export function useRemoteParticipants({
     [],
   );
 
-  useEffect(() => {
-    if (isHost) return undefined;
-
-    return roomConnectionRef.current?.subscribe((message) => {
-      if (message.type !== SIGNALING_MESSAGE.HOST_PRESENT) return;
-
-      if (message.displayName) {
-        setHostDisplayName(resolveDisplayName(message.displayName));
-      }
-      if (typeof message.audioMuted === "boolean") {
-        setHostAudioMuted(message.audioMuted);
-      }
-      if (typeof message.videoMuted === "boolean") {
-        setHostVideoMuted(message.videoMuted);
-      }
-      if (typeof message.screenSharing === "boolean") {
-        setHostScreenSharing(message.screenSharing);
-      }
-      if (message.mode === "listening" || message.mode === "available") {
-        setHostMode(message.mode);
-      }
-      if (typeof message.sessionTitle === "string" && setSessionTitle) {
-        setSessionTitle(message.sessionTitle);
-      }
-    });
-  }, [isHost, roomConnectionRef, setSessionTitle]);
-
-  useEffect(() => {
-    if (isHost) return undefined;
-
-    return roomConnectionRef.current?.subscribe((message) => {
-      switch (message.type) {
-        case SIGNALING_MESSAGE.HOST_AUDIO_MUTED:
-          setHostAudioMuted(true);
-          break;
-        case SIGNALING_MESSAGE.HOST_AUDIO_UNMUTED:
-          setHostAudioMuted(false);
-          break;
-        case SIGNALING_MESSAGE.HOST_VIDEO_MUTED:
-          setHostVideoMuted(true);
-          break;
-        case SIGNALING_MESSAGE.HOST_VIDEO_UNMUTED:
-          setHostVideoMuted(false);
-          break;
-        default:
-          break;
-      }
-    });
-  }, [isHost, roomConnectionRef]);
-
-  useEffect(() => {
-    if (isHost) return undefined;
-
-    return roomConnectionRef.current?.subscribe((message) => {
-      const localId = roomConnectionRef.current?.localParticipantId;
-
-      switch (message.type) {
-        case SIGNALING_MESSAGE.RECORDING_STATE: {
-          const active = Boolean(message.active);
-          const paused = Boolean(message.paused);
-          setIsRecording((previous) => {
-            if (!active) {
-              resetRecordingTimer();
-              return false;
-            }
-            if (!previous && !paused) {
-              resetRecordingTimer();
-            }
-            return true;
-          });
-          setIsRecordingPaused(active && paused);
-          break;
-        }
-        case SIGNALING_MESSAGE.HOST_MUTE_AUDIO:
-          if (message.participantId && message.participantId !== localId)
-            return;
-          localStream?.getAudioTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          screenStream?.getAudioTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          setIsAudioMuted(true);
-          publishParticipantMediaStatus({ audioMuted: true });
-          void roomConnection?.syncOutboundMedia?.();
-          break;
-        case SIGNALING_MESSAGE.HOST_MUTE_VIDEO:
-          if (message.participantId && message.participantId !== localId)
-            return;
-          localStream?.getVideoTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          screenStream?.getVideoTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          setIsVideoMuted(true);
-          publishParticipantMediaStatus({ videoMuted: true });
-          void roomConnection?.syncOutboundMedia?.();
-          break;
-        case SIGNALING_MESSAGE.HOST_MUTE_ALL_AUDIO:
-          localStream?.getAudioTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          screenStream?.getAudioTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          setIsAudioMuted(true);
-          publishParticipantMediaStatus({ audioMuted: true });
-          void roomConnection?.syncOutboundMedia?.();
-          break;
-        case SIGNALING_MESSAGE.HOST_MUTE_ALL_VIDEO:
-          localStream?.getVideoTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          screenStream?.getVideoTracks().forEach((track) => {
-            track.enabled = false;
-          });
-          setIsVideoMuted(true);
-          publishParticipantMediaStatus({ videoMuted: true });
-          void roomConnection?.syncOutboundMedia?.();
-          break;
-        case SIGNALING_MESSAGE.PARTICIPANT_PROFILE_BROADCAST:
-          if (message.participantId === localId) return;
-          handlePeerProfileBroadcast(message);
-          break;
-        case SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STARTED:
-          if (message.participantId === localId) return;
-          setParticipantScreenSharing(message.participantId, true);
-          break;
-        case SIGNALING_MESSAGE.PARTICIPANT_SCREEN_SHARE_STOPPED:
-          if (message.participantId === localId) return;
-          setParticipantScreenSharing(message.participantId, false);
-          break;
-        case SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED:
-        case SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED:
-        case SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED:
-        case SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED: {
-          if (message.participantId === localId) return;
-          const peerAudioMuted =
-            message.type === SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED;
-          const peerVideoMuted =
-            message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED;
-          const audioChanged =
-            message.type === SIGNALING_MESSAGE.PARTICIPANT_AUDIO_MUTED ||
-            message.type === SIGNALING_MESSAGE.PARTICIPANT_AUDIO_UNMUTED;
-          const videoChanged =
-            message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_MUTED ||
-            message.type === SIGNALING_MESSAGE.PARTICIPANT_VIDEO_UNMUTED;
-          const previousMediaState =
-            peerMediaStateRef.current.get(message.participantId) ?? {};
-          const nextMediaState = {
-            ...previousMediaState,
-            ...(audioChanged ? { isAudioMuted: peerAudioMuted } : {}),
-            ...(videoChanged ? { isVideoMuted: peerVideoMuted } : {}),
-          };
-          peerMediaStateRef.current.set(message.participantId, nextMediaState);
-          setPeerParticipants(function updatePeer(prev) {
-            return prev.map(function mapPeer(entry) {
-              if (entry.id !== message.participantId) return entry;
-              const updated = { ...entry };
-              if (audioChanged) updated.isAudioMuted = peerAudioMuted;
-              if (videoChanged) updated.isVideoMuted = peerVideoMuted;
-              return updated;
-            });
-          });
-          setVideoParticipants((previous) =>
-            previous.map((entry) =>
-              entry.id === message.participantId
-                ? {
-                    ...entry,
-                    ...(audioChanged ? { isAudioMuted: peerAudioMuted } : {}),
-                    ...(videoChanged ? { isVideoMuted: peerVideoMuted } : {}),
-                  }
-                : entry,
-            ),
-          );
-          break;
-        }
-        default:
-          break;
-      }
-    });
-  }, [
-    handlePeerProfileBroadcast,
+  useAttendeeSignalingCommands({
     isHost,
+    roomConnectionRef,
+    roomConnection,
     localStream,
     screenStream,
-    roomConnection,
-    publishParticipantMediaStatus,
-    resetRecordingTimer,
-    roomConnectionRef,
-    setParticipantScreenSharing,
+    isAudioMuted,
+    isVideoMuted,
     setIsAudioMuted,
     setIsVideoMuted,
     setIsRecording,
     setIsRecordingPaused,
-  ]);
-
-  useEffect(() => {
-    if (isHost || !roomConnection?.localParticipantId) return undefined;
-
-    publishParticipantMediaStatus({
-      audioMuted: isAudioMuted,
-      videoMuted: isVideoMuted,
-    });
-
-    return undefined;
-  }, [
-    isAudioMuted,
-    isHost,
-    isVideoMuted,
+    resetRecordingTimer,
     publishParticipantMediaStatus,
-    roomConnection?.localParticipantId,
-  ]);
-
-  useEffect(() => {
-    if (isHost) return;
-    setPeerParticipants((previous) => {
-      let changed = false;
-      const next = previous.map((peer) => {
-        const videoEntry = videoParticipants.find(
-          (entry) => entry.id === peer.id,
-        );
-        if (videoEntry && videoEntry.isSpeaking !== peer.isSpeaking) {
-          changed = true;
-          return { ...peer, isSpeaking: videoEntry.isSpeaking };
-        }
-        return peer;
-      });
-      return changed ? next : previous;
-    });
-  }, [isHost, videoParticipants]);
+    peerMediaStateRef,
+    videoParticipants,
+    setVideoParticipants,
+    setPeerParticipants,
+    handlePeerProfileBroadcast,
+    setParticipantScreenSharing,
+  });
 
   useEffect(() => {
     if (!isHost) return undefined;

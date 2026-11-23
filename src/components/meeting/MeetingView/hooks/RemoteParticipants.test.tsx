@@ -29,24 +29,22 @@ function createRoomConnection(): RemoteParticipantsConnection & {
   };
 }
 
-function renderRemoteParticipants({
-  isHost = true,
-  roomConnection = createRoomConnection(),
-  isAudioMuted = false,
-  isVideoMuted = false,
-} = {}) {
+function renderRemoteParticipants(
+  overrides: Partial<Parameters<typeof useRemoteParticipants>[0]> = {},
+) {
+  const roomConnection = overrides.roomConnection ?? createRoomConnection();
   const roomConnectionRef = createRef<RemoteParticipantsConnection>();
   roomConnectionRef.current = roomConnection;
 
   const view = renderHook(() =>
     useRemoteParticipants({
-      isHost,
+      isHost: true,
       roomConnectionRef,
       roomConnection,
       localStream: null,
       screenStream: null,
-      isAudioMuted,
-      isVideoMuted,
+      isAudioMuted: false,
+      isVideoMuted: false,
       setIsAudioMuted: jest.fn(),
       setIsVideoMuted: jest.fn(),
       setIsRecording: jest.fn(),
@@ -54,6 +52,7 @@ function renderRemoteParticipants({
       resetRecordingTimer: jest.fn(),
       publishParticipantMediaStatus: jest.fn(),
       setSessionTitle: jest.fn(),
+      ...overrides,
     }),
   );
 
@@ -136,28 +135,12 @@ describe("RemoteParticipants", () => {
     const setIsAudioMuted = jest.fn();
     const setIsVideoMuted = jest.fn();
     const setSessionTitle = jest.fn();
-    const roomConnection = createRoomConnection();
-    const roomConnectionRef = createRef<RemoteParticipantsConnection>();
-    roomConnectionRef.current = roomConnection;
-
-    const { result } = renderHook(() =>
-      useRemoteParticipants({
-        isHost: false,
-        roomConnectionRef,
-        roomConnection,
-        localStream: null,
-        screenStream: null,
-        isAudioMuted: false,
-        isVideoMuted: false,
-        setIsAudioMuted,
-        setIsVideoMuted,
-        setIsRecording: jest.fn(),
-        setIsRecordingPaused: jest.fn(),
-        resetRecordingTimer: jest.fn(),
-        publishParticipantMediaStatus: jest.fn(),
-        setSessionTitle,
-      }),
-    );
+    const { result, roomConnection } = renderRemoteParticipants({
+      isHost: false,
+      setIsAudioMuted,
+      setIsVideoMuted,
+      setSessionTitle,
+    });
 
     act(() => {
       roomConnection.emit({
@@ -212,28 +195,14 @@ describe("RemoteParticipants", () => {
     const setIsAudioMuted = jest.fn();
     const setIsVideoMuted = jest.fn();
     const publishParticipantMediaStatus = jest.fn();
-    const roomConnection = createRoomConnection();
-    const roomConnectionRef = createRef<RemoteParticipantsConnection>();
-    roomConnectionRef.current = roomConnection;
-
-    renderHook(() =>
-      useRemoteParticipants({
-        isHost: false,
-        roomConnectionRef,
-        roomConnection,
-        localStream,
-        screenStream,
-        isAudioMuted: false,
-        isVideoMuted: false,
-        setIsAudioMuted,
-        setIsVideoMuted,
-        setIsRecording: jest.fn(),
-        setIsRecordingPaused: jest.fn(),
-        resetRecordingTimer: jest.fn(),
-        publishParticipantMediaStatus,
-        setSessionTitle: jest.fn(),
-      }),
-    );
+    const { roomConnection } = renderRemoteParticipants({
+      isHost: false,
+      localStream,
+      screenStream,
+      setIsAudioMuted,
+      setIsVideoMuted,
+      publishParticipantMediaStatus,
+    });
 
     act(() => {
       roomConnection.emit({
@@ -270,27 +239,12 @@ describe("RemoteParticipants", () => {
     const syncOutboundMedia = jest.fn();
     const roomConnection = createRoomConnection();
     roomConnection.syncOutboundMedia = syncOutboundMedia;
-    const roomConnectionRef = createRef<RemoteParticipantsConnection>();
-    roomConnectionRef.current = roomConnection;
-
-    renderHook(() =>
-      useRemoteParticipants({
-        isHost: false,
-        roomConnectionRef,
-        roomConnection,
-        localStream,
-        screenStream,
-        isAudioMuted: false,
-        isVideoMuted: false,
-        setIsAudioMuted: jest.fn(),
-        setIsVideoMuted: jest.fn(),
-        setIsRecording: jest.fn(),
-        setIsRecordingPaused: jest.fn(),
-        resetRecordingTimer: jest.fn(),
-        publishParticipantMediaStatus: jest.fn(),
-        setSessionTitle: jest.fn(),
-      }),
-    );
+    renderRemoteParticipants({
+      isHost: false,
+      localStream,
+      screenStream,
+      roomConnection,
+    });
 
     act(() => {
       roomConnection.emit({

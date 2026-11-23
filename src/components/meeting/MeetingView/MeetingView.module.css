@@ -125,31 +125,6 @@
     background: #000;
   }
 
-  .combinedSlot {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: auto;
-    bottom: 0;
-    z-index: 25;
-    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .combinedSlotClosed {
-    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
-    pointer-events: none;
-    transform: translateX(100%);
-  }
-
-  .combinedSidebar {
-    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
-    padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: env(safe-area-inset-bottom, 0);
-    padding-left: env(safe-area-inset-left, 0);
-    padding-right: env(safe-area-inset-right, 0);
-  }
-
   .stage {
     padding: 0 0 0.25rem;
     gap: 0;
@@ -181,31 +156,6 @@
 @media (max-height: 550px) and (orientation: landscape) {
   .workspace {
     background: #000;
-  }
-
-  .combinedSlot {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: auto;
-    bottom: 0;
-    z-index: 25;
-    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .combinedSlotClosed {
-    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
-    pointer-events: none;
-    transform: translateX(100%);
-  }
-
-  .combinedSidebar {
-    width: min(calc(100vw - env(safe-area-inset-left, 0px)), 320px);
-    padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: env(safe-area-inset-bottom, 0);
-    padding-left: env(safe-area-inset-left, 0);
-    padding-right: env(safe-area-inset-right, 0);
   }
 
   .stage {

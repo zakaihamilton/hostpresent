@@ -1,5 +1,6 @@
 import { MicOff, VideoOff, X } from "@/components/ui/Icons";
 import { Tooltip } from "@/components/ui/Tooltip";
+import responsiveStyles from "../ResponsiveSidebar.module.css";
 import styles from "./ParticipantsSidebar.module.css";
 
 interface ParticipantsHeaderProps {
@@ -26,7 +27,7 @@ export function ParticipantsHeader({
   onClose,
 }: ParticipantsHeaderProps) {
   return (
-    <div className={styles.header}>
+    <div className={`${styles.header} ${responsiveStyles.mobileHeader}`}>
       <div className={styles.headerCopy}>
         <div className={styles.headerTitle}>
           <span>Participants</span>
@@ -75,7 +76,7 @@ export function ParticipantsHeader({
           <Tooltip text="Close participants" placement="left">
             <button
               type="button"
-              className={styles.closeButton}
+              className={`${styles.closeButton} ${responsiveStyles.mobileCloseButton}`}
               onClick={onClose}
               aria-label="Close participants"
             >
