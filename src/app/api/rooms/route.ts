@@ -10,7 +10,7 @@ import { ROOM_ROLE, signRoomToken } from "@/lib/room/tokens";
 
 export const runtime = "nodejs";
 
-export async function POST(request) {
+export async function POST(request: Request) {
   const requestId = createRequestId();
   const blocked = guardPostRequest(request);
   if (blocked) return blocked;

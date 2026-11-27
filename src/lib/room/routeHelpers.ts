@@ -2,21 +2,21 @@ import { TextDecoder, TextEncoder } from "node:util";
 import { applySecurityHeaders } from "./apiSecurity";
 import { inspectRoomToken, TOKEN_FAILURE } from "./tokens";
 
-export function jsonOk(body, init = undefined) {
+export function jsonOk(body: unknown, init?: ResponseInit): Response {
   return applySecurityHeaders(Response.json(body, init));
 }
 
-export function jsonError(message, status = 400) {
+export function jsonError(message: string, status = 400): Response {
   return jsonOk({ error: message }, { status });
 }
 
-export function getBearerToken(request) {
+export function getBearerToken(request: Request): string | null {
   const authorization = request.headers.get("authorization") ?? "";
   const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
   return match?.[1] ?? null;
 }
 
-export function verifyRequestToken(token) {
+export function verifyRequestToken(token: unknown) {
   if (!token || typeof token !== "string") {
     return { error: jsonError("[E065] Token required", 401) };
   }
@@ -44,8 +44,8 @@ export function verifyRequestToken(token) {
 export const BODY_TOO_LARGE = Symbol("body-too-large");
 
 export async function readJsonBody(
-  request,
-  { maxBytes = 16_384 }: { maxBytes?: any } = {},
+  request: Request,
+  { maxBytes = 16_384 }: { maxBytes?: number } = {},
 ) {
   try {
     const reader = request.body?.getReader?.();

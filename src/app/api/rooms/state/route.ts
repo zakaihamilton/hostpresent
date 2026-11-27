@@ -17,7 +17,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function GET(request) {
+export async function GET(request: Request) {
   const requestId = createRequestId();
   const token = getBearerToken(request);
   const auth = verifyRequestToken(token);

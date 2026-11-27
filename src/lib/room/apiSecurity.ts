@@ -8,14 +8,16 @@ const SECURITY_HEADERS = {
 const MAX_TOKEN_LENGTH = 2048;
 const DEFAULT_MAX_BODY_BYTES = 16_384;
 
-export function applySecurityHeaders(response) {
+export function applySecurityHeaders(response: Response): Response {
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(name, value);
   }
   return response;
 }
 
-export function validateTokenParam(token) {
+export function validateTokenParam(
+  token: unknown,
+): { ok: true } | { ok: false; error: string } {
   if (!token || typeof token !== "string") {
     return { ok: false, error: "[E061] Token required" };
   }
@@ -27,10 +29,20 @@ export function validateTokenParam(token) {
   return { ok: true };
 }
 
+interface ValidateJsonPostOptions {
+  maxBodyBytes?: number;
+}
+
+interface JsonPostValidationResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+}
+
 export function validateJsonPost(
-  request,
-  { maxBodyBytes = DEFAULT_MAX_BODY_BYTES }: { maxBodyBytes?: any } = {},
-) {
+  request: Request,
+  { maxBodyBytes = DEFAULT_MAX_BODY_BYTES }: ValidateJsonPostOptions = {},
+): JsonPostValidationResult {
   const rawContentLength = request.headers.get("content-length");
   const contentLength =
     rawContentLength === null ? null : Number(rawContentLength);
@@ -64,7 +76,10 @@ export function validateJsonPost(
   return { ok: true };
 }
 
-export function guardPostRequest(request, options = undefined) {
+export function guardPostRequest(
+  request: Request,
+  options?: ValidateJsonPostOptions,
+): Response | null {
   const validation = validateJsonPost(request, options);
   if (!validation.ok) {
     return applySecurityHeaders(
