@@ -160,17 +160,3 @@ export function verifyRoomToken(token) {
   const inspection = inspectRoomToken(token);
   return inspection.ok ? inspection.verified : null;
 }
-
-export function createRoomTokens(roomId, joinCode = null) {
-  const hostToken = signRoomToken({ roomId, role: ROOM_ROLE.HOST, joinCode });
-  const participantToken = signRoomToken({
-    roomId,
-    role: ROOM_ROLE.PARTICIPANT,
-    joinCode,
-  });
-  return {
-    roomId,
-    hostToken,
-    participantToken,
-  };
-}
