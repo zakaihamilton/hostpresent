@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 const localSignalingSources = isDevelopment
   ? " http://127.0.0.1:9000 ws://127.0.0.1:9000 http://localhost:9000 ws://localhost:9000"
   : "";
 
-export function proxy(request) {
+export function proxy(request: NextRequest) {
   const nonce = Buffer.from(randomUUID()).toString("base64");
   const contentSecurityPolicy = [
     "default-src 'self'",

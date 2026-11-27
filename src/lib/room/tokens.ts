@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { normalizeJoinCode } from "./joinCodeFormat";
-import { ROOM_ROLE } from "./roles";
+import { ROOM_ROLE, type RoomRole } from "./roles";
 
 // Room tokens are deliberately shorter lived than the join code. The code
 // remains the durable, stateless participant credential; a leaked token
@@ -10,7 +10,7 @@ export const ROOM_TOKEN_SECRET_MIN_BYTES = 32;
 
 export { ROOM_ROLE } from "./roles";
 
-export function getSigningSecret() {
+export function getSigningSecret(): string | null {
   const secret = process.env.ROOM_TOKEN_SECRET?.trim();
   // Length does not prove randomness, so deployment guidance supplies a
   // cryptographically generated value and this check rejects short secrets.
@@ -23,11 +23,11 @@ export function getSigningSecret() {
   return secret;
 }
 
-export function isRoomSigningConfigured() {
+export function isRoomSigningConfigured(): boolean {
   return Boolean(getSigningSecret());
 }
 
-function toBase64Url(value) {
+function toBase64Url(value: string | Buffer): string {
   return Buffer.from(value)
     .toString("base64")
     .replace(/\+/g, "-")
@@ -35,18 +35,18 @@ function toBase64Url(value) {
     .replace(/=+$/g, "");
 }
 
-function fromBase64Url(value) {
+function fromBase64Url(value: string): Buffer {
   const padded = value + "=".repeat((4 - (value.length % 4)) % 4);
   return Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64");
 }
 
-function signPayload(payload) {
+function signPayload(payload: string): Buffer | null {
   const secret = getSigningSecret();
   if (!secret) return null;
   return createHmac("sha256", secret).update(payload).digest();
 }
 
-function verifySignedPayload(token) {
+function verifySignedPayload(token: unknown): Record<string, unknown> | null {
   if (!token || typeof token !== "string" || !token.includes(".")) {
     return null;
   }
@@ -79,10 +79,10 @@ export function signRoomToken({
   role,
   joinCode = null,
 }: {
-  roomId?: any;
-  role?: any;
-  joinCode?: any;
-}) {
+  roomId: string;
+  role: RoomRole;
+  joinCode?: string | null;
+}): string | null {
   if (!getSigningSecret()) return null;
   const iat = Date.now();
   const exp = iat + ROOM_TOKEN_TTL_MS;
@@ -95,7 +95,9 @@ export function signRoomToken({
     ...(joinCode ? { joinCode: normalizeJoinCode(joinCode) } : {}),
   };
   const payloadPart = toBase64Url(JSON.stringify(payload));
-  const signaturePart = toBase64Url(signPayload(payloadPart));
+  const signature = signPayload(payloadPart);
+  if (!signature) return null;
+  const signaturePart = toBase64Url(signature);
   return `${payloadPart}.${signaturePart}`;
 }
 

@@ -20,7 +20,6 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Repository health
         run: pnpm run health --details
-      - run: pnpm exec playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pnpm run lint
       - run: pnpm run test:unit --runInBand

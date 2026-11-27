@@ -13,7 +13,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST(request) {
+export async function POST(request: Request) {
   const blocked = guardPostRequest(request, { maxBodyBytes: 2_048 });
   if (blocked) return blocked;
 
